@@ -33,7 +33,6 @@
 
 ## Reported to other owners
 
-- **setup** (via the dispatcher, 2026-10-04): it leaves `.claude/settings.proposed.json`
-  untracked with no `.gitignore` entry, so a new repo never reads clean and a
-  `git add -A` would commit the proposal; and it writes no `.gitignore` at all, though
-  this repo's plan (routing-tree §7) puts a token in `local.env`.
+- None open. (The setup `.gitignore` report was fixed in tools/setup 7336f9f and
+  applied here 2026-10-04 by re-running setup: `.claude/settings.proposed.json`,
+  `local.env` and `.claude/local.env` checked ignored with `git check-ignore -v`.)
