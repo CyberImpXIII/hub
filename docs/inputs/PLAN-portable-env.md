@@ -29,6 +29,18 @@
 >
 > Credentials never go in `local.env`. They're supplied at run time, as before.
 
+
+> **Jacob, 2026-10-04 (planner window), the directive restated and widened:** "Also
+> tools/checks should be public, and this should be the case for all of these folders.
+> Anything SPECIFIC to my projects and setup should be abstracted to a file that is
+> ignored. The code that is public is the framework by which it can be applied to
+> anyone elses or any other projects at all." So: every tool repo here is public;
+> §3.1 (`local.env`, gitignored) is the file; the §5 hardcode audit becomes a
+> `tools/checks` check, `no-instance-data`, red on any `local.env` value found in
+> tracked code or templates; a private repo flips to public only after that check is
+> green there, and the flip (`gh repo edit --visibility public`) is Jacob's own step.
+> §4 then runs per owner. Decisions 1 and 2 in §7 stay open; decision 3's order is
+> overtaken: setup exists, so §3.1 and the audit go now, as one deep-work job.
 ## 2. Where things stand (probed 2026-10-02, grep over code, excluding `*.md`, data and archives)
 
 | hardcoded | where | count |

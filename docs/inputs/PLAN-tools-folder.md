@@ -64,7 +64,7 @@ harness (the manifest is harness's) and everything else portable.
    its own `dev.sh check`; the direction audit; gates from PLAN-repo-setup.md §3.
    This is the one tool that is scaffolded by hand, since nothing exists to scaffold
    it. ~150k tokens.
-2. **`tools/hooks/`**, `deep-work`, one job, right after setup (approved 2026-10-03,
+2. **`tools/hooks/`**, `deep-work`, one job, right after setup (DONE 2026-10-04, e5ce84a, §9; approved 2026-10-03,
    §7): the three generic hooks, `write-targets.sh` and their tests as one source;
    each hook carries a small declaration (`applies_to: all | repos | roles`) that
    setup's `hooks` component reads to decide where it is installed. **Plug-in
@@ -242,3 +242,59 @@ one and the existing one is deleted only after both have passed together once.
 **Order.** Step 3 in §4, right after `tools/hooks/` (it consumes hooks' source for
 `hooks-installed`) and in parallel with todo, which gets `todo-valid` as its first
 consumer. **All three decided "yes" by Jacob, 2026-10-03, in the planner window:** the tool, step 3 in parallel with todo, and the add-beside-then-delete migration rule.
+
+## 9. After `tools/hooks/`: the install path and the old comparison
+
+> Dispatcher's report, 2026-10-04 (information, no approval): step 2 is done,
+> github.com/CyberImpXIII/hooks, commit e5ce84a, **private** (the plan did not say;
+> the builder chose). `source/` holds the three hooks, their tests, `write-targets.sh`
+> and the settings registrations; `./hooks list|source|copies|audit`; `./hooks copies`
+> compares every installed copy with the source by meaning: 13 locations, 79 files,
+> all agree; `./dev.sh check` passes and a planted fault turns it red. Two follow-ups
+> were asked for as design.
+
+**Order: step 3 (`tools/checks/`) first.** It is approved and needs nothing below;
+(1) and (2) need Jacob's yes and (2) is smaller once step 3 exists.
+
+**(1) Setup installs from the source.** `setup`'s `hooks` component takes its list from
+`tools/hooks/hooks list --json` and defaults its source to `tools/hooks/source`;
+`--hooks-from DIR` stays as the override for a workspace without `tools/hooks`. It
+compares by meaning through the same library `hooks copies` uses (`hookslib`), never a
+second comparator: a copy that differs only in its header is **refreshed** and reported
+`installed` with "header refreshed, logic unchanged"; a copy whose logic differs is
+`drift`, reported and never overwritten, as today. Direction holds both ways: setup
+reads `tools/hooks`; `tools/hooks` reads nothing from setup.
+- **The reinstall is lazy.** `hooks copies` says all thirteen agree by meaning today,
+  so nothing is wrong on disk; a sweep of nine owner dispatches to refresh headers
+  buys nothing. Each owner runs `setup <its repo>` the next time it touches its repo,
+  and `hooks copies` is the gate that catches a stale one. The old hand copies retire
+  by that route, one repo at a time.
+- Gates, in setup's suite: a fixture copy with a header-only difference comes back
+  `installed` with the refresh note and identical logic; one with a logic difference
+  comes back `drift` and is byte-unchanged afterwards; `setup components` still
+  matches the implemented list; direction audit stays clean. ~40k tokens, `setup`.
+
+**(2) The site-scrapers comparison gives way, inside step 3.** `check-hooks.sh`'s
+`DECLARED` list is the last hand-kept copy inventory, and it already lacks `tools/hub`,
+`tools/todo` and `tools/hooks`. Rather than extend it, step 3's `hooks-installed` check
+is the generic replacement: in a workspace (the manifest marker exists) it calls
+`tools/hooks/hooks copies` and fails on any disagreement; standalone, in a fresh clone,
+it checks only that the repo's own hooks are present, executable and parse, because
+there is no source to compare with. Then site-scrapers swaps its `check-hooks.sh` and
+`--sync` for that check (one `site-scrapers` dispatch, ~30k), and the "ten copies"
+paragraph in the top-level `CLAUDE.md` becomes one sentence naming `hooks copies` (the
+dispatcher's edit). Nothing retires before the generic check has run green from
+site-scrapers.
+
+**Two items the builder left open in `tools/hooks/TODO.md`:**
+- *Should `check` scan the whole workspace?* No: a repo's `./dev.sh check` gates that
+  repo's commit, and another repo's drift blocking it is the wrong answer. The
+  whole-workspace sweep is `hooks copies` run from the top, which `agents.sh check`
+  and step 3's top-level run already own.
+- *The direction audit does not check roster agent names.* Correct as left: that is
+  step 3's `no-roster` check, applied to `tools/` as a whole.
+
+**Visibility.** `tools/setup` is public and Jacob said of the hub repo "I don't see why
+we would need for it to be private"; a private `hooks` repo is the odd one out and a
+fresh clone of any tool repo would want to fetch its source. Decision for Jacob below;
+the change is one `gh repo edit --visibility public`, run in the dispatcher window.

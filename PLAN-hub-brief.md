@@ -131,3 +131,8 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 **Done when:** the file exists on a branch named `plan/hub`, answers all ten questions,
 has the four closing sections, and every platform claim has a URL. Nothing else in the
 repo is changed.
+
+## 6. Setup component
+
+None in the brief itself: a brief installs nothing. The plan it produces carries the
+component (PLAN-hub.md "Setup component", reviewed in PLAN-hub-review.md).

@@ -30,6 +30,7 @@ tags, so nothing renames when the server lands.
 | `dispatch` | who, in what order, is the approval present, did it return, is the queue blocked | **Jacob**, from the dispatcher, in a typed section | "harness is still on the applications roster job after 40 minutes; wait or stop it?" |
 | `plan` | should we, which design, what is the policy, anything that would change a `PLAN-*.md`, `TODO.md` or a rule | **the planner**, forwarded by the hook; never Jacob | "keep graphify-eval or promote it?" |
 | `context` | what does X do, why did Y fail, what did the last run report, where is Z | **the agent that owns the task**: a read-only question dispatch, the ledger, or that repo's `TODO.md`; never Jacob | "does `fill_application_form` take a label or a selector?" |
+| `settings` | a step only Jacob can take: `settings.json`, a grant, a model flag | **nobody asks.** The doctor states it at session start; the planner carries it in its list of Jacob's steps. The dispatcher never asks Jacob for it (Jacob, 2026-10-04: it "falls outside of dispatcher's role"); it may say once, to the planner, that a dispatch is blocked by it. `harness` adds the kind to the gate's table when it next touches it. |
 
 **A claim one agent makes about another repo is a `context` question** for that repo's
 owner, not something the dispatcher checks itself. The case that showed this is in

@@ -1,11 +1,18 @@
-# Inputs for PLAN-hub-brief.md
+# Inputs for PLAN-hub-brief.md and for the review's fix pass
 
-Copies taken 2026-10-04 from the top of the claudeTest folder, which is not a git
-repo. They are snapshots: the originals keep changing, these do not. The brief's §2
-lists thirteen inputs: the brief itself (`../../PLAN-hub-brief.md`, at the repo
-root) and the twelve files in this folder. `PLAN-repo-setup.md` and
-`PLAN-portable-env.md` were added to §2 later the same day; they were copied and
-the brief refreshed from the top-level original then.
+Copies from the top of the claudeTest folder, which is not a git repo. They are
+snapshots: the originals keep changing, these do not until someone refreshes them.
+
+- **First taken 2026-10-04** for the cloud session that wrote `PLAN-hub.md`: the
+  brief (`../../PLAN-hub-brief.md`, at the repo root) and its §2 inputs.
+  `PLAN-hub.md` was written from that snapshot; it is commit 842d00b here.
+- **Refreshed 2026-10-04 (evening)** for the fix pass that PLAN-hub-review.md §4a
+  sends back to the cloud: every copy replaced by its original, and the three plans
+  the review builds on and the brief does not list were added (`read by: review`
+  below). Seven copies had drifted: the brief (it gained "§6. Setup component"),
+  `claudeTest-CLAUDE.md`, `PLAN-cloud-offload.md` (it gained §8, which the review's
+  finding 8 cites), `PLAN-question-routing.md`, `PLAN-todo-tool.md`,
+  `PLAN-tools-folder.md` and `PLAN-portable-env.md`.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's
@@ -13,31 +20,50 @@ the brief refreshed from the top-level original then.
 subdirectory as project instructions when it reads files there
 (<https://code.claude.com/docs/en/large-codebases#choose-where-to-start-claude>),
 and that file is claudeTest's instructions to its dispatcher, not to this repo.
+`./dev.sh check` fails if any `CLAUDE.md` is stored under `docs/`.
 
-Each copy matched its original byte for byte when taken (sha256 below, checked
-against the originals with `shasum -a 256` on 2026-10-04). Check a copy here with
-`shasum -a 256 -c docs/inputs/SHA256SUMS` from the repo root.
+**Checked by `./dev.sh check`:** every copy matches its line in `SHA256SUMS`; this
+table, `SHA256SUMS` and the files in this folder list the same copies; every file the
+brief's §2 names has a row here. By hand: `shasum -a 256 -c docs/inputs/SHA256SUMS`
+from the repo root. `./dev.sh drift` compares each copy with its original (only where
+the originals are reachable, not in a clone), and `./dev.sh refresh` copies them all
+again, running the leak audit on the originals first and refusing on any finding.
 
-| copy | original (claudeTest top level) |
+| copy | original (claudeTest top level) | read by |
+|---|---|---|
+| `../../PLAN-hub-brief.md` | `PLAN-hub-brief.md` | brief |
+| `claudeTest-CLAUDE.md` | `CLAUDE.md` | brief §2 |
+| `PLAN-routing-tree.md` | `PLAN-routing-tree.md` | brief §2 |
+| `PLAN-tools-folder.md` | `PLAN-tools-folder.md` | brief §2 |
+| `PLAN-auto-relay.md` | `PLAN-auto-relay.md` | brief §2 |
+| `PLAN-question-routing.md` | `PLAN-question-routing.md` | brief §2 |
+| `PLAN-group-servers.md` | `PLAN-group-servers.md` | brief §2 |
+| `PLAN-agent-groups.md` | `PLAN-agent-groups.md` | brief §2 |
+| `PLAN-todo-tool.md` | `PLAN-todo-tool.md` | brief §2 |
+| `PLAN-interim-rules.md` | `PLAN-interim-rules.md` | brief §2 |
+| `PLAN-cloud-offload.md` | `PLAN-cloud-offload.md` | brief §2; review §3 finding 8 (§3, §8) |
+| `PLAN-repo-setup.md` | `PLAN-repo-setup.md` | brief §2 |
+| `PLAN-portable-env.md` | `PLAN-portable-env.md` | brief §2 |
+| `PLAN-usage-reporting.md` | `PLAN-usage-reporting.md` | review §3 finding 3 (§3: the usage gate admission asks) |
+| `PLAN-hard-gates.md` | `PLAN-hard-gates.md` | review §3 finding 4 (§2: the `Agent:` commit stamp) |
+| `PLAN-check-progress.md` | `PLAN-check-progress.md` | review §3 finding 5 (§7: why H1a splits) |
+
+## What the fix pass needs, and where each piece is
+
+The fix pass is PLAN-hub-review.md §4a's prompt, run on branch `plan/hub`. Item by
+item:
+
+| the prompt asks | it reads |
 |---|---|
-| `../../PLAN-hub-brief.md` | `PLAN-hub-brief.md` |
-| `claudeTest-CLAUDE.md` | `CLAUDE.md` |
-| `PLAN-routing-tree.md` | `PLAN-routing-tree.md` |
-| `PLAN-tools-folder.md` | `PLAN-tools-folder.md` |
-| `PLAN-auto-relay.md` | `PLAN-auto-relay.md` |
-| `PLAN-question-routing.md` | `PLAN-question-routing.md` |
-| `PLAN-group-servers.md` | `PLAN-group-servers.md` |
-| `PLAN-agent-groups.md` | `PLAN-agent-groups.md` |
-| `PLAN-todo-tool.md` | `PLAN-todo-tool.md` |
-| `PLAN-interim-rules.md` | `PLAN-interim-rules.md` |
-| `PLAN-cloud-offload.md` | `PLAN-cloud-offload.md` |
-| `PLAN-repo-setup.md` | `PLAN-repo-setup.md` |
-| `PLAN-portable-env.md` | `PLAN-portable-env.md` |
+| read the review first | `docs/REVIEW-2026-10-04.md` on `plan/hub` (a copy of the top-level `PLAN-hub-review.md`, byte-identical on 2026-10-04) |
+| 1. citations as `"quote" (url#anchor)` | the review's §2 table, which lists the anchors. `kb check` and its docs mirror live in the knowledge-base repo, which is private and local: the cloud cannot run it. The planner runs it on the result (review §4 step 4) |
+| 2. findings 1-6 and 8 | `PLAN-hub.md` on `plan/hub`; `PLAN-usage-reporting.md` §3, `PLAN-hard-gates.md` §2, `PLAN-check-progress.md` §7, `PLAN-cloud-offload.md` §3 and §8, all here |
+| 3. §11 into `PLAN-hub-view.md` | `PLAN-hub.md` §11, and Jacob's message about the view, which is **not** an input anywhere: it exists only in the cloud session's own transcript (review §1, deviation 2). A fresh session would not have it |
+| 4. a TODO.md item per cloud phase | `PLAN-hub.md` §9 |
 
-**Referenced by the inputs but not copied** (the brief's §2 does not list them):
-`PLAN-context-hygiene.md` (6 mentions), `PLAN-knowledge-base.md` (4),
-`PLAN-applications.md` (1), and the top-level `TODO.md` (counted 2026-10-04 with
-`grep -ohE 'PLAN-[a-z0-9-]+\.md'` over the brief and this folder; `PLAN-x.md` is a
-placeholder and `PLAN-hub.md` is the output).
-Where a plan needs one of these, it names it as an open pointer rather than
-guessing its content.
+**These copies are on `main`; the fix pass works on `plan/hub`,** which was branched
+before they were added. Read them there with `git fetch origin main` and then
+`git show origin/main:docs/inputs/<file>`, or have `main` merged into `plan/hub`
+first. Never copied, on purpose: anything from `.claude/` (PLAN-cloud-offload.md §8's
+predicate), and the plans `PLAN-hub.md` names as open pointers (`PLAN-context-hygiene.md`,
+`PLAN-knowledge-base.md`, `PLAN-applications.md`), which the fix pass does not need.
