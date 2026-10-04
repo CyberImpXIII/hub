@@ -36,8 +36,10 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 | `PLAN-todo-tool.md` | §2, §4 | the worked example of "the tool carries facts about the work; harness resolves the agent" |
 | `PLAN-interim-rules.md` | §5 | rules that hold until the hub exists, which the plan retires one by one |
 | `PLAN-cloud-offload.md` | §3 | what may run in the cloud; the hub's tests must be offline |
+| `PLAN-repo-setup.md` | §1, §2 | the setup directive every plan obeys (§5 below cites it) and what `setup` installs |
+| `PLAN-portable-env.md` | §1–§3 | no hardcoded paths, owner or accounts; `local.env` and `init.sh`, which the hub token and keep-alive use |
 
-The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04. The originals
+The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
 live at the top of the claudeTest folder, which is not a git repo.
 
 ## 3. Fixed points, not open for re-decision
