@@ -1,10 +1,13 @@
 # hub
 
-What this repo is for: not written yet. Its owner fills this in, outside the
-shared block below.
+The node server from PLAN-routing-tree.md, built as a portable tool. **Stage:
+planning.** Nothing is built yet; the task is `PLAN-hub-brief.md` at the root,
+whose output is `PLAN-hub.md`.
 
 | doing this | use |
 |---|---|
+| the task, its fixed points and its output contract | `PLAN-hub-brief.md` |
+| the brief's inputs (copies, 2026-10-04) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
 | before committing | `./dev.sh check` (a stub that fails until the owner fills in the contract) |
 | what is open | `TODO.md` |
 
