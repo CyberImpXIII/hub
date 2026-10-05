@@ -2,19 +2,6 @@
 
 ## Own bugs
 
-- **Three hook copies are `drift`, left byte-unchanged by setup** (hub, 2026-10-05):
-  setup (tools/setup 32aeaa9) installed 16 hook files and `.claude/lib/{ledger,
-  write-targets}.sh` here and refreshed one header, but says `troubleshooting.sh`,
-  `test-troubleshooting.sh` and `test-prefer-recipes.sh` differ in logic from
-  tools/hooks/source. Replacing a drifted copy waits on Jacob (PLAN-repo-setup §7.12;
-  `--rebuild` not used). `hooks copies` lists the same three as DRIFT. They keep
-  `./dev.sh check` red on `checks` [hooks-installed].
-- **The leak audit flags a reserved-domain placeholder** (hub, 2026-10-05): `cmd_leaks`
-  fails `.claude/hooks/test-push-gate.sh:24: email address` on `t@example.invalid`, a
-  git identity in shared hook test code (RFC 2606 domain, not a person). Not a leak.
-  Open decision: allow `.invalid`/`example.*` domains in the email pattern, or
-  exclude installed hook copies from the audit (they are tools/hooks' content). Until
-  then `./dev.sh check` is red on `leaks`.
 - **The leak audit's terms are three shapes** (email, home-folder path, phone); the
   credential half is tools/checks `no-secrets`. Names of people and of private repos
   are not caught: `claudeTest-CLAUDE.md` names private repos, as it did in the first
