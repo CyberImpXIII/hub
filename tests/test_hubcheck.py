@@ -4,6 +4,7 @@ A gate that cannot be shown red is not a gate. Leak-shaped strings are built at
 run time so this file does not trip the leak audit it tests.
 """
 import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -224,6 +225,54 @@ class TestLeaks(Base):
                 "2026-10-04, 2026-10-04T20:14Z, 250-400k, 29k\n")
         (self.r / "ok.md").write_text(text)
         self.assertEqual(hc.gate_leaks(self.r), [])
+
+
+class TestChecks(Base):
+    """gate_checks reads `checks run --json`'s report: every failing line, never the truncated text."""
+
+    def fake_cli(self, report, code):
+        """A stand-in checks CLI: prints `report` (a dict, or raw text) and exits `code`; logs its argv."""
+        (self.r / "report.out").write_text(report if isinstance(report, str) else json.dumps(report))
+        cli = self.r / "fake-checks"
+        cli.write_text(f'#!/usr/bin/env bash\necho "$@" > "{self.r}/argv.out"\n'
+                       f'cat "{self.r}/report.out"\necho "a stderr line" >&2\nexit {code}\n')
+        cli.chmod(0o755)
+        return cli
+
+    def results(self, *rows):
+        return {"results": [{"check": c, "status": s, "lines": ls} for c, s, ls in rows]}
+
+    def test_green_with_unchecked_is_ok_and_names_them(self):
+        rep = self.results(("a", "ok", []), ("b", "unchecked", ["no node.json"]))
+        f, notes = hc.gate_checks(self.fake_cli(rep, 0), self.r)
+        self.assertEqual((f, notes), ([], ["b: no node.json"]))
+        self.assertEqual((self.r / "argv.out").read_text().split(), ["run", str(self.r), "--json"])
+
+    def test_every_failing_line_is_a_finding_path_first(self):
+        lines = [f".claude/hooks/h{i}.sh: missing" for i in range(12)]   # the text run shows 8, then "... and 4 more"
+        rep = self.results(("hooks-installed", "fail", lines), ("x", "error", []), ("a", "ok", []))
+        f, _ = hc.gate_checks(self.fake_cli(rep, 1), self.r)
+        self.assertEqual(f, [f"{l} [hooks-installed]" for l in lines] + ["x: error, with no line saying why"])
+
+    def test_exit_disagreeing_with_the_report_is_a_finding(self):
+        f, _ = hc.gate_checks(self.fake_cli(self.results(("a", "ok", [])), 1), self.r)
+        self.assertEqual(f, ["checks run . exit 1 disagrees with its report (1 checks)"])
+        f, _ = hc.gate_checks(self.fake_cli(self.results(("a", "fail", ["l"])), 0), self.r)
+        self.assertEqual(f, ["l [a]", "checks run . exit 0 disagrees with its report (1 checks)"])
+
+    def test_no_report_or_an_empty_one_is_not_a_pass(self):
+        f, _ = hc.gate_checks(self.fake_cli("checks run: 1 ok -> green\n", 0), self.r)
+        self.assertFinding(f, "printed no report with results (exit 0; a stderr line)")
+        f, _ = hc.gate_checks(self.fake_cli(self.results(), 0), self.r)
+        self.assertFinding(f, "reported no checks (exit 0)")
+        f, _ = hc.gate_checks(self.r / "absent-cli", self.r)
+        self.assertFinding(f, "could not start")
+
+    def test_main_prints_findings_in_the_gate_shape(self):
+        cli = self.fake_cli(self.results(("a", "fail", ["dev.sh:3: x"])), 1)
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "checks", str(cli)], capture_output=True,
+                           text=True, env={**os.environ, "HUB_ROOT": str(self.r)})
+        self.assertEqual((p.returncode, p.stdout), (1, "  FAIL  dev.sh:3: x [a]\n"))
 
 
 class TestDriftAndRefresh(Base):

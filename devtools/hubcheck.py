@@ -14,6 +14,8 @@ at a throwaway fixture. Findings name a file, a line and a KIND, never a value.
   leaks   public-safety half of the leak audit: email addresses, home-folder
           paths, phone numbers. The credential half is tools/checks'
           no-secrets (run by `checks run .`), not re-implemented here.
+  checks  tools/checks' `checks run . --json`, every failing line (the text run
+          truncates); its exit code must agree with its report
   drift   each copy against its original at the workspace top (informational)
   refresh copy every original over its copy, leak audit first, then rewrite
           SHA256SUMS
@@ -299,9 +301,56 @@ def refresh(root: Path):
     return []
 
 
+CHECKS_PASS = ("ok", "unchecked")
+
+
+def gate_checks(cli, root: Path):
+    """tools/checks' `checks run <root> --json`, read from its report, not its text.
+
+    Returns (findings, notes): one finding per line of each check that is neither
+    ok nor unchecked, `<line> [<check>]` so a leading path stays first; notes name
+    the unchecked ones (never a pass, never a fail here, as in `checks run`). The
+    text run truncates a long check's lines ("... and N more"); the report has all.
+    A report that does not parse, lists no checks, or disagrees with the exit code
+    is itself a finding.
+    """
+    try:
+        p = subprocess.run([str(cli), "run", str(root), "--json"], capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL)
+    except OSError as e:
+        return [f"checks run could not start: {e}"], []
+    tail = (p.stderr.strip().splitlines() or ["no stderr"])[-1]
+    try:
+        results = json.loads(p.stdout)["results"]
+        rows = [(r["check"], r["status"], r.get("lines") or []) for r in results]
+    except (ValueError, KeyError, TypeError):
+        return [f"checks run . --json printed no report with results (exit {p.returncode}; {tail})"], []
+    if not rows:
+        return [f"checks run . --json reported no checks (exit {p.returncode}): a report of nothing is not a pass"], []
+    f, notes = [], []
+    for name, status, lines in rows:
+        if status in CHECKS_PASS:
+            if status == "unchecked":
+                notes.append(f"{name}: {lines[0] if lines else 'no reason given'}")
+            continue
+        f += [f"{l} [{name}]" for l in lines] or [f"{name}: {status}, with no line saying why"]
+    if (p.returncode == 0) == bool(f):
+        f.append(f"checks run . exit {p.returncode} disagrees with its report ({len(rows)} checks)")
+    return f, notes
+
+
 def main(argv):
     root = Path(os.environ.get("HUB_ROOT") or Path(__file__).resolve().parent.parent)
     cmd, args = (argv[0], argv[1:]) if argv else ("", [])
+    if cmd == "checks" and len(args) == 1:
+        f, notes = gate_checks(args[0], root)
+        for x in f:
+            print(f"  FAIL  {x}")
+        for x in notes:
+            print(f"  note  unchecked {x}")
+        if not f:
+            print(f"  ok    checks: checks run . green, {len(notes)} unchecked (never a pass, listed above)")
+        return 1 if f else 0
     if cmd in ("inputs", "files"):
         f = gate_inputs(root) if cmd == "inputs" else gate_files(root)
         for x in f:
@@ -346,7 +395,7 @@ def main(argv):
         if not f:
             print(f"  ok    refresh: {len(readme_rows(root))} copies written, {SUMS} rewritten")
         return 1 if f else 0
-    print("usage: hubcheck.py inputs|files|leaks [FILE...]|drift [--json]|refresh", file=sys.stderr)
+    print("usage: hubcheck.py inputs|files|leaks [FILE...]|drift [--json]|refresh|checks <checks CLI>", file=sys.stderr)
     return 2
 
 

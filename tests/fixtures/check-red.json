@@ -1,0 +1,25 @@
+{"ok": false, "checks": [
+ {"name": "test", "status": "fail", "counts": {"failed": 2}, "failures": [
+  {"message": "FAIL: test_clean (test_hubcheck.TestInputs.test_clean)", "file": "tests/test_hubcheck.py", "line": null, "role": "code"},
+  {"message": "ERROR: test_gone (test_nowhere.Gone.test_gone)", "file": null, "line": null, "role": "code"}]},
+ {"name": "hooktests", "status": "fail", "counts": {"failed": 2}, "failures": [
+  {"message": ".claude/hooks/test-no-inline-blobs.sh: exit 1: FAIL case 7 expected exit 2, got 0 | 1 FAILED", "file": ".claude/hooks/test-no-inline-blobs.sh", "line": null, "role": "code"},
+  {"message": ".claude/hooks/test-gone.sh: exit 127", "file": null, "line": null, "role": "code"}]},
+ {"name": "files", "status": "fail", "counts": {"failed": 2}, "failures": [
+  {"message": "gone.md: missing", "file": null, "line": null, "role": "code"},
+  {"message": "dev.sh: not executable", "file": "dev.sh", "line": null, "role": "code"}]},
+ {"name": "inputs", "status": "fail", "counts": {"failed": 3}, "failures": [
+  {"message": "docs/inputs/SHA256SUMS:3: docs/inputs/PLAN-a.md does not match its sum", "file": "docs/inputs/SHA256SUMS", "line": 3, "role": "docs"},
+  {"message": "PLAN-hub-brief.md:12: item 9 in §3 follows item 9; expected 10", "file": "PLAN-hub-brief.md", "line": 12, "role": "docs"},
+  {"message": "PLAN-hub-brief.md §2 names PLAN-z.md; no copy of it in the docs/inputs/README.md table", "file": null, "line": null, "role": "docs"}]},
+ {"name": "leaks", "status": "fail", "counts": {"failed": 2}, "failures": [
+  {"message": "notes.md:1: email address", "file": null, "line": null, "role": "audit"},
+  {"message": "CLAUDE.md:0: phone number", "file": "CLAUDE.md", "line": null, "role": "audit"}]},
+ {"name": "plans", "status": "unchecked", "reason": "plans: ../setup/setup not found (set HUB_SETUP_BIN)", "counts": {"failed": 0}, "failures": []},
+ {"name": "checks", "status": "fail", "counts": {"failed": 2}, "failures": [
+  {"message": ".claude/hooks/ask-first.sh: missing; not covered by user scope [hooks-installed]", "file": null, "line": null, "role": "audit"},
+  {"message": "dev.sh:4: credential-shaped value [no-secrets]", "file": "dev.sh", "line": 4, "role": "audit"}]},
+ {"name": "silent", "status": "unchecked", "reason": "gate silent exited 3 (unchecked) without saying why", "counts": {"failed": 0}, "failures": []},
+ {"name": "extra", "status": "error", "counts": {"failed": 1}, "failures": [
+  {"message": "gate extra broke (exit 2) with no finding line; ./dev.sh check prints its output", "file": null, "line": null, "role": "code"}]}
+]}

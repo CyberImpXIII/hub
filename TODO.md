@@ -34,6 +34,24 @@
 
 ## Own limits, known
 
+- **`./dev.sh check` is red on `checks` today, not from this repo's code** (hub,
+  2026-10-05): tools/checks `hooks-installed` reports four shared hooks not installed
+  here (`ask-first`, `git-stamp`, `settings-guard`, `write-ledger`, their tests, and
+  `.claude/lib/write-targets.sh`). Same hand-copy as the bug above, plus registering
+  them in `.claude/settings.json` (Jacob's step if settings-guard covers it). Not done
+  in the check-json change; owed by whoever reinstalls the hooks here.
+- **`check --json` (2026-10-05, PLAN-agent-groups §4.4)**: `devtools/checkjson.py`, the
+  third copy of the same emitter (setup, hooks, hub), each with its own finding
+  readers. The shape is held by the shared validator; the readers are per repo. If a
+  fourth repo copies it, the row format and verdict belong in one place (tools/checks'
+  call). Drift is not in `--json` (a note, not a check): `./dev.sh drift --json`. Exit
+  codes other than 0/1/3 from a gate are `error`. `checks one check-json ../hub` took
+  140 s on 2026-10-05 (limit 280 s; the plain check alone took 70 s, the 44 unit tests
+  ~30 s of it, mostly the mutant and validator runs).
+- **Roles are the §4.1 starting set** (`gate_role` in dev.sh): inputs, plans -> docs;
+  leaks, checks -> audit; the rest -> code. That each names a role in hub's group
+  waits on the node registry (§4.4's second gate); hub has no group in the manifest yet.
+
 - **The numbering gate reads column-0 items only** (`hubcheck.py brief_numbering`,
   2026-10-05): each must be previous + 1 or 1 (a new list). Not seen: a duplicate in a
   nested (indented) list, or a second list that restarts at 1 where a continuation was
