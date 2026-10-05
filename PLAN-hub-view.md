@@ -249,7 +249,7 @@ fallback installs nothing. `setup` gains no component for the view.
 
 | # | decision (§n pointer first) | hinges on | recommend |
 |---|---|---|---|
-| 1 | §4: the terminal host: A (Wave Terminal, no fork, hub-served panels in web blocks), B (a Tabby plugin), or C (tmux layout only) | whether the request's icons, switches and spin need a DOM, and V0's result on Jacob's machine | A, with C as the fallback that ships in every case |
+| 1 | §4: the terminal host: A (Wave Terminal, no fork, hub-served panels in web blocks), B (a Tabby plugin), or C (tmux layout only) | whether the request's icons, switches and spin need a DOM, and V0's result on Jacob's machine | A, with C as the fallback that ships in every case. **Jacob, 2026-10-05: A, "wave with tmux"**; V0 confirms Wave on his machine, and a failed clause falls to C, not B |
 | 2 | §2: the on/off switch controls an agent's membership in the feed block, not whether its tab exists | what Jacob meant by "what I am seeing in the single terminal view" | yes. **Jacob, 2026-10-05: yes** |
 | 3 | §1: the view lives in `tools/hub/view/`, same repo and CLI (`hub view`), not a separate `tools/hub-view/` | keeping the API and its only client in one commit against the cost of a larger repo | yes |
 | 4 | §2: red in the agents panel means "in `hub.json`, not spawned", where Jacob said "in the manifest.json"; `hub.json` is rendered from the manifest so the set is the same, and the view never opens the manifest | the fixed point that the hub reads no roster | yes |

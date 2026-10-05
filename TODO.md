@@ -176,7 +176,8 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   the planner's re-read; (2) the port in the registry: "I believe so", confirm with the
   planner; (3) G1's place after H2: explained, planner to confirm; (4) the view's
   switch controls feed membership: yes (PLAN-hub-view.md Decision 2); (5) the terminal
-  host: explained, open (PLAN-hub-view.md Decision 1); (6) the owed reports below wait
+  host: **Wave with tmux as the fallback** (PLAN-hub-view.md Decision 1, answered
+  2026-10-05; V0 still confirms Wave on his machine); (6) the owed reports below wait
   for the planner's re-read; (7) the read-only tool list: "I think so", with the
   question below.
 - **How a coder's code change travels as a `write-request`** (cloud, 2026-10-05,
