@@ -11,8 +11,8 @@
 > **Owners:** `deep-work` for `tools/hub/` (server, CLI, view, gates); `harness` for what
 > stays in `.claude/` and for rendering the registry from the manifest (§2); the
 > `cron-scheduler` agent for `chron.py`'s side of §7; the dispatcher for the CLAUDE.md
-> rewrite in phase H4; Jacob for `settings.json`, the terminal host (§11) and the
-> Decisions table.
+> rewrite in phase H4; Jacob for `settings.json`, the terminal host (PLAN-hub-view.md)
+> and the Decisions table.
 >
 > **Builds on:** PLAN-routing-tree.md (the approved design, placed here, not redesigned);
 > PLAN-tools-folder.md §1, §3, §7 (the criterion and the home); PLAN-auto-relay.md §3–§4,
@@ -77,7 +77,7 @@ subprocess; a rewrite in JavaScript is a later job only if a measurement asks fo
 | the relay ledger (`relay-ledger.tsv`) | **moves** | becomes the hub's conversation ledger, one JSON line per routing decision with the registry hash that produced it (routing-tree §1, §3), and per spawn the `result` line's `usage` tokens. `hub log [--since] [--kind] [--usage]` reads it, `--usage` in units of 1u; `agents.sh relays` calls that |
 | the dispatch ledger (`dispatches.jsonl`, Agent-tool spawns) | **stays until H4, then merges** | it records roster spawns through the Agent tool and reads agent types (tools-folder §7 row E). Spawns the server makes are hub ledger rows from H1b on; when H4 removes the Agent-tool path, `agents.sh dispatches` becomes a view over `hub log --kind spawn` and the file retires. Tools-folder §7's "the ledger stays until hub" is confirmed, with the date fixed at H4 |
 | `agent-watch.sh` (stale alerts) | **stays until H4**; its function for server-owned processes is the server's | per-role last-seen is server state (group-servers §3.4): the server reports a role process that dies or goes silent as `failed`/`stale` in `hub status` and as a `report` envelope to the sender. The hook keeps watching Agent-tool spawns until H4; interim `stale-spawn` retires then |
-| `quote-words.sh` | **stays** | it is policy over roster spawns (row B). On a server spawn the same fact (Jacob's words, human-origin only) arrives through the envelope: the origin stamp that classifies a turn `jacob` already reads that prompt, so the server attaches it as `origin_text` on `origin: jacob` envelopes and the cold role's prompt carries it. One transcript reader, `hub origin`, serves both; `quote-words.sh` calls it for the text instead of keeping its own jq (Decision 5) |
+| `quote-words.sh` | **stays** | it is policy over roster spawns (row B). On a server spawn the same fact (Jacob's words, human-origin only) arrives through the envelope: the origin stamp that classifies a turn `jacob` already reads that prompt, so the server attaches it as `origin_text` on `origin: jacob` envelopes and the cold role's prompt carries it. One transcript reader, `hub origin`, serves both; `quote-words.sh` calls it for the text instead of keeping its own jq (Decision 3) |
 | `dispatch-guard.sh`, `grant`, the manifest, `gen`, `check`, `doctor`, `wiring` | **stay** | the roster and the policy over it (tools-folder §7). The guard gains two facts from the hub: `hub status --json` says whether the server is up (§3), and a model's Bash call to `hub routes accept` is blocked the way `agents.sh grant` is |
 | PLAN-group-servers.md's per-group server (`/touched`, `/stop`, `/audit`) | **becomes the `check` and `hook` services of this process**, not a second program (routing-tree §14.6, fixed point 10) | its endpoints become `check` requests (`{repo, scope}`); the stateful halves of `troubleshooting.sh` (host history), `agent-watch.sh` (staleness), `quote-words.sh` (the words) and `record-session.sh` (the sockets) become `hook` service lookups answered from the ledger, while each hook's **blocking** half stays a command hook (group-servers §2). Lands as phase G1 (§9) |
 
@@ -219,7 +219,7 @@ exist** are split across the seam, each side checking what it can read:
   CLI; each repo's `check --json` conforms; nothing reads a store around its CLI. This
   plan depends on them and does not build them.
 - `setup` refuses to write a starter where a manifest exists and prints the `gen`
-  command instead, so the file never has two writers (Decision 4).
+  command instead, so the file never has two writers (Decision 2).
 
 → Built in H1a-1 (schema, `hub init`, `hub check`), with the `gen` rendering as a
 `harness` job alongside H1a-2.
@@ -330,11 +330,11 @@ H1b (the first spawn).
 
 Cold by default (routing-tree §11 decision 2). Three modes:
 
-| mode | what the server does | state the view sees (§11) |
+| mode | what the server does | state the view sees (PLAN-hub-view.md §2) |
 |---|---|---|
 | `window` | never spawns; delivers to the recorded inbox socket; learns busy/idle from `claude agents --json`: `kind` is "`interactive` or `background`" and `pid`, `status` are present "While the process is alive" as "Process ID and one of `busy`, `waiting`, or `idle`" (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>), joined on `sessionId` ("the full session UUID", same anchor) with `/sessions` | green busy, yellow idle or waiting, red no session |
 | `cold` | per message: `claude -p --agent <role> --permission-mode dontAsk --allowedTools <read-only list> --disallowedTools Edit,Write,NotebookEdit --permission-prompts none --output-format stream-json --verbose --max-budget-usd <cap>` in the role's `dir`, brief on stdin, inside a sandbox whose writable set is the role's scratchpad only (routing-tree §13.2 quotes the sandboxing docs: these paths are "enforced at the OS level, so all commands running inside the sandbox, including their child processes, respect them", <https://code.claude.com/docs/en/sandboxing#configure-sandboxing>; quoted there, not re-verified in this pass). **The role is read-only** (fixed point 9): it writes only by sending a `write-request`, which the `write` service runs (§3). A `--disallowedTools` bare name "removes the matching tools from Claude's context" (<https://code.claude.com/docs/en/cli-reference#cli-flags>); parses the stream and takes the final `result` line as the report: "The last line of the stream is a `result` message with the final response text, cost, and session metadata" (<https://code.claude.com/docs/en/headless#stream-responses>). `dontAsk`: "If you set `dontAsk` mode, Claude Code auto-denies every tool call that would otherwise prompt you" and "It also denies the built-in `AskUserQuestion` tool even if your allow rules match it" (<https://code.claude.com/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode>). `--permission-prompts none`: "Pass `--permission-prompts none` when nobody is available to answer permission prompts" and "Claude is told that nobody can approve the request and not to retry it" (<https://code.claude.com/docs/en/headless#turn-off-permission-prompts-in-unattended-runs>). No approval through auto mode, by construction (fixed point 8). A role's final report can be forced to a shape: "To get output conforming to a specific schema, use `--output-format json` with `--json-schema` and a JSON Schema definition" (<https://code.claude.com/docs/en/headless#get-structured-output>); the `report` envelope's `body` is that object's one summary line. `--max-budget-usd`: "Maximum dollar amount to spend on API calls before stopping (print mode only)" (<https://code.claude.com/docs/en/cli-reference#cli-flags>); **a kill switch against a runaway role, never a cost measure.** Cost here is tokens: the server reads the `result` line's `usage` and writes it to the ledger row per spawn, and `hub log --usage` shows it in units of 1u (review finding 2). Stopping a cold role is SIGINT to end the turn, then SIGTERM: "If you stop a `claude -p` run with SIGTERM, for example with `kill` or from a process supervisor, Claude Code exits with code 143" and "Claude Code then runs `SessionEnd` hooks and exits" (<https://code.claude.com/docs/en/headless#stop-a-run-with-sigterm>) | green while the process runs; red otherwise (a cold role between messages is not spawned) |
-| `warm` | a role kept alive between messages. Two mechanisms, chosen by the probe below (Decision 3) | green busy, yellow idle, red not started |
+| `warm` | a role kept alive between messages. Two mechanisms, chosen by the probe below (Decision 1) | green busy, yellow idle, red not started |
 
 **Warm roles wait for the sandbox probe** (routing-tree §13.2: "warm roles need the
 sandbox probe first (does a long-lived `claude -p` keep the sandbox across
@@ -408,7 +408,7 @@ for cold roles they would silently not run. Role hooks therefore install through
 does load: "Without `--bare`, a `-p` session runs the hooks in a project's
 `.claude/settings.json` and connects the servers in its `.mcp.json`, even in a folder
 you've never trusted" (<https://code.claude.com/docs/en/headless#start-faster-with-bare-mode>).
-Frontmatter is used only for window roles Jacob has trusted. Decision 13.
+Frontmatter is used only for window roles Jacob has trusted. Decision 8.
 
 → H0 probe; H1b cold; H5 warm.
 
@@ -496,13 +496,13 @@ What the hub exposes, and nothing more:
 |---|---|
 | `chron.py` (group-servers decision 4) | `hub up [--tree] [--foreground]`, `hub down [--tree]`, `hub status --json [--tree]` (one object per node: `name, up, port, pid, queued, held, dead_letter, children[]`), exit 0 when every node asked about is up, 1 otherwise; a pidfile in `.hub/server.json`; `GET /health`. `--foreground` is for a supervisor (launchd `KeepAlive`, or cron `@reboot` plus a watchdog, cron-scheduler's call) |
 | `init.sh` (portable-env §3.2) | `hub up --tree` as its last step before `agents.sh check`, as routing-tree §7 says |
-| the view's cron panel (§11) | `hub cron --json`: the hub shells out to `chron.py list --json` and returns `[{job, next_run, schedule, enabled}]`. This needs a `list --json` on `chron.py`; it is a request to the `cron-scheduler` agent (Risks) |
+| the view's cron panel (PLAN-hub-view.md §2) | `hub cron --json`: the hub shells out to `chron.py list --json` and returns `[{job, next_run, schedule, enabled}]`. This needs a `list --json` on `chron.py`; it is a request to the `cron-scheduler` agent (Risks) |
 
 **One change to report to `cron-scheduler`:** group-servers §3.5 has `chron.py` read
 its server list from the manifest. Under this plan the list is `hub status --json
 --tree` from the top node, because the manifest no longer knows the tree (a child
 node's children are the child's business). Gate unchanged in spirit: the servers
-`chron.py` shows == the nodes `hub status --tree` reports, both directions (Decision 7).
+`chron.py` shows == the nodes `hub status --tree` reports, both directions (Decision 5).
 
 → H1a-1 (`status --json`, `/health`), H3 (`--tree`), V2 (`hub cron`).
 
@@ -531,7 +531,7 @@ the test, never claudeTest or any repo of ours.
 | **warm probe** | the three-clause probe in §4, per mechanism; a role may be `warm` only with a `measured` date | H0, H5 |
 | **sync** | every declared source exists; every target holds its artifacts; an edit inside a block is caught; an undeclared override fails; a child cannot redefine a parent's tag; a root with no children says so | S1–S3 |
 | **registry** | schema valid; `agents.sh check` re-renders and diffs where a manifest exists; `setup` refuses to write a starter beside a manifest; the whole row runs against the root's own `hub.json` on day one | H1a-1 |
-| **view contract** | the view consumes only endpoints in `docs/API.md` (a static scan of the client source); the agent panel's three states are driven by fixtures (`/agents` says busy/idle/absent and the rendered page shows green/yellow/red); a toggled switch changes the feed; a pinned block changes when its source changes; the view never writes outside `hub-view.json` | V1–V3 |
+| **view contract** | in PLAN-hub-view.md "Gates"; the one row this plan keeps: every endpoint the view consumes is in `docs/API.md` and served (the help-equals-implemented row, applied to the client's source by a static scan) | V1–V3, there |
 | **fails open, every hook** | each installed hook copy exits 0 on malformed input and on a dead server; tested, not promised | H1a-2 |
 | **services as data** (routing-tree §14.2, §14.6) | the program contains no tool's command and no repo's path (the no-names audit extended to service names); every `repos` row names its CLI; a fixture node with a different CLI gets every service working; `check` runs only the command the row names | H1a-1 (audit), H1b (`write`), G1 (`check`, `hook`) |
 | **read-only roles** (routing-tree §13.4) | a fixture role with tools lacking Edit and Write and a sandbox allowing only the scratchpad: a Bash `echo > repo/file` inside it fails, and the same write sent as a `write-request` succeeds through the CLI, both directions; a `plan`-mode role spawned from a `bypassPermissions` window still cannot write; a `write-request` whose verb is not on the tool's declared list is refused at the server and answered, never run | H1b |
@@ -623,128 +623,13 @@ one item.
   verbs and tags in its own `services.json`, through its own check and commit; nothing
   registers at run time; a second check server or hook server is never built.
 
-## 11. The view: a terminal front end over the hub
-
-> Jacob, 2026-10-04 (quoted in the brief's absence of this section): "take an open
-> source terminal software, and add some features to it to make specifically managing
-> all these agents and tasks easier. [...] pin blocks of text to the top and bottom of
-> the terminal view. [...] a section maybe 1/5 the screen width to the right. [...] a
-> list of agents in the active directory [...] a list of the folders in that directory
-> [...] upcoming chron jobs [...] a gear icon in the top left [...] adding folders,
-> changing the directory, adding or removing tabs to the main view (which should by
-> default have a Planner agent tab, and my dispatcher agent tab). Change the icons for
-> any of the status colors."
-
-### 11.1 What it is, in the hub's terms
-
-The view is a **client**. It reads `/agents`, `/folders`, `/cron`, `/held`,
-`/dead-letter` and the `/events` stream from the current node's server, and `claude
-agents --json` for session state; it writes only `hub view` commands (`hub send`, `hub
-up`, `setup <path>`) and its own `hub-view.json`. It never spawns, never reads the
-manifest, never touches `.claude/settings.json`. That keeps it portable (any node, any
-machine), keeps the server the one source of truth, and lets the host terminal be
-swapped without rewriting the panels.
-
-The three panels and the pinned blocks are **served by the hub as small local web
-pages** (`GET /view/agents`, `/view/folders`, `/view/cron`, `/view/pin/top`,
-`/view/pin/bottom`, `/view/feed`), plain HTML and a few hundred lines of JS, updated
-over `/events`. Circles, toggles, a spinning cross and a gear are trivial in HTML and
-awkward in text cells, so this is the one implementation; the terminal host only has
-to show a local URL beside a terminal. A text-only fallback, `hub view --tui`, draws
-the same panels in the terminal for SSH and cloud sessions, from the same JSON.
-
-### 11.2 The panels
-
-**Agents panel (top third).** One row per role of the current node, from `/agents`:
-
-| glyph | state | source |
-|---|---|---|
-| green circle | working | `cold`/`warm`: the server's own process state (running); `window`: `claude agents --json` `status: busy` for the session recorded in `/sessions` |
-| yellow circle | awaiting commands | `window`/`warm`: `status: idle` or `waiting` (with `waitingFor` shown as a tooltip: `permission prompt`, `input needed`) |
-| red circle | in the registry, not spawned | the role exists in `hub.json` and no process or session is known |
-
-To the left of each circle, an **on/off switch** controlling whether that agent's events
-appear in the **feed**: the single scrolling block of one-line events the server
-emits (`spawned`, `tool: Bash`, `report: …`, `held`, `dead-letter`) for every agent
-whose switch is on. Interactive tabs (planner, dispatcher) are always available in the
-tab bar; the switch does not close a tab (Decision 2 asks Jacob to confirm this
-reading). Clicking an agent's name opens its tab: `claude attach <id>` for a warm or
-window session, `hub log --role <name>` for a cold role.
-
-**Folders panel (middle third).** One row per direct subfolder of the node root, from
-`/folders`:
-
-| glyph | state | source |
-|---|---|---|
-| white circle, green cross | a node with its server up (registered child, `/health` answering) and at least one session or process alive there | the parent's children state plus the child's `/agents` |
-| white circle, yellow cross | a node (git repo with `hub.json`) whose server is down, or up with nothing alive | same |
-| white circle, red cross | a folder managed by this node: no git repo, or a git repo with no `hub.json` | the filesystem |
-
-Clicking a folder rotates the cross to an X and shows that folder's agents in the same
-shape as the agents panel, fetched from **the child's own** `/agents`, one level at a
-time. The parent's server still stores no grandchild; the view walks the tree by
-following links. A red folder has nothing to expand; its row offers "set up as a node"
-(runs `setup <path>`, §Setup component).
-
-**Cron panel (bottom third).** The next N runs from `hub cron --json` (§7), each as
-`HH:MM  job-name  (schedule)`, with disabled jobs greyed. Read-only in V2; enable and
-disable through `chron.py` is a later request to cron-scheduler, not this plan.
-
-**Gear (top left) → settings.** Writes `hub-view.json` next to `hub.json` (gitignored,
-per machine). Keys: `node` (the root whose server the view talks to; "changing the
-directory"), `tabs` (`[{name, command, cwd}]`, default `[{Planner, "claude --agent
-planner"}, {Dispatcher, "claude"}]` run at the node root), `folders` (extra roots to
-show), `icons` (per state: glyph, colour), `pins` (§11.3), `feed.default_on`.
-"Adding a folder" runs `setup <path>` and then `hub register`; `--github` is outward
-facing and asks first. Settings never touch `.claude/settings.json`, which stays
-Jacob's.
-
-### 11.3 Pinned blocks
-
-Two blocks, above and below the terminal area, each bound to a **source**: a file
-path, a hub endpoint (`/held`, `/status`, the planner's last `## Decisions` table from
-`hub log`), or literal text; configured in `hub-view.json` and editable from the gear.
-A block re-renders when its source changes (SSE for endpoints, a file watch for files).
-The gate: a change in the source changes the block; a block whose source is missing
-shows "source missing: <path>", never stale text.
-
-### 11.4 The host terminal
-
-Three ways to put these panels beside a terminal, with what each costs. Jacob chooses
-(Decision 1); the panels are the same in all three.
-
-| host | how the view arrives | fits the request | risk |
-|---|---|---|---|
-| **A. Wave Terminal** (Apache-2.0; Go backend, Electron/React front end, <https://github.com/wavetermdev/waveterm>) | no fork at first. Wave's unit is the **block** in a per-tab layout with tabs and a right **widget sidebar** configured in `widgets.json` ("By adding a widget to this file, it is possible to add widgets to the widget bar", <https://docs.waveterm.dev/customwidgets>), and `wsh` creates and places blocks from the shell: "The run command creates a new terminal command block and executes a specified command within it", blocks can be opened magnified or placed, `wsh web` opens a URL in a web block, `wsh badge` marks a block or tab header, `wsh notify` raises a desktop notification (<https://docs.waveterm.dev/wsh-reference>). `hub view` writes a `widgets.json` entry per panel (a `web` block at the hub's URL), lays out the default tab (planner terminal, pinned `web` blocks above and below, the sidebar column), and badges a tab when its agent needs input | tabs, blocks and a configurable sidebar are native; pinned blocks are literally blocks; the gear is a widget | **docs.waveterm.dev was unreachable from this container** (egress blocked); the quotes above come from the docs' source files on GitHub and must be probed on Jacob's machine before V1 starts. Young project; layout persistence across restarts to confirm |
-| **B. Tabby** (MIT; Electron, TypeScript, xterm.js, <https://github.com/Eugeny/tabby>) | a plugin: "A plugin should only provide a default export, which should be a `NgModule` class", loaded from the user's plugins directory or `TABBY_PLUGINS` (<https://github.com/Eugeny/tabby/blob/master/HACKING.md>). The plugin adds the sidebar and pinned blocks as Angular components around the terminal tab and a settings tab for the gear; the panels are the same hub-served pages in webviews | tabs and split panes native; a mature plugin API | Angular; whether a plugin can wrap the terminal tab's DOM without a fork is unverified: probe, else fork |
-| **C. No fork: a tmux layout in the terminal Jacob already uses** | `hub view --tui` opens a tmux session: main pane (`claude --agent planner`), thin top and bottom panes (`hub pin top|bottom`), a right column of three panes (`hub panel agents|folders|cron`), one tmux window per tab. iTerm2 renders tmux panes natively (Claude Code's own `--tmux` flag "Uses iTerm2 native panes when available", <https://code.claude.com/docs/en/cli-reference#cli-flags>) | works over SSH and in a cloud session; one language; zero dependency on a host's API | glyphs not icons, no spin, no gear; panes not overlays. This is the fallback that ships with every host anyway |
-
-**Recommendation:** A, with C always present as the fallback. Wave's native concepts
-(blocks, tabs, sidebar, `wsh`) are the request's nouns, so V1 needs no fork; a fork of
-Wave is considered only when a feature cannot be reached through `widgets.json`, `wsh`
-and web blocks, and that is a decision then, not now. Rendering the panels as
-hub-served pages is what makes the host swappable: if A disappoints, B shows the same
-pages in a plugin and nothing in the hub changes.
-
-### 11.5 What the view needs from the server that nothing else does
-
-`/agents` (roles joined with process and session state), `/folders` (children state
-plus a filesystem scan of the node root, one level), `/events` (SSE of ledger rows and
-state changes), `/view/*` (the pages), `hub cron --json`. All documented in
-`docs/API.md`, all under the help-equals-implemented gate. `claude agents --json` is
-polled every 3 s while a view is attached and not at all otherwise, since it "is the
-supported way to read session state from outside Claude Code" and "The files under
-`~/.claude/jobs/<id>/` are not a stable interface"
-(<https://code.claude.com/docs/en/agent-view#read-session-state-from-a-script>).
-`Notification` hooks with the matchers "`agent_needs_input`, `agent_completed`"
-(<https://code.claude.com/docs/en/hooks#notification>)
-are installed as telemetry-only HTTP hooks posting to `/hooks/notification`, so a
-needs-input state reaches the panel at once rather than at the next poll; HTTP hooks
-fail open ("Connection failure: non-blocking error, execution continues",
-<https://code.claude.com/docs/en/hooks#http-response-handling>), which is correct for
-telemetry and is why no enforcing hook is HTTP (group-servers §2).
-
-→ V1, V2, V3.
+**The view.** The terminal front end Jacob described on 2026-10-04 (agents, folders and
+cron panels beside the window he types in, pinned blocks, tabs, a gear) is
+PLAN-hub-view.md in this repo: a client of this server's API and of `claude agents
+--json`, built after H3, with its own phases, gates, setup component and decisions
+(review finding 7). What it needs from the server and nothing else does (`/agents`,
+`/folders`, `/events`, `/view/*`, `hub cron --json`) is listed there and lands in its
+phases, under this plan's help-equals-implemented gate.
 
 ---
 
@@ -761,12 +646,13 @@ asks for by name, each pointing at its rows:
    H1a-1 and H1a-2.
 4. **A conformance fixture that is not claudeTest**: §8 "conformance", H1b and H3.
 
-Plus the direction audit (every phase), the per-branch report (H1b), and the view
-contract (V1–V3). `./dev.sh check` in this repo runs `hub check` on the fixture, the
-unit suite, the direction audit, the no-names audit and `checks run .` once
-`tools/checks` exists; until the first phase lands it stays the failing stub, and its
-first real content is the inputs check `TODO.md` already describes (SHA256SUMS, the
-brief's §2 list, the README table).
+Plus the direction audit (every phase), the per-branch report (H1b), the five rows for
+fixed points 9 and 10, and the view contract (PLAN-hub-view.md). `./dev.sh check` in
+this repo already runs the inputs check (SHA256SUMS, the brief's §2 list, the README
+table), the leak audit, the hook tests and `setup plans .` and `checks run .` where the
+sibling tools are present (UNCHECKED where they are not); H1a-1 adds `hub check` on the
+fixture, the unit suite, the direction audit and the no-names audit to the same
+command.
 
 ## Phases
 
@@ -820,12 +706,7 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
   (<https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents>). Routing-tree
   §12 planned per-class hooks in frontmatter. §4 moves role hooks to settings via `setup
   hooks`; if Jacob prefers frontmatter, each role folder must be trusted once
-  interactively, and `hub doctor` must check that it was (Decision 13).
-- **Wave's documentation could not be read from this container.** The §11 claims about
-  `widgets.json` and `wsh` come from the docs' source files on GitHub, not the rendered
-  site, and from Wave's README (license, stack, platforms). V1 starts with a one-hour
-  probe on Jacob's machine: a `web` block at `http://127.0.0.1:$HUB_PORT/view/agents`,
-  a `wsh run -m` placement, a `wsh badge`. If any fails, B or C (§11.4).
+  interactively, and `hub doctor` must check that it was (Decision 8).
 - **Two writers of `hub.json`.** Harness renders it at the top; a repo without harness
   writes it by hand. `setup` refusing to write beside a manifest, and `rendered_from`
   marking the rendered kind, keep the two apart; the gate is in §2.
@@ -834,7 +715,7 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
   (§2 `server`, `services`, `repos`, `owners`; §3 the `write` service and failure
   routing; §4 read-only roles; §8 five gate rows; §9 phase G1; the Setup component's
   contract files) from routing-tree §13–§14 and repo-setup §7.8 as decided. Two
-  readings are the pass's own and are Decisions 15 and 16: the port in the registry
+  readings are the pass's own and are Decisions 10 and 11: the port in the registry
   rather than `local.env`, and G1's place after H2.
 - **The `write` service depends on tools that are plans.** PLAN-hard-gates.md §3's
   gates on a tool's CLI, `tools/checks`' `registry-matches`, `services-valid`,
@@ -886,20 +767,15 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
 
 | # | decision (§n pointer first) | hinges on | recommend |
 |---|---|---|---|
-| 1 | §11.4: the terminal host for the view: A (Wave Terminal, no fork, hub-served panels in web blocks), B (a Tabby plugin), or C (tmux layout only) | whether the request's icons, switches and spin need a DOM, and whether Wave's `widgets.json`/`wsh` work as its docs source says on Jacob's machine (probe) | A, with C as the fallback that ships in every case |
-| 2 | §11.2: the on/off switch controls an agent's membership in the feed block, not whether its tab exists | what Jacob meant by "what I am seeing in the single terminal view" | yes |
-| 3 | §4: warm mechanism W1 (`claude --bg --agent`, supervised by Claude Code, addressed by inbox socket) over W2 (the server owns a stdin stream-json pipe) | both passing H0's three-clause probe | W1 |
-| 4 | §2: at a node with harness, `agents.sh gen` renders `hub.json` and `setup` refuses to write a starter there | accepting one more rendered file in harness, and a `harness` job beside H1a-2 | yes |
-| 5 | §1: the server attaches Jacob's prompt text as `origin_text` on `origin: jacob` envelopes and cold roles receive it; `quote-words.sh` reads `hub origin` instead of its own jq | whether the quote on roster spawns may come from the envelope rather than the Agent-tool prompt | yes |
-| 6 | §5: `hops` 8, heartbeat 30 s with two misses to `down`, `budget_per_conversation` 10, `pingpong_hold` 4 | none of these has evidence yet; they are starting values the ledger will correct | yes, as starting values |
-| 7 | §7: `chron.py` reads its server list from `hub status --json --tree` instead of the manifest (changes group-servers decision 4's data source, not its owner) | whether cron-scheduler takes the change in its next job | yes |
-| 8 | §9: the view (V1–V3) is built after H3, as review finding 7 places it, not between H1b and H2 as the first draft had it | whether seeing the agents and folders early outranks finishing the hub's routing while the cloud credits last | after H3 |
-| 9 | §11.1: the view lives in `tools/hub/view/`, same repo and CLI (`hub view`), not a separate `tools/hub-view/` | keeping the API and its only client in one commit against the cost of a larger repo | yes |
-| 10 | §3: H1b (the server spawns cold roles for `task` from the dispatcher) stays in phase 1 rather than moving to H2 | whether one phase may both relay and spawn; the fallback path stays either way | yes |
-| 11 | §11.2: red in the agents panel means "in `hub.json`, not spawned", where Jacob said "in the manifest.json"; `hub.json` is rendered from the manifest so the set is the same, and the view never opens the manifest | the fixed point that the hub reads no roster | yes |
-| 12 | §11.2: the gear's "add folder" runs `setup <path>` and asks before `--github`; "change directory" switches the node the view talks to | whether settings may run `setup` from the view | yes |
-| 13 | §4: role hooks install through `setup hooks` into settings proposals rather than agent frontmatter, because frontmatter hooks need an interactive trust grant that `-p` roles never give | whether Jacob prefers trusting each role folder once by hand | settings via `setup hooks` |
-| 14 | §9: the total, 1.4–1.9M tokens over twelve hub phases (the view costed separately), is acceptable as the hub's price before H5's savings can be measured, with about three quarters of it on the cloud credits | the cloud credit balance and the order in §9 | yes, in the order given |
-| 15 | §2: the server's port lives in the committed registry (`server.port`, rendered from the manifest's `servers.<group>` entry), not in `local.env`; a clash on a machine is a `hub check` finding | routing-tree §14.6 as settled 2026-10-05 against portable-env §1's "machine-specific location" rule; the manifest already commits ports | registry, as §14.6 says |
-| 16 | §9: G1 (the `check` and `hook` services) runs after H2 and before H3, with its site-scrapers pilot as a local follow-up | whether a `check-red` message may flow before the loop controls and the lease exist | after H2 |
-| 17 | §4: a role's read-only tool list is exactly Read, Grep, Glob and `Bash(hub send *)`, plus a test runner only where its repo's `services.json` declares one for a tester | routing-tree §13.2's list, which also names the runner; whether `Glob` is worth listing beside Grep | yes, with `Glob` |
+| 1 | §4: warm mechanism W1 (`claude --bg --agent`, supervised by Claude Code, addressed by inbox socket; restart is `claude stop` then a fresh `claude --bg`) over W2 (the server owns a stdin stream-json pipe) | both passing H0's three-clause probe, and the sandbox probe for warm roles | W1 |
+| 2 | §2: at a node with harness, `agents.sh gen` renders `hub.json` and `setup` refuses to write a starter there | accepting one more rendered file in harness, and a `harness` job beside H1a-2 | yes |
+| 3 | §1: the server attaches Jacob's prompt text as `origin_text` on `origin: jacob` envelopes and cold roles receive it; `quote-words.sh` reads `hub origin` instead of its own jq | whether the quote on roster spawns may come from the envelope rather than the Agent-tool prompt | yes |
+| 4 | §5: `hops` 8, heartbeat 30 s with two misses to `down`, `budget_per_conversation` 10, `pingpong_hold` 4 | none of these has evidence yet; they are starting values the ledger will correct | yes, as starting values |
+| 5 | §7: `chron.py` reads its server list from `hub status --json --tree` instead of the manifest (changes group-servers decision 4's data source, not its owner) | whether cron-scheduler takes the change in its next job | yes |
+| 6 | §9: the view (PLAN-hub-view.md) is built after H3, as review finding 7 places it, not between H1b and H2 as the first draft had it | whether seeing the agents and folders early outranks finishing the hub's routing while the cloud credits last | after H3 |
+| 7 | §3: H1b (the server spawns cold roles for `task` from the dispatcher, and runs their writes through `write`) stays in phase 1 rather than moving to H2 | whether one phase may both relay and spawn; the fallback path stays either way | yes |
+| 8 | §4: role hooks install through `setup hooks` into settings proposals rather than agent frontmatter, because frontmatter hooks need an interactive trust grant that `-p` roles never give | whether Jacob prefers trusting each role folder once by hand | settings via `setup hooks` |
+| 9 | §9: the total, 1.4–1.9M tokens over twelve hub phases (the view costed separately), is acceptable as the hub's price before H5's savings can be measured, with about three quarters of it on the cloud credits | the cloud credit balance and the order in §9 | yes, in the order given |
+| 10 | §2: the server's port lives in the committed registry (`server.port`, rendered from the manifest's `servers.<group>` entry), not in `local.env`; a clash on a machine is a `hub check` finding | routing-tree §14.6 as settled 2026-10-05 against portable-env §1's "machine-specific location" rule; the manifest already commits ports | registry, as §14.6 says |
+| 11 | §9: G1 (the `check` and `hook` services) runs after H2 and before H3, with its site-scrapers pilot as a local follow-up | whether a `check-red` message may flow before the loop controls and the lease exist | after H2 |
+| 12 | §4: a role's read-only tool list is exactly Read, Grep, Glob and `Bash(hub send *)`, plus a test runner only where its repo's `services.json` declares one for a tester | routing-tree §13.2's list, which also names the runner; whether `Glob` is worth listing beside Grep | yes, with `Glob` |
