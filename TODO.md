@@ -172,6 +172,21 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   and Decisions 10–11 flag the two readings that are the pass's own (the port in the
   committed registry; G1 after H2). Hinges on the planner's re-read of
   PLAN-hub.md §2–§4, §8–§9 against routing-tree §13–§14 before `plan/hub` merges.
+  **Jacob, 2026-10-05, on the pass's seven questions:** (1) the placement waits for
+  the planner's re-read; (2) the port in the registry: "I believe so", confirm with the
+  planner; (3) G1's place after H2: explained, planner to confirm; (4) the view's
+  switch controls feed membership: yes (PLAN-hub-view.md Decision 2); (5) the terminal
+  host: explained, open (PLAN-hub-view.md Decision 1); (6) the owed reports below wait
+  for the planner's re-read; (7) the read-only tool list: "I think so", with the
+  question below.
+- **How a coder's code change travels as a `write-request`** (cloud, 2026-10-05,
+  raised to Jacob on question 7): routing-tree §13.5 makes a coder's writes
+  write-requests the server honours for its own repo, and PLAN-hub.md §3 and §4 follow
+  it, but no plan names the verb that carries a source edit. A read-only role cannot run
+  Edit, Write or any repo command itself, so even a repo's read commands must be
+  declared verbs. One shape: the coder writes a patch to its scratchpad and requests
+  `git apply` through `write`; the server applies it, runs the repo's check and commits
+  with the `Agent:` trailer. The planner's call; not written into the plan.
 
 ## Own limits, known
 
