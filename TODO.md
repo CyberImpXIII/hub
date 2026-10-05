@@ -2,13 +2,13 @@
 
 ## Own bugs
 
-- **`./dev.sh check` is red on `hooks-installed`, not by anything here** (hub,
-  2026-10-04): mid-session, `tools/hooks` gained an uncommitted edit to
-  `source/hooks/test-no-inline-blobs.sh` (+71 lines of cases), and `./hooks copies`
-  then reported all 14 copies of that file as DRIFT, this one included. The other six
-  gates were green in the same run. When tools/hooks commits it, reinstall this copy
-  (re-run `../setup/setup .`, or the reinstall the hooks owner names) and re-run the
-  check. Not reinstalled from an uncommitted source on purpose.
+- **Hook copies are reinstalled by hand-copying, because setup has no replace path**
+  (hub, 2026-10-04): `setup . --dry-run` reports a drifted hook as `drift ... (not
+  overwritten)` and nothing more. So after tools/hooks 0ddb31d, the six
+  `.claude/hooks/` files were copied byte for byte from `tools/hooks/source/hooks/`
+  (`cmp` equal, mode kept). That includes `prefer-recipes.sh`, which `hooks copies`
+  did not flag because it differed only in its header. The next source change needs
+  the same copy until setup gains an update mode (tools/setup's call).
 - **The leak audit's terms are three shapes** (email, home-folder path, phone); the
   credential half is tools/checks `no-secrets`. Names of people and of private repos
   are not caught: `claudeTest-CLAUDE.md` names private repos, as it did in the first
