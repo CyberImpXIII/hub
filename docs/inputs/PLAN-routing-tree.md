@@ -519,9 +519,9 @@ Jacob: "I want to be sure I understand EXACTLY what you mean, so please elaborat
 *The process.* `hub up` starts **one** server process for this node (the claudeTest top;
 later one more for site-scrapers when it becomes a child node, §10 phase 3). It listens
 on a localhost port or a Unix socket named in `.claude/local.env`. It is configured by
-two data files and nothing else: the node's **registry** (roles with their `claude -p`
+one data file and nothing else: the node's **registry** (roles with their `claude -p`
 arguments, tags, children, the four services with the CLI each one runs, the owner
-table of §14.7) and the manifest's `servers.<group>` entry. It contains no tool's
+table of §14.7, and the server's own port and keep-alive, which harness's `gen` renders into the registry from the manifest's `servers.<group>` entry: the hub never opens the manifest, PLAN-hub-brief.md §3 fixed point 2). It contains no tool's
 command and no repo's path (PLAN-group-servers.md §1a's audit). No model runs inside
 it, ever.
 
@@ -581,9 +581,9 @@ over the message's `ref`:
 
 *Worked examples, from this week.* Last night's relay: the stamp did not happen, so
 kind `delivery`, owner `harness`; it would have reached harness's queue as a message
-instead of being found by the planner in a transcript. The hub brief's duplicate item
-number (2026-10-04 22:10): a `bug-report` from the planner with `ref` tools/hub, rule 2,
-straight to hub; today it went planner to dispatcher to hub by `SendMessage`, and
+instead of being found by the planner in a transcript. The planner's false report of a duplicate item
+number in the hub brief (2026-10-04 22:10; two lists, one "9." each, read as one list): a `bug-report` with `ref` tools/hub, rule 2,
+straight to hub, which would have answered "no such defect" to the planner by the same path; today it went planner to dispatcher to hub by `SendMessage`, and
 `peer-cap.sh` held the second hop because two windows were talking. A red
 `hooks-installed` in tools/todo: `check-red`, owner `tools/todo`. `hooks-installed`
 raising on a malformed `settings.json`: `check-broken`, owner `tools/checks`.

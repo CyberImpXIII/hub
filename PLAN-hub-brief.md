@@ -97,9 +97,9 @@ live at the top of the claudeTest folder, which is not a git repo.
     - **Stores stay the truth** (§14.1). The server's only store is the ledger of what
       moved; it reads a tool's facts through that tool's CLI and keeps no copy of them.
     - **One process, four services** (§14.6, decision 36). `hub up` starts one server
-      per node, configured by data only; no model runs in it and its code holds no
-      tool's command and no repo's path. Its services are `route`, `check`, `hook` and
-      `write`, each a registry row naming the CLI it runs. There is no separate check
+      per node, configured by one data file, the registry; no model runs in it and its
+      code holds no tool's command and no repo's path. Its services are `route`,
+      `check`, `hook` and `write`, each a registry row naming the CLI it runs. There is no separate check
       server or hook server: PLAN-group-servers.md's per-group server *is* `check` and
       `hook` (its `/touched`, `/stop` and `/audit` become `check` requests). Every hook
       that blocks stays a command hook and may ask `hook` only for context, with a
@@ -130,11 +130,11 @@ live at the top of the claudeTest folder, which is not a git repo.
       `services-valid`, `registry-matches`) are tools/checks items: the plan depends on
       them and does not build them.
 
-    This widens fixed point 2's registry by `services` and `owners`. **Not fixed**, so a
-    row in the plan's Decisions table: §14.6 names "the manifest's `servers.<group>`
-    entry" as the server's second input, and fixed point 2 forbids the hub to open the
-    manifest; the plan says how the two meet (for instance, harness renders that entry
-    into the registry as it renders roles) and who writes which part of the registry.
+    This widens fixed point 2's registry by `services`, `owners` and the server's own
+    port and keep-alive. The registry is the server's one input (§14.6, settled by the
+    planner 2026-10-05): harness's `gen` renders the manifest's `servers.<group>` entry
+    into it as it renders roles, so fixed point 2 stands and the hub never opens the
+    manifest. The plan says who writes which part of the registry.
 
 ## 4. What the plan must settle
 
@@ -147,7 +147,7 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
    `agent-watch.sh`, `quote-words.sh`. PLAN-tools-folder.md §7 says row D is the hub and
    the ledger stays until the hub exists; confirm or correct with reasons.
 2. **The registry file.** Its schema (fixed point 2's roles, tags, children, parent and
-   mode, and fixed point 10's `services` and `owners`), who writes each part at a node
+   mode, and fixed point 10's `services`, `owners`, port and keep-alive), who writes each part at a node
    with harness and at one without, and the gates that it matches the manifest and every
    repo's `services.json` where they exist.
 3. **The first node.** Routing-tree phase 1 with today's folder agents as addresses:

@@ -26,6 +26,12 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   for owners, fixed point 10 is new, its §2 row says §11-§14 are decided, and it reads
   `PLAN-repo-setup.md` §7.8 too. `PLAN-agent-groups.md` (§10) and
   `PLAN-repo-setup.md` (§7) had also drifted and came along.
+- **Refreshed 2026-10-05 (later)** for the planner's settlement of §14.6:
+  `PLAN-routing-tree.md` §14.6 now makes the registry the server's one input, with
+  harness's `gen` rendering the manifest's `servers.<group>` entry (port, keep-alive)
+  into it, so brief fixed point 2 stands; §14.7's worked example no longer reports a
+  duplicate item 9. The brief's fixed point 10 (and §4 item 2) were edited at the
+  top-level original to match and lose their "Not fixed" paragraph. Nothing else drifted.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

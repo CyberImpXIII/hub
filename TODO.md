@@ -32,14 +32,6 @@
   copy direction should flip for the brief (this repo the original); the planner's
   and Jacob's call, since the top level is the planner's.
 
-- **§14.6 names the manifest as a server input; fixed point 2 forbids the hub to open
-  it** (2026-10-05). routing-tree §14.6: the server is "configured by two data files":
-  the registry and "the manifest's `servers.<group>` entry". Brief fixed point 2: nothing
-  under `tools/hub/` opens the manifest. The brief now leaves this to the plan's
-  Decisions table (fixed point 10, "Not fixed") rather than guessing. Hinges on whether
-  harness renders `servers.<group>` into the registry; the planner's and Jacob's call.
-  Reported to the planner (below).
-
 ## Own limits, known
 
 - **The numbering gate reads column-0 items only** (`hubcheck.py brief_numbering`,
@@ -75,13 +67,5 @@
   3) is in no input; only the resumed session's transcript has it.
 - **dispatcher** (2026-10-04): the top-level `CLAUDE.md` tools row for `tools/hub/`
   still says its `./dev.sh check` is setup's stub; it is a real check now.
-- **planner** (via the dispatcher, 2026-10-05): routing-tree §14.6 lists "the
-  manifest's `servers.<group>` entry" as the hub's second config file, against brief
-  fixed point 2 ("nothing under `tools/hub/` opens the manifest"). Expected: §14.6 says
-  the entry reaches the hub rendered into the registry, or fixed point 2 is amended.
-  Also: the 2026-10-05 dispatch asked to renumber "the duplicate item 9 in §3"; no
-  version of the brief in this repo (27d1a37..3f1bc95) nor the top-level original had
-  one, so nothing was renumbered; §14.7's worked example may describe an uncommitted
-  state. A numbering gate now catches it.
 - None other open. (The setup `.gitignore` report was fixed in tools/setup 7336f9f and
   applied here 2026-10-04.)
