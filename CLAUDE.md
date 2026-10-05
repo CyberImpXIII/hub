@@ -7,8 +7,9 @@ whose output is `PLAN-hub.md`.
 | doing this | use |
 |---|---|
 | the task, its fixed points and its output contract | `PLAN-hub-brief.md` |
-| the brief's inputs (copies, 2026-10-04) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
-| before committing | `./dev.sh check` (a stub that fails until the owner fills in the contract) |
+| the brief's inputs and the review's fix-pass inputs (copies, refreshed 2026-10-04) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
+| before committing | `./dev.sh check`: unit tests, hook tests, required files, the inputs against `SHA256SUMS`, the leak audit, `setup plans .`, `checks run .`; a missing sibling tool is UNCHECKED, never ok |
+| copies against their originals | `./dev.sh drift`; `./dev.sh refresh` re-copies them (leak audit first) and rewrites `SHA256SUMS` |
 | what is open | `TODO.md` |
 
 <!-- shared:rules@7867132c3871 -->

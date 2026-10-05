@@ -139,3 +139,62 @@ Nothing per repo. The flag, `agents.sh cloud` and the guard are top-level and be
 component installs: a clone that bootstraps and runs its check from nothing on a machine
 that is not this one. A repo that passes portable-env is cloud-ready; this plan adds no
 file to it.
+
+## 8. Greenfield planning goes to the cloud: the rule, and conditional offloading
+
+> **Jacob, 2026-10-04 (planner window):** "I'd also like to setup rules with you and
+> the dispatcher that sets up greenfield projects so that the planning stage can be
+> done with cloud agents, as my current promotional balance for cloud only usage
+> credits has gone up." And: "This might be good as a todo for... maybe harness? So
+> that we can have conditional offloading of certain work."
+
+**The rule.** A *greenfield* project is a new tool with no repo and no local state yet.
+Its **planning stage is cloud work by default** while the cloud-only credits last
+(Jacob says when they are out). The hub plan on 2026-10-04 is the worked example, and
+its steps are the procedure:
+
+1. **The planner writes `PLAN-<x>-brief.md`**, shaped like PLAN-hub-brief.md: the task
+   in one paragraph; the inputs in reading order, each a file and the sections that
+   matter; the fixed points not open for re-decision; the questions the plan must
+   settle; the output contract (file, branch, status header, Gates, Phases with token
+   costs, Decisions table, done criteria). The brief is the only thing the cloud
+   session reads first, so what it omits is decided wrong.
+2. **The dispatcher runs `setup tools/<x> --github`** (public, as Jacob said of hub),
+   copies the brief and every input file into `docs/inputs/` with `SHA256SUMS`, commits
+   and pushes. Running setup and copying files is tool use, the dispatcher's own; no
+   roster agent is needed. The top-level `CLAUDE.md` goes in as `claudeTest-CLAUDE.md`
+   so the clone's own `CLAUDE.md` stays the tool's.
+3. **Jacob starts the cloud session** on the repo, pointed at the brief. Never from a
+   spawn: a spawn with `isolation: remote` ran locally and billed ordinary usage
+   (TODO.md, "Confirmed"), so the only path that reaches the credits is the one Jacob
+   starts himself, and phase 1 of §5 is still what proves which one that is.
+4. **The plan comes back as `PLAN-<x>.md` on branch `plan/<x>`.** The dispatcher
+   fetches it; the planner reviews it against the brief's fixed points and puts its
+   decisions in a table; Jacob decides. Only then does building start.
+5. **Building stays local** unless §3 says the cloud is fine for that work: a new tool
+   with offline tests is §3's first row, so a greenfield build may follow its plan to
+   the cloud once the §5 phase-1 probe has shown the repo's hooks fire there.
+
+**Conditional offloading, the predicate behind the rule.** Work is cloud-eligible when
+every one of these holds, and §3 is this predicate applied to today's roster:
+
+- every input is in a public-safe repo or can be copied into one: no secrets, no local
+  database, no captured handoff values, nothing from `.claude/`;
+- the output is a document or a commit on a branch, nothing that has to land in local
+  state by hand;
+- it drives no browser against a job site, no Gmail, no crontab;
+- the credit balance has not been reported out by Jacob.
+
+**The harness item**, interim until the hub routes: `agents.sh offload <PLAN-x.md>`
+reads the plan's `Owner` and inputs, applies the predicate, and prints `cloud-eligible:
+yes` or `no, because <the failing clause>`, with the brief's required sections it finds
+missing. A test fixes the answer for each §3 row and for a plan that names
+`site-scrapers/data/`. The hub later carries the same predicate as a routing rule
+(PLAN-routing-tree.md §3), which is why it is written as a predicate and not as a
+list of names. ~25k tokens, harness, after the resumable check and the hub entry.
+
+**What the planner and dispatcher do differently from today:** the planner, asked for a
+new tool, writes the brief instead of the plan and says so; the dispatcher, handed a
+brief, runs step 2 without a roster spawn and hands Jacob the one command for step 3.
+Both rules go in the top-level `CLAUDE.md` "Two windows" section (the dispatcher's
+edit) once Jacob approves below.

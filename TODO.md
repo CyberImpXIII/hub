@@ -2,18 +2,17 @@
 
 ## Own bugs
 
-- **`./dev.sh check` is still the setup stub** (deep-work, 2026-10-04): it fails by
-  design until the hub is built. The one seam this repo has today, `docs/inputs/`
-  against `docs/inputs/SHA256SUMS` and against the brief's §2 list, is checked only by
-  hand (`shasum -a 256 -c docs/inputs/SHA256SUMS`, 13 OK on 2026-10-04 after the
-  second copy). The first real `check` should run that, plus "every file the brief's
-  §2 names is present" and "the README's table lists exactly the files in SHA256SUMS".
-- **`docs/inputs/claudeTest-CLAUDE.md` is behind its original** (deep-work,
-  2026-10-04): the top-level `CLAUDE.md` changed after the copy, two lines, both repo
-  lists (tools/setup's origin now exists; addon-bench and setup named in the git
-  section). None of the sections the brief's §2 cites changed, so the snapshot was
-  kept. Refresh it, and its SHA256SUMS line, if those sections change before the
-  cloud session runs. Probe: `diff docs/inputs/claudeTest-CLAUDE.md ../../CLAUDE.md`.
+- **Hook copies are reinstalled by hand-copying, because setup has no replace path**
+  (hub, 2026-10-04): `setup . --dry-run` reports a drifted hook as `drift ... (not
+  overwritten)` and nothing more. So after tools/hooks 0ddb31d, the six
+  `.claude/hooks/` files were copied byte for byte from `tools/hooks/source/hooks/`
+  (`cmp` equal, mode kept). That includes `prefer-recipes.sh`, which `hooks copies`
+  did not flag because it differed only in its header. The next source change needs
+  the same copy until setup gains an update mode (tools/setup's call).
+- **The leak audit's terms are three shapes** (email, home-folder path, phone); the
+  credential half is tools/checks `no-secrets`. Names of people and of private repos
+  are not caught: `claudeTest-CLAUDE.md` names private repos, as it did in the first
+  copy. Unconfirmed whether that matters for a public repo; Jacob's call if it does.
 
 ## Open decisions
 
@@ -21,19 +20,52 @@
   installed but not registered, so they do not fire here, in a local session or a
   cloud one. setup wrote `.claude/settings.proposed.json` (untracked); applying it is
   `cp .claude/settings.proposed.json .claude/settings.json`.
+- **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
+  never a fail: the copies are snapshots, and a top-level plan edit must not block a
+  hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
+
+- **Where the brief is edited.** routing-tree §13.5 says hub owns the brief, but
+  `docs/inputs/README.md` makes the top-level `PLAN-hub-brief.md` its original, and
+  `./dev.sh refresh` copies the original over `PLAN-hub-brief.md` here. So fixed point
+  9 (2026-10-04) was written at the top-level original and refreshed in; an edit made
+  only to this repo's copy would be undone by the next refresh. Hinges on whether the
+  copy direction should flip for the brief (this repo the original); the planner's
+  and Jacob's call, since the top level is the planner's.
+
+## Own limits, known
+
+- **The numbering gate reads column-0 items only** (`hubcheck.py brief_numbering`,
+  2026-10-05): each must be previous + 1 or 1 (a new list). Not seen: a duplicate in a
+  nested (indented) list, or a second list that restarts at 1 where a continuation was
+  meant. The ok line prints the item count (20 on 2026-10-05).
+
+- **The brief-pointer gate checks that a target exists, not what it says**
+  (`hubcheck.py brief_pointers`, 2026-10-04): `§N` in the §2 table and `<plan> §N`
+  in the text must be a `## N.` heading in the copy. Not checked: that fixed point 9
+  says what routing-tree §13 decided (meaning, by reading only), `§N.M` subsections,
+  bare `§N` without a plan name, and a pointer split across a line break. The ok line
+  prints how many it checked (49 on 2026-10-04), so a regex that stops matching shows
+  as a drop, not a pass.
 
 ## Unconfirmed suspicions
 
-- **The cloud session may lack inputs it needs** (deep-work, 2026-10-04):
-  `PLAN-repo-setup.md` and `PLAN-portable-env.md` were added to the brief's §2 and
-  copied (second commit, same day). Still cited but not listed or copied:
-  `PLAN-context-hygiene.md` (6 mentions), `PLAN-knowledge-base.md` (4),
-  `PLAN-applications.md` (1). Probe: whether `PLAN-hub.md` comes back with open
-  pointers to them.
+- **The fix pass may not see the new inputs** (hub, 2026-10-04): they are on `main`,
+  and PLAN-hub-review.md §4a tells the cloud session to work on `plan/hub`, branched
+  before them, and does not mention `main`. docs/inputs/README.md says to read them
+  with `git show origin/main:docs/inputs/<file>`, but the cloud session reads the
+  prompt first. Probe: whether the fix pass's commits cite PLAN-usage-reporting.md §3
+  and PLAN-hard-gates.md §2. Reported to the planner (below).
+- **`TODO.md` will conflict when `plan/hub` merges into `main`**: §4a step 4 has the
+  cloud session write this file on `plan/hub`. Probe: `git merge-tree` of the two
+  heads after the fix pass.
 
 ## Reported to other owners
 
-- **setup** (via the dispatcher, 2026-10-04): it leaves `.claude/settings.proposed.json`
-  untracked with no `.gitignore` entry, so a new repo never reads clean and a
-  `git add -A` would commit the proposal; and it writes no `.gitignore` at all, though
-  this repo's plan (routing-tree §7) puts a token in `local.env`.
+- **planner** (via the dispatcher, 2026-10-04): PLAN-hub-review.md §4a's prompt should
+  say "read `docs/inputs/` from `origin/main`" (or `main` be merged into `plan/hub`
+  first), and should expect the TODO.md conflict above. Jacob's view message (§4a step
+  3) is in no input; only the resumed session's transcript has it.
+- **dispatcher** (2026-10-04): the top-level `CLAUDE.md` tools row for `tools/hub/`
+  still says its `./dev.sh check` is setup's stub; it is a real check now.
+- None other open. (The setup `.gitignore` report was fixed in tools/setup 7336f9f and
+  applied here 2026-10-04.)

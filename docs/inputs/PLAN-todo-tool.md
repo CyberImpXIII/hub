@@ -57,6 +57,43 @@ tool does by itself (§3).
   Kinds and statuses are a vocabulary in one file the parser, the renderer, the docs
   and the tests all read.
 
+## 2a. History: done items leave the store, never the record
+
+> **Jacob, 2026-10-04:** "I'd also like to add a history to the todo. This way we can
+> have historical data loaded when necessary for checks, but as tasks fall away we can
+> keep the main todo trim."
+
+- **Two files per repo:** `todo.json` holds open items only; `todo-history.json` holds
+  every item that reached `done`, with its closing fields (`done` date, `resolution`,
+  and the evidence it carried). `todo done ID` moves the item across in one write; the
+  item's id, `added` date and every field it had come with it, so nothing is lost by
+  closing. `TODO.md` renders the store alone, which is what keeps it trim.
+- **History is append-only.** An id that has entered history is never removed or
+  reused; `todo done` on an id already in history is refused. Editing a history
+  entry is not a command.
+- **Checks read it when they need the past:**
+  - `todo check` pairs a `reported_to` against the counterpart's store *and* history,
+    so a report the owner already closed is not re-reported (the CLAUDE.md rule "so the
+    next session doesn't report it again" becomes a lookup);
+  - the migration check in §6 phase 3 counts closed items too, so a repo whose TODO.md
+    shrank because items were done is distinguished from one that lost them;
+  - a `suspicion` that was settled stays findable with its probe and outcome.
+- **`todo history [ID | --since DATE | --repo R | --kind K | --grep TEXT]`** prints the
+  matching closed items, newest first, with their resolution; without arguments the
+  last ten. `todo show ID` falls through to history when the id is closed, and says so.
+- **`todo import TODO.md`** sends bullets marked DONE (today's "DONE 2026-10-03: ..."
+  form) to history with the date in the bullet, and everything else to the store, so
+  the existing files convert without a second pass.
+- **`todo render --history`** writes `TODO-HISTORY.md` read-only for a human to read;
+  it is never required and never checked, since the data file is the record.
+
+**Gates for §2a** (added to §5): an id appears in exactly one of the two files, and
+every id ever written to history is still there (an audit against the git log of the
+file); `done` then `history ID` round-trips every field; `import` of a fixture with
+DONE bullets puts them in history with the right dates and leaves the store trim;
+the pairing check finds a counterpart in history, with a fixture where the owner has
+already closed the report.
+
 ## 3. Commands
 
 ```
@@ -66,6 +103,8 @@ todo report ID --to <repo>               marks it reported; creates the counterp
 todo list [--kind ..] [--status ..] [--repo ..] [--mine]
 todo show ID                             todo render [--all]      todo tree [ID]
 todo check                               todo import TODO.md      todo repos
+todo history [ID | --since D | --repo R | --kind K | --grep T]   closed items, newest first (§2a)
+todo render --history                    TODO-HISTORY.md, read-only, never checked
 todo ready [--repo ..] [--work ..]       open items with repo, work and done_when set: dispatchable at a glance
 todo brief ID                            the item as a dispatch brief: what, why (evidence), files, done_when
 ```
@@ -115,6 +154,9 @@ todo brief ID                            the item as a dispatch brief: what, why
   real files.
 - **Direction audit:** no file in `todo/` reads `.claude/` or names a roster agent.
 - **Documented == implemented:** the §3 command list against the parser, both ways.
+- **History (§2a):** one file per id, history append-only against its own git log,
+  `done` round-trips every field, DONE bullets import to history, pairing finds a
+  closed counterpart.
 - **One pre-commit command,** `./dev.sh check`, from the first commit.
 
 ## 6. Phases
@@ -188,3 +230,9 @@ is at zero drift only if it has a `todo.json`, its `TODO.md` is the render of it
 5. **Order against addon-bench:** *Jacob:* "parallel unless there is a reason one
    should come first." None: they share no files and no owner. **Decided: parallel.**
    Todo's own start waits on setup (decision 1), not on addon-bench.
+
+**td-1, answered by Jacob 2026-10-04 (planner window):** "Yeah I think we can make an
+exception or maybe a special case such as 'done-depricated'." So: an imported DONE
+bullet with no resolution gets the resolution value `done-deprecated` (spelled so in
+the vocabulary), set by the import, shown as such, and the §5 red stays for every
+other closed item. The todo agent builds it with its gate and a mutant.

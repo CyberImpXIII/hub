@@ -27,7 +27,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 |---|---|---|
 | this file | all | the task, the fixed points, the output contract |
 | `CLAUDE.md` (top level) | "How work is split here", "Gate the seams", "Make the wrong thing impossible", "Constraints that don't bend" | the house rules every plan here obeys |
-| `PLAN-routing-tree.md` | all, §11 and §12 are decided | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12) |
+| `PLAN-routing-tree.md` | all; §11, §12, §13 and §14 are decided | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10) |
 | `PLAN-tools-folder.md` | §1, §3 (hub row), §4, §7, §8 | the criterion, the order, what harness irreducibly is (§7), the `applies_to` declaration shared by hooks and checks |
 | `PLAN-auto-relay.md` | §3–§4, §7, §9 | what the first node's inbox already does; the hub must keep every behaviour there |
 | `PLAN-question-routing.md` | §2, §4, §9 | the question kinds and the two arbiters; the hub routes these |
@@ -36,7 +36,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 | `PLAN-todo-tool.md` | §2, §4 | the worked example of "the tool carries facts about the work; harness resolves the agent" |
 | `PLAN-interim-rules.md` | §5 | rules that hold until the hub exists, which the plan retires one by one |
 | `PLAN-cloud-offload.md` | §3 | what may run in the cloud; the hub's tests must be offline |
-| `PLAN-repo-setup.md` | §1, §2 | the setup directive every plan obeys (§5 below cites it) and what `setup` installs |
+| `PLAN-repo-setup.md` | §1, §2, §7.8 | the setup directive every plan obeys (§5 below cites it), what `setup` installs, and who owns the files it renders (fixed point 10) |
 | `PLAN-portable-env.md` | §1–§3 | no hardcoded paths, owner or accounts; `local.env` and `init.sh`, which the hub token and keep-alive use |
 
 The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
@@ -74,6 +74,67 @@ live at the top of the claudeTest folder, which is not a git repo.
    `init` into `local.env` and is never in a commit.
 8. **No approval through auto mode.** Headless roles run in `dontAsk` with declared
    tools (routing-tree §5, cited).
+9. **Roles are read-only; the server runs the writes, and a failed send is a routed
+   message** (routing-tree §13, decision 31, Jacob 2026-10-04: "I think so yes, its
+   not hard to determine quickly what the necessary gates are if routing falls back
+   quickly"). A role keeps `dontAsk`, a `tools` list without Edit and Write, and a
+   sandbox whose writable set is its scratchpad only (the §13.2 table, cited there). It
+   writes by sending a `write-request`; the node's server runs that tool's gated CLI and
+   answers with the CLI's own result as a `report`, and a verb not on the tool's declared
+   list is refused, never run. A failure the server detects becomes a tagged message
+   routed by §3 like any other, to the agent in charge of the failing seam and to the
+   dispatcher when no rule names one; dead-letter is where it rests, not where it ends.
+   Only "the server is down" is left to the sender's command hook. The plan places the
+   §13.4 gates with their parts; it must not give a role a write path of its own, let
+   the stamp depend on the receiving window, or end a failure as a log line. Cold roles
+   get this at phase 1; warm roles wait for the sandbox probe in §13.2. Which owner a
+   failure goes to is fixed point 10's owner table (decision 32, answered by §14.4 and
+   §14.7), never the sender's or the dispatcher's judgment.
+10. **One server per node with four services declared as data, an owner per seam kind,
+    and the agent last** (routing-tree §14, all decided by Jacob: 37 and 36 on
+    2026-10-04, 38 and §14.8 on 2026-10-05; the decisions paragraph closing §14.5). The
+    plan places these; it does not reopen them.
+    - **Stores stay the truth** (§14.1). The server's only store is the ledger of what
+      moved; it reads a tool's facts through that tool's CLI and keeps no copy of them.
+    - **One process, four services** (§14.6, decision 36). `hub up` starts one server
+      per node, configured by one data file, the registry; no model runs in it and its
+      code holds no tool's command and no repo's path. Its services are `route`,
+      `check`, `hook` and `write`, each a registry row naming the CLI it runs. There is no separate check
+      server or hook server: PLAN-group-servers.md's per-group server *is* `check` and
+      `hook` (its `/touched`, `/stop` and `/audit` become `check` requests). Every hook
+      that blocks stays a command hook and may ask `hook` only for context, with a
+      short timeout. With the server down the system degrades to today's (command hooks
+      block, the dispatcher spawns, `dev.sh check` runs by hand, the Dispatch section
+      uses the inbox socket). Build order: routing-tree phase 1 builds `route` and
+      `write` for cold roles; `check` and `hook` arrive in PLAN-group-servers.md phase 1,
+      on site-scrapers.
+    - **The agent is last** (§14.3, decision 37). Validate, run the gate, route by the
+      registry; a model turn is spent only after those, and `hub status` counts model
+      turns by the step that caused them.
+    - **An owner per seam kind** (§14.7, decision 38). The registry's `owners` table is
+      keyed by a seam-kind enum in the message vocabulary (`delivery`, `lease`,
+      `check-broken`, `check-red`, `hook-broken`, `hook-block`, `tool-result`, and
+      `bug-report`, the one kind a role sets). The server sets a failure's kind from
+      where it detected it, never the sender. A kind with no row goes to the dispatcher,
+      logged `routed_by: dispatcher`, and the same re-route 3 times proposes the row
+      through `routes accept`. Kinds and owner keys are gated both ways, with the §14.7
+      fixtures.
+    - **Services are declared ahead of time, never registered at run time** (§14.8).
+      Each repo's own `services.json` declares its check command, its CLI, the verbs
+      `write` may run and the tags it owns; the node's registry is their union, read at
+      start and on `hub reload`, and kept equal to them by the `registry-matches` check.
+      `setup` installs the contract (`services.json`, `cli.json`, a
+      `registry.proposed.json` row), then runs `checks run .` itself as its last step,
+      sequentially, never concurrently. Who owns the rendered files is
+      PLAN-repo-setup.md §7.8. The contract checks (`check-json`, `accessor`,
+      `services-valid`, `registry-matches`) are tools/checks items: the plan depends on
+      them and does not build them.
+
+    This widens fixed point 2's registry by `services`, `owners` and the server's own
+    port and keep-alive. The registry is the server's one input (§14.6, settled by the
+    planner 2026-10-05): harness's `gen` renders the manifest's `servers.<group>` entry
+    into it as it renders roles, so fixed point 2 stands and the hub never opens the
+    manifest. The plan says who writes which part of the registry.
 
 ## 4. What the plan must settle
 
@@ -85,8 +146,10 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
    kinds, `dispatch-section.sh`, `relay-gate.sh`, the relay and dispatch ledgers,
    `agent-watch.sh`, `quote-words.sh`. PLAN-tools-folder.md §7 says row D is the hub and
    the ledger stays until the hub exists; confirm or correct with reasons.
-2. **The registry file.** Its schema, who writes it at a node with harness and at one
-   without, and the gate that it matches the manifest where both exist.
+2. **The registry file.** Its schema (fixed point 2's roles, tags, children, parent and
+   mode, and fixed point 10's `services`, `owners`, port and keep-alive), who writes each part at a node
+   with harness and at one without, and the gates that it matches the manifest and every
+   repo's `services.json` where they exist.
 3. **The first node.** Routing-tree phase 1 with today's folder agents as addresses:
    what `hub up` does on the first day at the top level, how the planner's Dispatch
    section reaches it instead of the dispatcher's socket, and how the dispatcher stays
@@ -131,3 +194,8 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 **Done when:** the file exists on a branch named `plan/hub`, answers all ten questions,
 has the four closing sections, and every platform claim has a URL. Nothing else in the
 repo is changed.
+
+## 6. Setup component
+
+None in the brief itself: a brief installs nothing. The plan it produces carries the
+component (PLAN-hub.md "Setup component", reviewed in PLAN-hub-review.md).
