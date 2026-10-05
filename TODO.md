@@ -2,13 +2,19 @@
 
 ## Own bugs
 
-- **Hook copies are reinstalled by hand-copying, because setup has no replace path**
-  (hub, 2026-10-04): `setup . --dry-run` reports a drifted hook as `drift ... (not
-  overwritten)` and nothing more. So after tools/hooks 0ddb31d, the six
-  `.claude/hooks/` files were copied byte for byte from `tools/hooks/source/hooks/`
-  (`cmp` equal, mode kept). That includes `prefer-recipes.sh`, which `hooks copies`
-  did not flag because it differed only in its header. The next source change needs
-  the same copy until setup gains an update mode (tools/setup's call).
+- **Three hook copies are `drift`, left byte-unchanged by setup** (hub, 2026-10-05):
+  setup (tools/setup 32aeaa9) installed 16 hook files and `.claude/lib/{ledger,
+  write-targets}.sh` here and refreshed one header, but says `troubleshooting.sh`,
+  `test-troubleshooting.sh` and `test-prefer-recipes.sh` differ in logic from
+  tools/hooks/source. Replacing a drifted copy waits on Jacob (PLAN-repo-setup §7.12;
+  `--rebuild` not used). `hooks copies` lists the same three as DRIFT. They keep
+  `./dev.sh check` red on `checks` [hooks-installed].
+- **The leak audit flags a reserved-domain placeholder** (hub, 2026-10-05): `cmd_leaks`
+  fails `.claude/hooks/test-push-gate.sh:24: email address` on `t@example.invalid`, a
+  git identity in shared hook test code (RFC 2606 domain, not a person). Not a leak.
+  Open decision: allow `.invalid`/`example.*` domains in the email pattern, or
+  exclude installed hook copies from the audit (they are tools/hooks' content). Until
+  then `./dev.sh check` is red on `leaks`.
 - **The leak audit's terms are three shapes** (email, home-folder path, phone); the
   credential half is tools/checks `no-secrets`. Names of people and of private repos
   are not caught: `claudeTest-CLAUDE.md` names private repos, as it did in the first
@@ -16,10 +22,13 @@
 
 ## Open decisions
 
-- **`.claude/settings.json` is absent** (Jacob's step): the three shared hooks are
-  installed but not registered, so they do not fire here, in a local session or a
-  cloud one. setup wrote `.claude/settings.proposed.json` (untracked); applying it is
-  `cp .claude/settings.proposed.json .claude/settings.json`.
+- **`.claude/settings.json` lacks 12 hook registrations** (Jacob's step; setup
+  2026-10-05): the shared hooks are installed but not registered, so they do not fire
+  here, in a local session or a cloud one. setup wrote `.claude/settings.proposed.json`
+  (untracked); applying it is `cp .claude/settings.proposed.json .claude/settings.json`.
+  setup also installed `.githooks/{pre-commit,commit-msg,check-pass}`, but
+  `core.hooksPath` is unset and `githooks.checks` has no checks CLI, so those gates are
+  off (setup reports `needs-jacob`).
 - **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
@@ -34,12 +43,6 @@
 
 ## Own limits, known
 
-- **`./dev.sh check` is red on `checks` today, not from this repo's code** (hub,
-  2026-10-05): tools/checks `hooks-installed` reports four shared hooks not installed
-  here (`ask-first`, `git-stamp`, `settings-guard`, `write-ledger`, their tests, and
-  `.claude/lib/write-targets.sh`). Same hand-copy as the bug above, plus registering
-  them in `.claude/settings.json` (Jacob's step if settings-guard covers it). Not done
-  in the check-json change; owed by whoever reinstalls the hooks here.
 - **`check --json` (2026-10-05, PLAN-agent-groups §4.4)**: `devtools/checkjson.py`, the
   third copy of the same emitter (setup, hooks, hub), each with its own finding
   readers. The shape is held by the shared validator; the readers are per repo. If a

@@ -40,6 +40,11 @@ def _checks_cli():
 CHECKS_CLI = _checks_cli()
 LONE = "no shared checks CLI in a workspace around this tool (a lone clone)"
 
+# A hook path that must never exist here: the helper sets `file` only for a file
+# that exists, so the red fixture's null depends on it. It was ask-first.sh until
+# setup installed that one (2026-10-05); test_absent_hook_is_absent holds it.
+ABSENT_HOOK = ".claude/hooks/never-installed.sh"
+
 # (gate, role, exit code, output): one of each finding kind the helper reads, in
 # the shapes this repo's gates print them (dev.sh and devtools/hubcheck.py).
 RED = [
@@ -60,7 +65,7 @@ RED = [
     ("leaks", "audit", 1, "  FAIL  notes.md:1: email address\n  FAIL  CLAUDE.md:0: phone number\n"),
     ("plans", "docs", 3, "  UNCHECKED  plans: ../setup/setup not found (set HUB_SETUP_BIN)\n"),
     ("checks", "audit", 1,
-     "  FAIL  .claude/hooks/ask-first.sh: missing; not covered by user scope [hooks-installed]\n"
+     f"  FAIL  {ABSENT_HOOK}: missing; not covered by user scope [hooks-installed]\n"
      "  FAIL  dev.sh:4: credential-shaped value [no-secrets]\n"
      "  note  unchecked no-roster: names half not run\n"),
     ("silent", "code", 3, ""),
@@ -166,6 +171,10 @@ class Case(unittest.TestCase):
 class Report(Case):
     def helper(self, args, helper=HELPER):
         return subprocess.run([str(helper), *args], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+
+    def test_absent_hook_is_absent(self):
+        # the red fixture's `"file": null` for this row holds only while it is not here
+        self.assertFalse((TOOL_ROOT / ABSENT_HOOK).exists(), f"{ABSENT_HOOK} exists: pick another stand-in")
 
     def test_red_report_is_the_fixture_and_exits_red(self):
         r = self.helper(rows(self.tmp, RED))

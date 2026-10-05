@@ -17,7 +17,7 @@
   {"message": "CLAUDE.md:0: phone number", "file": "CLAUDE.md", "line": null, "role": "audit"}]},
  {"name": "plans", "status": "unchecked", "reason": "plans: ../setup/setup not found (set HUB_SETUP_BIN)", "counts": {"failed": 0}, "failures": []},
  {"name": "checks", "status": "fail", "counts": {"failed": 2}, "failures": [
-  {"message": ".claude/hooks/ask-first.sh: missing; not covered by user scope [hooks-installed]", "file": null, "line": null, "role": "audit"},
+  {"message": ".claude/hooks/never-installed.sh: missing; not covered by user scope [hooks-installed]", "file": null, "line": null, "role": "audit"},
   {"message": "dev.sh:4: credential-shaped value [no-secrets]", "file": "dev.sh", "line": 4, "role": "audit"}]},
  {"name": "silent", "status": "unchecked", "reason": "gate silent exited 3 (unchecked) without saying why", "counts": {"failed": 0}, "failures": []},
  {"name": "extra", "status": "error", "counts": {"failed": 1}, "failures": [
