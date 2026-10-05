@@ -7,7 +7,8 @@ at a throwaway fixture. Findings name a file, a line and a KIND, never a value.
   inputs  docs/inputs/: SHA256SUMS verify; the README table, SHA256SUMS and
           the files on disk list the same copies; every file the brief's §2
           names is a copy; every section the brief points to in a copy
-          exists there; no CLAUDE.md is stored under docs/ (it would load
+          exists there; the brief's numbered lists have no repeated or
+          skipped number; no CLAUDE.md is stored under docs/ (it would load
           as instructions)
   files   the files this repo needs are present (dev.sh executable)
   leaks   public-safety half of the leak audit: email addresses, home-folder
@@ -123,7 +124,35 @@ def gate_inputs(root: Path):
     for p in (root / "docs").rglob("CLAUDE.md"):
         f.append(f"{p.relative_to(root)}: a CLAUDE.md under docs/ loads as instructions; store it renamed")
     f += brief_pointers(root, rows)[0]
+    f += brief_numbering(root)[0]
     return f
+
+
+ITEM_RX = re.compile(r"^(\d+)\. ")
+
+
+def brief_numbering(root: Path):
+    """Each top-level numbered list in the brief counts 1, 2, 3 ... with no repeat or gap.
+
+    Seam: fixed points and questions are cited by number ("fixed point 9"), so a
+    duplicate number makes a citation ambiguous; one went unseen on 2026-10-04
+    (routing-tree §14.7's worked example). An item must be the previous number + 1,
+    or 1 (a new list). Only column-0 items are read: an indented item is a nested
+    list. Returns (findings, how many items were checked).
+    """
+    f, n, prev, sec = [], 0, 0, "top"
+    for i, line in enumerate((root / BRIEF).read_text().splitlines(), 1):
+        if line.startswith("## "):
+            prev, sec = 0, line[3:].split(" ")[0].rstrip(".")
+            continue
+        m = ITEM_RX.match(line)
+        if not m:
+            continue
+        k, n = int(m.group(1)), n + 1
+        if k not in (prev + 1, 1):
+            f.append(f"{BRIEF}:{i}: item {k} in §{sec} follows item {prev}; expected {prev + 1}")
+        prev = k
+    return f, n
 
 
 SECTION_RX = re.compile(r"§(\d+[a-z]?)")
@@ -281,8 +310,10 @@ def main(argv):
         if not f:
             if n:
                 k = brief_pointers(root, readme_rows(root))[1]
+                items = brief_numbering(root)[1]
                 print(f"  ok    {cmd}: {n} copies verify against {SUMS}, the README table and the brief's §2;"
-                      f" {k} section pointers in the brief resolve in their copies")
+                      f" {k} section pointers in the brief resolve in their copies;"
+                      f" {items} numbered items in the brief count without repeat or gap")
             else:
                 print(f"  ok    {cmd}")
         return 1 if f else 0

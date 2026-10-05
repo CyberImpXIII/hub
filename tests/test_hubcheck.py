@@ -147,7 +147,7 @@ class TestInputs(Base):
 
     def test_pointer_to_a_missing_section(self):
         # the seam this gate exists for: the brief cites a section the copy has not got yet
-        brief = BRIEF + "9. **Fixed** (PLAN-a §1 and §13).\n"
+        brief = BRIEF + "1. **Fixed** (PLAN-a §1 and §13).\n"
         self._brief_and_plan(brief, "# a\n## 1. One\n")
         self.assertFinding(hc.gate_inputs(self.r), "points to PLAN-a.md §13; no '## 13.' heading")
         self._brief_and_plan(brief, "# a\n## 1. One\n## 13. Added\n")
@@ -166,6 +166,26 @@ class TestInputs(Base):
         brief = BRIEF + "See PLAN-hub-review.md §4a and some-thing §9.\n"
         self._brief_and_plan(brief, "plan a\n")
         self.assertEqual(hc.gate_inputs(self.r), [])
+
+    def test_numbering_counts_without_repeat_or_gap(self):
+        # two lists in two sections, a nested list, and a second list restarting at 1
+        brief = BRIEF + ("1. a\n2. b\n   1. nested\n   7. nested\n3. c\n\nAfter.\n\n1. again\n2. again\n"
+                         "\n## 4. More\n\n1. x\n2. y\n")
+        self._brief_and_plan(brief, "plan a\n")
+        self.assertEqual(hc.gate_inputs(self.r), [])
+        self.assertEqual(hc.brief_numbering(self.r), ([], 7))
+
+    def test_duplicate_item_number(self):
+        # the seam this gate exists for: a new fixed point written as a second "9."
+        items = "".join(f"{k}. x\n" for k in range(1, 10)) + "9. y\n10. z\n"
+        self._brief_and_plan(BRIEF + items, "plan a\n")
+        f = hc.gate_inputs(self.r)
+        self.assertFinding(f, "item 9 in §3 follows item 9; expected 10")
+        self.assertEqual(len(f), 1, f)
+
+    def test_skipped_item_number(self):
+        self._brief_and_plan(BRIEF + "1. a\n3. b\n", "plan a\n")
+        self.assertEqual(hc.gate_inputs(self.r), [f"PLAN-hub-brief.md:{BRIEF.count(chr(10)) + 2}: item 3 in §3 follows item 1; expected 2"])
 
     def test_malformed_sums_line(self):
         p = self.r / "docs/inputs/SHA256SUMS"
