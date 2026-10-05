@@ -103,3 +103,94 @@ where setup is first, as `tools/setup/`, built by `deep-work`, with the `agent` 
 created by hand and is an adopter. Decision 3 stays open. The `--github` default
 flips to public (Jacob, 2026-10-03, on the todo repo: "I don't think it's necessary
 for it to be private"); `--private` on request.
+
+## 7. Setup as a top-down service: the architecture is written once, read-only, and recurses to children (Jacob, 2026-10-04)
+
+> Jacob: "I WOULD like to enforce read only, so architecture I suppose is written once by
+> setup when we spin up the new git repo. This makes setup a top down service like the
+> others, designed to make my coding environment portable both across machines, but also
+> drilling down to children right?"
+
+**7.1 Yes, with one word made exact: "once" means once per version of the template.**
+Setup writes the architecture layer of a repo when the repo is spun up: the shared-rules
+block, the hooks and settings proposal, the check stub, `cli.json`, `checks.json`,
+`services.json`, the proposed registry row (PLAN-routing-tree.md §14.8). From that
+moment those files are **setup's, not the repo agent's**. The repo agent never edits
+them; when the template changes, setup re-renders them (`setup <path>` again, the
+`drift` status today), and the marker in the block (`shared:rules@<hash>`) says which
+version a repo carries. This replaces the current rule that "each copy belongs to its
+folder's owner, so reinstalling it is a dispatch to each" (top-level CLAUDE.md, the
+hooks paragraph): the owner of a shared file is the tool that renders it, and the folder
+agent owns only what it wrote. It is the same shape as the hub brief decision (TODO.md
+"Hub brief edited at the top level": original in the owner's repo, read-only copy
+written by the owner's refresh), applied to every repo at once.
+
+**7.2 How read-only is enforced, in three layers, weakest to strongest.**
+
+| layer | what it does | what it cannot do |
+|---|---|---|
+| mode 444 on every rendered file | an edit by hand or by the Edit tool fails visibly; `git diff` shows a mode change if forced | stop a `chmod`; it is a signal, not a wall |
+| `checks`: `rules-in-sync`, `hooks-installed`, and new `rendered-matches` (the file equals what setup would render for its marker version) | a changed copy goes red in that repo and in `checks all`; the fix is `setup <path>`, never an edit | stop the write itself |
+| the OS sandbox on roles (PLAN-routing-tree.md §13.2): `sandbox.allowWrite` for a coder role lists its repo's own paths and **excludes the rendered files** | the write is refused at the OS level, child processes included | apply to a session Jacob runs by hand; that is the point |
+
+Setup's own repo is the exception that proves it: the templates are editable there,
+and only there, with setup's tests and `./dev.sh check` as the gate.
+
+**7.3 Setup is a tool the server calls, not a fifth service.** The server keeps its four
+services (§14.6). Setup is a tool with declared verbs in its own `services.json`:
+`setup <path>`, `setup <path> --dry-run`, `setup components`, `setup plans <path>`. A
+role that finds drift sends a `write-request` naming setup's verb; the `write` service
+runs it; setup's own output is the report. So a top-down change reaches every repo
+through one path, with setup's gates run each time, and no role edits a rendered file.
+
+**7.4 Portable across machines.** A fresh clone on another machine meets the baseline
+when `setup <path>` is run there: hooks and settings proposal re-rendered, user-scope
+hooks installed (shipped 2026-10-04, `--user-scope`), and every machine-specific value
+read from the gitignored `.claude/local.env` (PLAN-portable-env.md §3.1), never from the
+rendered files. The registry row and `services.json` travel with the repo because they
+hold no paths outside it. Gate: the §7.5 fixture, run from a clone in a temporary
+directory on this machine, is the stand-in for the second machine until there is one.
+
+**7.5 Drilling down to children.** A node is a repo that has children. `setup <path>
+--node` renders, in addition, the node's registry skeleton (its roles, its services, its
+owner table with only the `unowned` default), its server entry, and runs the ordinary
+components on each child path listed in its `children.json`. A child that is itself a
+node recurses. So the top is set up once, and every level below it is rendered from the
+same templates with its own data: the tree in PLAN-routing-tree.md §1 is a tree of setup
+runs. Gate: a fixture tree two levels deep, rendered from an empty folder, passes
+`checks all` from the root, and `registry-matches` at each node agrees with its
+children's `services.json`.
+
+**7.6 What this does not change.** A repo's own code, tests, docs, TODO entries and its
+sections of `CLAUDE.md` outside the markers stay the repo agent's, writable as now. The
+roster's agent definitions stay the manifest's (`agents.sh gen` already renders them
+read-only, the same pattern one level up). Settings stay Jacob's: setup writes
+`settings.proposed.json` and `registry.proposed.json`, and the copy into the live file
+is his step.
+
+**7.7 Decisions** are in the planner's reply by pointer (`PLAN-repo-setup.md §7`).
+
+**7.8 Ownership restated: the node owns its files, the parent owns the template, setup
+runs locally (Jacob, 2026-10-05).** Jacob: "setup should be what instantiates functions
+at each node/server that own the repo it is in. This way there does not need to be
+multiple 'jumps' in order for things to be written. The child nodes should be informed
+by their parent, and should be 'owned' by their parent, but the child nodes should own
+their own files." This supersedes 7.1's "those files are setup's": there, a write to a
+rendered file in a child would have travelled to setup at the top and back, two hops for
+one file. The corrected model has three owners, each of one thing:
+
+| thing | owner | how it moves |
+|---|---|---|
+| the **template** and its version (the rules block text, the hook sources, the contract skeletons, the marker hash) | the **parent** node; at the top, setup's repo | top-down: the parent's registry names the template version each child must carry; `rendered-matches` at the child goes red when it carries another |
+| the **rendered files** in a repo | the **node** the repo belongs to: its server runs setup's render verb locally, in the same process tree, one hop | a role's `write-request` to its own node's server; the server runs `setup <path>` with the parent's version; setup's output is the report |
+| the repo's **own** code, tests, docs, TODO, its `CLAUDE.md` outside the markers | the repo's agent or role, as now | ordinary gated writes |
+
+"Setup instantiates functions at each node" is then exact: setup is installed at every
+node as the same tool, its verbs declared in that node's registry, so the render runs
+where the files are. The parent "owns" the child in the sense of what it declares for
+it: the child's registry row, its template version, its place in the tree. It never
+writes the child's files. The read-only guarantee of 7.2 is unchanged: no **role** writes
+a rendered file at any level; the node's server does, through setup, and nothing else.
+Gate added to 7.5's fixture: a `write-request` for a rendered file in a child is served
+by the child's server with no message to the parent (the parent's ledger shows none),
+and the result carries the parent's template version.

@@ -305,3 +305,62 @@ component's first run, not a hand-edited set of definitions, so the second repo 
 nothing new. Content-agnostic: a role names a tool class and an allowlist, never a
 repo or a path. PLAN-routing-tree.md §8 writes the same roles into the node config,
 so once routing-tree lands, this component is routing-tree's.
+
+## 10. Roles by kind across repos, and what checks are the truth of (Jacob, 2026-10-04)
+
+> Jacob: "is the idea that checks is the source of truth for architecture and design as
+> well? Should we come up with stricter rules in terms of HOW code is written that can
+> be better enforced by check? If this is the case, we may have to reconsider our groups
+> right? Tests would determine tests for any repo, site-scraper would have a dedicated
+> agent that a lack of recipes falls back to. And while we COULD have a dedicated dev
+> agent for each repo, it might reduce the amount of active agents we need, making
+> context-cleaning that much more important? Let me know if you agree."
+
+**10.1 Agreed, with four corrections to the reasoning.**
+
+1. **Checks are the truth of *gates*, not of design.** Design lives in the plans; a
+   tool's facts live in its store (PLAN-routing-tree.md §14.1). What `tools/checks`
+   owns is the executable form of every rule that *can* be executed, each with a passing
+   and a failing fixture. The link between the two is PLAN-hard-gates.md §5,
+   `rules-gated`: every rule in `CLAUDE.md` either names its gate or is listed as a
+   principle with the reason it cannot be gated. So "stricter rules on how code is
+   written": yes, and the test of whether a rule is strict enough is whether it has a
+   failing fixture. A rule without one is a principle, not a rule. Candidates already
+   named across the plans: one CLI per store and nothing reads the store around it
+   (PLAN-hard-gates.md §3 "accessor"); generated files written read-only; `check --json`
+   conforming to the one schema (§4.4); no second copy of anything (PLAN-one-source.md
+   §3 item 1); help equals implementation (`help-matches`, built); literals that belong
+   to one caller are parameters (site-scrapers' `audit.js literals`, generalised).
+2. **Roles by kind across repos, yes, because the per-repo part becomes data.** Once a
+   repo meets the contract (its `dev.sh check --json`, its gated CLI, its `checks.json`,
+   its `CLAUDE.md` section), what a tester or a coder needs to know about the repo is
+   supplied per task by the server and the registry, not baked into an agent
+   definition. One `tester` prompt instead of fourteen copies is the "don't duplicate
+   procedure" rule applied to agents. The site-scrapers case Jacob names is a
+   `recipe-builder` role that `route` sends to when `known <host>` says unknown: the
+   fallback is a routing rule, not a standing agent.
+3. **The cost is tokens per task, not the number of agents.** `tokens --agents` since
+   2026-10-03 shows every folder agent starting at about 29.3k regardless of repo, so
+   the per-repo part of today's prefix is already small; fewer definitions save almost
+   nothing by themselves. The saving comes from a role loading only its kind's rules
+   and tools (§3 of this plan), and it is measured, not assumed (decision 1's gate
+   stands).
+4. **Context-cleaning matters more, for a sharper reason than "fewer agents".** A role
+   that serves many repos must not carry repo A's context, hosts or findings into repo
+   B. Cold roles (PLAN-routing-tree.md §5) solve that by construction: one task, one
+   process. Warm roles across repos are therefore gated on a context reset at every
+   repo switch, which is PLAN-context-hygiene.md §4's component; until it exists,
+   cross-repo roles run cold. One more consequence: with one coder serving a repo at a
+   time, the write lease (PLAN-routing-tree.md §6) stops being a safety net and becomes
+   the normal case.
+
+**10.2 What changes in this plan.** §4's silos were per kind *per repo*. They become per
+kind, with the repo a parameter of the task: `coder`, `tester`, `auditor`, `docs`,
+`recipe-builder`, each a registry role with its tool allowlist, `omitClaudeMd`, and the
+repo's `CLAUDE.md` section attached per task by `quote-words.sh`'s successor in the
+`hook` service. The pilot (decision 2) is unchanged: site-scrapers first, because it
+already meets the contract. Gate: the same `tester` role, run cold against two repos'
+fixtures, produces each repo's findings and none of the other's; its starting context
+is within 1k of a per-repo silo's.
+
+**10.3 Decision:** yes, Jacob 2026-10-05 ("Yes I think so. I'd love a run down of what that means though"). The rundown he asked for is 10.1-10.2; building waits on decision 1 of §6 (measure first), unchanged.

@@ -510,5 +510,141 @@ queued item per group), after which the node's server runs its checks and gates,
 its roles are read-only by §13. PLAN-hard-gates.md §3 is the inventory of which rules
 already have a gate the server can run and which still need one.
 
-**Decisions for §14** (36-38) are in the top-level reply's table; §11 records them once
+**Decisions for §14.** 37 (agent-last ordering): yes, Jacob 2026-10-04. 36, elaborated as §14.6: yes, Jacob 2026-10-04 ("1) yes", the first row of the table numbered from 1). 38, elaborated as §14.7: yes, Jacob 2026-10-05 ("I'm not sure what the alternative is. So yes?"; the alternative was the dispatcher routing every failure by judgment, §14.3). §14.8 (contract files as setup components, each with a check): yes, Jacob 2026-10-05, **sequential**: setup renders, then runs `checks run .` itself as its last step; the two never run concurrently, and the check output is setup's report. Ownership of the rendered files: PLAN-repo-setup.md §7.8. From 2026-10-04 22:20 decision numbers restart at 1 in every planner reply; the pointer is the identity, so §11 records them by pointer once
 answered.
+
+**14.6 Decision 36 in exact terms: one process, four services, and what each does.**
+Jacob: "I want to be sure I understand EXACTLY what you mean, so please elaborate."
+
+*The process.* `hub up` starts **one** server process for this node (the claudeTest top;
+later one more for site-scrapers when it becomes a child node, §10 phase 3). It listens
+on a localhost port or a Unix socket named in `.claude/local.env`. It is configured by
+two data files and nothing else: the node's **registry** (roles with their `claude -p`
+arguments, tags, children, the four services with the CLI each one runs, the owner
+table of §14.7) and the manifest's `servers.<group>` entry. It contains no tool's
+command and no repo's path (PLAN-group-servers.md §1a's audit). No model runs inside
+it, ever.
+
+*The four services, concretely.*
+
+| service | request | what the server does | answer |
+|---|---|---|---|
+| `route` | an envelope (§2), from `hub send` or a role's final result | validates; **stamps `origin`** by reading the sender's transcript turn as `relay-gate.sh` does today; applies §3; writes the ledger row; delivers: a cold role is spawned `claude -p --agent <role>`, the dispatcher gets its inbox socket, a child node gets its server | the message id, and later the `report` that comes back the same way |
+| `check` | `{repo, scope}` where scope is `touched`, `all` or `audit`; from a PostToolUse hook, the cron audit, or a `check-request` message | runs that repo's `dev.sh check --json` (and `checks run . --json`) in a subprocess; keeps the full output in the ledger | green: a `report` to `from`. Red: one `check-failed` per finding, `ref` = check name and file:line, routed to the owner (§14.7) |
+| `hook` | a hook's JSON input, from an HTTP hook on a role, for hooks whose decision needs state: the host failure history `troubleshooting.sh` prints, `quote-words.sh`'s words, `agent-watch.sh`'s staleness, `record-session.sh`'s sockets | answers from the ledger | `additionalContext`, or a non-blocking decision |
+| `write` | `{tool, verb, args}` from a read-only role (§13.2) | looks the tool up in the registry: its CLI path and its declared verbs; refuses a verb not declared; runs the CLI | the CLI's own stdout and exit as a `report`; the server adds nothing |
+
+*What stays outside the process, and why.* Every hook that **blocks** (`dispatch-guard`,
+`no-inline-blobs`, `prefer-recipes`, `troubleshooting`'s block, `peer-cap`'s hold) stays
+a command hook registered in settings, enforcing from local data, because a down server
+would otherwise mean "allow everything" (PLAN-group-servers.md §2). Such a hook may ask
+the `hook` service for *context* with a short timeout and go on without it.
+
+*When the server is down.* The system degrades to today's, not to nothing: command
+hooks still block; the dispatcher spawns roster agents directly (§4, "still the
+fallback"); checks run by hand through `dev.sh check`; the planner's Dispatch section
+falls back to the inbox socket it uses now. Gate: kill the server, and the day's work
+still gets done, with `doctor` saying the server is down.
+
+*What "no separate check server, hook server" changes in the existing plans.*
+PLAN-group-servers.md's per-group server **is** this process's `check` and `hook`
+services (its `/touched`, `/stop`, `/audit` endpoints become `check` requests), not a
+second program; PLAN-auto-relay.md's `relay-gate.sh` stamping and `peer-cap.sh`'s budget
+become the `route` service's stamping and loop control; the `write` service is new, from
+§13. Build order: §10 phase 1 builds `route` and `write` for cold roles; `check` and
+`hook` arrive as services of the same process in PLAN-group-servers.md phase 1, piloted
+on site-scrapers.
+
+*What it is not.* Not one server for the whole tree (one per node, §1). Not a store of
+any tool's facts (§14.1). Not a replacement for a repo's `dev.sh check`: it calls it.
+Not a place where a model decides anything.
+
+**14.7 Decision 38 in exact terms: the owner table, and how a failure finds its row.**
+Jacob: "Maybe, lets elaborate on this a bit."
+
+*The data.* The registry has an `owners` table keyed by **seam kind**, an enum in the
+message vocabulary. The **server** sets a failure message's seam kind from where it
+detected the failure; a sender never does (as with `origin`). Rows may be templates
+over the message's `ref`:
+
+| seam kind | set when | owner row |
+|---|---|---|
+| `delivery` | a message cannot be delivered, validated or stamped | `harness` (top); a child node's server owner from its own registry |
+| `lease` | a write lease conflict or expiry | same |
+| `check-broken` | a check raised, or failed its own fixture | `tools/checks` |
+| `check-red` | a check ran and returned findings in repo R | `{R}/coder` until roles exist, then `{R}/coder`; today `{R}`'s folder agent |
+| `hook-broken` | a hook exited with an error (not a block) | `tools/hooks` |
+| `hook-block` | a hook blocked a call | the caller's own role; the block text is the message |
+| `tool-result` | a `write` ran and the CLI refused or returned non-zero | back to `from` (§3, replies return the way they went) |
+| `bug-report` (sent by a role, kind not set by the server) | a role reports a problem in repo R | `{R}` by §3 rule 2; the dispatcher never sees it |
+| any kind with no row | | the node's dispatcher, logged `routed_by: dispatcher` |
+
+*Worked examples, from this week.* Last night's relay: the stamp did not happen, so
+kind `delivery`, owner `harness`; it would have reached harness's queue as a message
+instead of being found by the planner in a transcript. The hub brief's duplicate item
+number (2026-10-04 22:10): a `bug-report` from the planner with `ref` tools/hub, rule 2,
+straight to hub; today it went planner to dispatcher to hub by `SendMessage`, and
+`peer-cap.sh` held the second hop because two windows were talking. A red
+`hooks-installed` in tools/todo: `check-red`, owner `tools/todo`. `hooks-installed`
+raising on a malformed `settings.json`: `check-broken`, owner `tools/checks`.
+
+*How a missing row is filled.* An unowned kind goes to the dispatcher and is logged.
+When the dispatcher re-routes the same kind to the same owner 3 times, the server
+proposes the row and Jacob accepts it with `agents.sh routes accept` (§3). So the table
+starts small and grows only from evidence, and judgment becomes procedure one row at a
+time.
+
+*Gates.* The vocabulary's seam kinds and the owner table's keys are checked both ways
+(a kind without a row is allowed only as the explicit `unowned` default; a row without a
+kind fails). A fixture that removes `harness`'s row sends a `delivery` failure to the
+dispatcher and nowhere else. A fixture that flips a check's fixture result moves the
+message from `check-red` to `check-broken` and from the repo to `tools/checks`.
+
+**14.8 What makes the architecture the default, and who declares the services (Jacob,
+2026-10-04).** Jacob: "if checks does not enforce design decisions, what tells new apps
+to build with this type of architecture as a default not as the exception. Also does
+this mean that setup will have a server that registers services? The route should
+determine TYPES of routes, but the services should be determined ahead of time and not
+guessed by an agent right?"
+
+*Three jobs, three tools, in that order.* The plans decide the architecture once.
+**`setup` installs it** into every new or adopted repo as the starting state, so a repo
+meets the contract before anyone writes a line of its own: that is what makes it the
+default rather than the exception. **`checks` keeps it**: a repo that stops meeting the
+contract goes red, and `rules-gated` ties each rule to its check. Setup and checks are
+both data-driven, so the architecture is a template plus a fixture, not a habit. What
+setup installs today (`setup components`): the rules block, the hooks and settings
+proposal, TODO.md, a `dev.sh check` stub that **fails until filled in**, the ignore
+entries, the commit, the remote. Its `agent` and `server` components print "nothing"
+because the roster and the server entry had no defined shape. §14.6 defines the shape,
+so the contract becomes the next setup components, each with a check beside it:
+
+| contract item | setup installs | checks enforces |
+|---|---|---|
+| `dev.sh check --json` in the one schema (PLAN-agent-groups.md §4.4) | the stub, failing | `check-json`: the output conforms, red and green fixtures |
+| one gated CLI per store, declared verbs | `cli.json` skeleton: `{store, cli, verbs: []}` | `accessor`: nothing in the repo reads the store around its CLI |
+| `checks.json` (which generic checks apply, their params) | the baseline list | `todo-valid`, `rules-in-sync`, etc., as now |
+| `services.json` (below) | the skeleton with the repo's name and its `check` command only | `services-valid`: every entry names an existing executable and verb; nothing undeclared |
+| the registry entry at the node | a proposed row in `registry.proposed.json`, as `settings.proposed.json` is today | `registry-matches`: the node's registry agrees with every repo's `services.json` |
+
+*No, setup has no server, and nothing registers at run time.* Setup writes **data**: a
+repo's `services.json` declares, ahead of time, what the server may do with that repo:
+its check command, its CLI and the verbs the `write` service may run, the tags it owns
+for `route`. The node's server reads the registry at start and on `hub reload`, and the
+registry is the union of the repos' declarations, which `registry-matches` keeps equal
+to them. A verb that is not declared is refused by the `write` service (§14.6), and a
+tag with no declaring repo has no owner and falls to the dispatcher (§14.7). No agent
+ever adds a service by acting; it adds one by editing `services.json` in the repo it
+owns, which goes through that repo's check and commit. The server's `route` knows the
+**kinds** of route (the vocabulary of message types and seam kinds) and nothing about
+any repo; which repo answers a kind is the registry's data. So Jacob's reading is
+exactly right: the server determines types of routes, the services are declared in
+advance, and no agent guesses either.
+
+*Gates.* Setup's conformance fixture (PLAN-group-servers.md §1a): a fresh folder after
+`setup <path>` passes `checks run .` on every contract check, red fixtures and all. A
+`services.json` that names a verb the CLI does not implement fails `services-valid`
+(fixture). A registry row with no matching `services.json` fails `registry-matches`
+(fixture). Removing `cli.json` from a repo that has a store fails `accessor`. Each is a
+tools/checks item, installed by a setup component, so the set of components and the set
+of contract checks are compared both ways by `help-matches`'s sibling for setup.
