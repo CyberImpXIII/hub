@@ -128,6 +128,17 @@ leaves the system working.
 After these, the local phases in PLAN-hub.md §9 (S2, V0–V3 in PLAN-hub-view.md, H4, H5)
 are `deep-work` jobs and Jacob's own hours, not cloud items.
 
+## For the local handoff (Jacob, 2026-10-05)
+
+- **Docs of every external tool go into the knowledge base, never the tool's code into
+  context.** Jacob: "we want the docs for every external tool put into the knowledge
+  base, rather than storing the entirety of the code in context." For the hub and its
+  view that means: Wave Terminal's docs and tmux's manual before V1 (PLAN-hub-view.md
+  §4, V0); Claude Code's `agent-sdk/streaming-input` page, which the review found
+  missing from the mirror (PLAN-hub.md §4 W2 is unverified for that reason); and the
+  same for any host, library or CLI a later phase adopts. A builder asks `kb q`, not
+  `cat` on a vendored tree. Owner: knowledge-base, in "Reported to other owners".
+
 ## Own bugs
 
 - **`./dev.sh check` counts an UNCHECKED hook test as a FAIL** (hub, cloud fix pass,
@@ -243,6 +254,12 @@ PLAN-hub.md's Decisions**, each once, from this list. None sent yet (2026-10-05)
   --check --json` after S1 (PLAN-hub.md §6); and the four contract checks of
   routing-tree §14.8 (`check-json`, `accessor`, `services-valid`, `registry-matches`)
   that PLAN-hub.md depends on and does not build.
+- **knowledge-base**, to send: add to the mirror Claude Code's
+  `docs/en/agent-sdk/streaming-input` page (the review found it absent; PLAN-hub.md §4
+  cites it as unverified), Wave Terminal's documentation (docs.waveterm.dev:
+  `customwidgets`, `wsh-reference`, layouts and config at least) and tmux's manual, so
+  `kb q` and `kb check` cover every external tool the hub and its view use (Jacob's
+  directive above; PLAN-hub-view.md §4 and V0).
 - **tools/usage**, to send: `usage gate <estimate>` with exit code 0 = go and the words
   `warn` / `hold` with a hold time on non-zero (PLAN-hub.md §3; PLAN-usage-reporting.md
   §3).

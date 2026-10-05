@@ -145,6 +145,16 @@ machine in V0.**
 | **B. Tabby** (MIT; Electron, TypeScript, xterm.js, <https://github.com/Eugeny/tabby>) | a plugin: "A plugin should only provide a default export, which should be a `NgModule` class", loaded from the user's plugins directory or `TABBY_PLUGINS` (<https://github.com/Eugeny/tabby/blob/master/HACKING.md>). The plugin adds the sidebar and pinned blocks as Angular components around the terminal tab and a settings tab for the gear; the panels are the same hub-served pages in webviews | tabs and split panes native; a mature plugin API | Angular; whether a plugin can wrap the terminal tab's DOM without a fork is unverified: probe, else fork |
 | **C. No fork: a tmux layout in the terminal Jacob already uses** | `hub view --tui` opens a tmux session: main pane (`claude --agent planner`), thin top and bottom panes (`hub pin top|bottom`), a right column of three panes (`hub panel agents|folders|cron`), one tmux window per tab. iTerm2 renders tmux panes natively: Claude Code's own `--tmux` flag "Uses iTerm2 native panes when available" (<https://code.claude.com/docs/en/cli-reference#cli-flags>) | works over SSH and in a cloud session; one language; zero dependency on a host's API | glyphs not icons, no spin, no gear; panes not overlays. This is the fallback that ships with every host anyway |
 
+**External docs go into the knowledge base, not into context** (Jacob, 2026-10-05: "we
+want the docs for every external tool put into the knowledge base, rather than storing
+the entirety of the code in context"). Before V1, Wave Terminal's documentation (the
+`customwidgets`, `wsh-reference` and layout pages at least) and tmux's manual are added
+to the `knowledge-base` mirror, so that `kb q` answers a builder's question about
+`widgets.json` or `wsh` in a few lines, `kb check` can verify the quotes in this table,
+and no session reads Wave's source tree to learn it. This is a request to the
+knowledge-base owner, recorded in `TODO.md`; V0 includes it. The same rule applies to
+any host or library the view adopts later.
+
 **Recommendation:** A, with C always present as the fallback. Wave's native concepts
 (blocks, tabs, sidebar, `wsh`) are the request's nouns, so V1 needs no fork; a fork of
 Wave is considered only when a feature cannot be reached through `widgets.json`, `wsh`
@@ -207,7 +217,7 @@ over 200k (PLAN-check-progress.md §7, as in the hub plan).
 
 | # | phase | contents | cost |
 |---|---|---|---|
-| **V0** | the host probe (Jacob's hour) | with Wave installed: a `web` block at `http://127.0.0.1:<port>/view/agents` against a stub page, `wsh run -m`, `wsh badge`, a restart; the result file in `tools/hub/probes/`. If Wave fails any clause, the same four lines for Tabby (a plugin skeleton that adds one toolbar button and one webview); C needs no probe | 20–40k (1u) |
+| **V0** | the host probe (Jacob's hour) and the docs | with Wave installed: a `web` block at `http://127.0.0.1:<port>/view/agents` against a stub page, `wsh run -m`, `wsh badge`, a restart; the result file in `tools/hub/probes/`. If Wave fails any clause, C (Jacob, 2026-10-05: Wave with tmux; Tabby is out). In the same step, Wave's docs and tmux's manual enter the knowledge-base mirror (§4), and the §4 quotes are re-checked with `kb check` | 20–40k (1u) + the knowledge-base job |
 | **V1** | agents and folders | `/agents`, `/folders`, `/events` (SSE); the hub-served pages for the two panels and the feed; the switch; expand to a child's `/agents`; `hub view` writing the host's layout (two tabs, planner and dispatcher, the sidebar column) and `--uninstall`; `hub view --tui` for the same two panels; the V1 gates | 150–200k (5–7u) |
 | **V2** | cron and settings | `hub cron --json` (after `chron.py list --json` exists), the cron panel, the gear with `node`, `tabs`, `folders`, `icons`, `feed.default_on`, "add folder" through `setup <path> --node` with the `--github` confirmation; `hub-view.json`; the V2 gates | 150–200k (5–7u) |
 | **V3** | pinned blocks and polish | top and bottom blocks from file, endpoint and text sources; per-state icon overrides; click-to-attach (`claude attach <id>` in a tab); tab badges on `agent_needs_input`; TUI parity for pins and cron; the V3 gates | 120–180k (4–6u) |
