@@ -125,6 +125,48 @@ class TestInputs(Base):
         (self.r / "docs/inputs/CLAUDE.md").write_text("x\n")
         self.assertFinding(hc.gate_inputs(self.r), "loads as instructions")
 
+    def _brief_and_plan(self, brief, plan):
+        """Write a brief and PLAN-a.md copy, keeping SHA256SUMS true so only the pointer gate speaks."""
+        (self.r / "PLAN-hub-brief.md").write_text(brief)
+        (self.r / "docs/inputs/PLAN-a.md").write_text(plan)
+        (self.r / "docs/inputs/claudeTest-CLAUDE.md").write_text("## Rules here: x\n")
+        (self.r / "docs/inputs/SHA256SUMS").write_text(
+            f"{sha(brief)}  PLAN-hub-brief.md\n"
+            f"{sha('## Rules here: x' + chr(10))}  docs/inputs/claudeTest-CLAUDE.md\n"
+            f"{sha(plan)}  docs/inputs/PLAN-a.md\n")
+
+    def test_pointer_into_a_copy_resolves(self):
+        brief = (BRIEF.replace("| `PLAN-a.md` | all |", "| `PLAN-a.md` | §1, §2a |")
+                 .replace("| `CLAUDE.md` (top level) | all |", '| `CLAUDE.md` (top level) | "Rules here" |')
+                 + "1. **Fixed** (PLAN-a §13 and §2a; PLAN-a.md §1).\n")
+        plan = "# a\n## 1. One\n## 2a. Two a\n## 13. Thirteen\n"
+        self._brief_and_plan(brief, plan)
+        self.assertEqual(hc.gate_inputs(self.r), [])
+        # table: §1, §2a, "Rules here"; text: §13, §2a, §1 -- all six were looked at
+        self.assertEqual(hc.brief_pointers(self.r, hc.readme_rows(self.r))[1], 6)
+
+    def test_pointer_to_a_missing_section(self):
+        # the seam this gate exists for: the brief cites a section the copy has not got yet
+        brief = BRIEF + "9. **Fixed** (PLAN-a §1 and §13).\n"
+        self._brief_and_plan(brief, "# a\n## 1. One\n")
+        self.assertFinding(hc.gate_inputs(self.r), "points to PLAN-a.md §13; no '## 13.' heading")
+        self._brief_and_plan(brief, "# a\n## 1. One\n## 13. Added\n")
+        self.assertEqual(hc.gate_inputs(self.r), [])
+
+    def test_table_section_and_quote_missing(self):
+        brief = (BRIEF.replace("| `PLAN-a.md` | all |", "| `PLAN-a.md` | §1, §4 |")
+                 .replace("| `CLAUDE.md` (top level) | all |", '| `CLAUDE.md` (top level) | "Gone rule" |'))
+        self._brief_and_plan(brief, "# a\n## 1. One\n")
+        f = hc.gate_inputs(self.r)
+        self.assertFinding(f, "§2 table points to PLAN-a.md §4")
+        self.assertFinding(f, '§2 table points to CLAUDE.md "Gone rule"')
+        self.assertEqual(len(f), 2, f)
+
+    def test_pointer_into_an_uncopied_plan_is_not_checked(self):
+        brief = BRIEF + "See PLAN-hub-review.md §4a and some-thing §9.\n"
+        self._brief_and_plan(brief, "plan a\n")
+        self.assertEqual(hc.gate_inputs(self.r), [])
+
     def test_malformed_sums_line(self):
         p = self.r / "docs/inputs/SHA256SUMS"
         p.write_text(p.read_text() + "not a sum line\n")

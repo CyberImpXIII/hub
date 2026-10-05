@@ -239,3 +239,10 @@ Reported `needs-jacob` until `settings.json` carries the two hooks.
    no record is refused. That is verifiable, keeps the automation, and is the gate
    PLAN-applications.md §4 phase 2 already needs. §3 row 8 and §6 are to be reworded
    to this before phase 1 is dispatched.
+
+**Not its own project (Jacob, 2026-10-04: "more of a tests, audits, checks task
+rather than its own project"):** agreed. This plan produces no tool and no repo. The
+hooks are tools/hooks sources, the check and `gates.json` are tools/checks, the git
+component is tools/setup, and only the `.claude/` parts are harness. What the plan
+adds is the order across those owners and §3, the list of which rule each gate
+enforces, which `gates.json` then carries as data.

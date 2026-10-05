@@ -323,3 +323,192 @@ and every new copy needs one more.
   That's one dispatch per owner.
 - **S3:** classes and per-class hooks, with phase 3 (hierarchy, agent groups).
 - **S4:** propagation as `sync` messages through the hub.
+
+## 13. Read-only roles, receipts, and where a failed send goes (Jacob, 2026-10-04)
+
+> Jacob: "is there a way to make agents read only? With the hard gating and the per
+> agent siloing we have planned for harness I feel like it might make it easier to
+> delegate more to the server. Since we are running HTTP you should receive a response
+> from the server no? [...] If something fails to send it should be sent to the agent in
+> charge of that, and in lieu of programmatic knowledge of where something should go
+> [...] it is sent to dispatch."
+
+Prompted by the 21:27 relay on 2026-10-04 that reached the dispatcher unstamped
+(TODO.md "Relay gate timed out and failed open"): the admitting hook timed out at 10 s
+under load, and because it fails open the message arrived with no `origin:` and no
+ledger row. Three corrections to the premise, then the design.
+
+**13.1 What runs today is a socket, not HTTP.** `auto-relay.sh` posts to the
+dispatcher's inbox socket with `nc -U`; the only receipt is `nc` exiting 0, which says
+the socket took the bytes, not that the gate admitted them. The hub and the group
+servers are plans (§10 phase 0 is still in flight; PLAN-group-servers.md is "Status:
+plan"). Under HTTP the hook-side failure is the same: a connection failure or a non-2xx
+is a non-blocking error and a timeout cancels the hook
+(<https://code.claude.com/docs/en/hooks#http-response-handling> "non-blocking error,
+execution continues"), which is why PLAN-group-servers.md §2 keeps
+enforcing hooks as command hooks. What a 2xx JSON body does give is a response in the
+same schema as command output, so a server *can* answer a hook. The fix is not the
+transport. It is **who stamps**: today the receiver's 10-second hook does; under §2 the
+server does ("`origin` ... stamped by the server, never by the sender"). A stamp
+written by the process that routes cannot be lost to a timeout in the window that
+reads.
+
+**13.2 Read-only roles exist in a soft form today and a hard form only with the
+server.** Three mechanisms, each cited:
+
+| mechanism | what it holds | what it misses |
+|---|---|---|
+| `tools` / `disallowedTools` in the agent definition (how `Explore` is built: no Edit, Write, NotebookEdit) | the file tools | Bash writes; `write-targets.sh` says of itself "bash_write_targets IS HEURISTIC" |
+| `permissionMode: plan`, "Plan mode (read-only exploration)" (<https://code.claude.com/docs/en/sub-agents#permission-modes> "Plan mode (read-only exploration)") | everything, as a permission | ignored when the spawning window is in `bypassPermissions`, `acceptEdits` or auto mode; honoured under `default`, `dontAsk`, `plan`, and in a cold `claude -p` role (§5), which has no parent window |
+| the OS sandbox: `sandbox.allowWrite` paths, "enforced at the OS level, so all commands running inside the sandbox, including their child processes, respect them" (<https://code.claude.com/docs/en/sandboxing#configure-sandboxing> "These paths are enforced at the OS level") | every process the role starts | it cannot tell a write made through the gated CLI from one made by hand, because both run inside the role's sandbox |
+
+The last row is the point. A hard read-only role cannot run the gated CLI itself, so
+**the write moves to the server**: the role sends a `write-request` (tag, `ref`, the
+CLI verb and its arguments as data), the node's server runs that tool's CLI with the
+gates PLAN-hard-gates.md §3 lists, and answers with the CLI's own result as a `report`.
+That is the site-scrapers pattern (read-only generated files, a gated store, one way
+in) applied to the roles themselves, and it is why read-only roles make delegating to
+the server *easier*, as Jacob suspected: a role that can only read and send has no
+seam to guard. Roles keep `dontAsk`, their `tools` list (Read, Grep, Glob, `hub send`,
+and a test runner where the role is a tester), and a sandbox whose writable set is the
+scratchpad only. Cold roles get this at phase 1; warm roles need the sandbox probe
+first (does a long-lived `claude -p` keep the sandbox across messages).
+
+**13.3 A failed send is a message, not a log line.** §6 already says undeliverable
+means dead-letter plus `doctor` plus a notice to the sender. Jacob's rule sharpens it:
+the dead-letter queue is where a failure *rests*, not where it *ends*. Every failure the
+server detects becomes a tagged message routed by §3 like any other:
+
+| failure | tag | goes to |
+|---|---|---|
+| a message fails validation, the hop limit, or delivery to a role process | `delivery-failure` | the owner of the failing seam: at the top level `harness`; inside a child node, that node's server owner from its registry |
+| a `write-request` the gated CLI refuses | `report` with the CLI's output | back to `from`, by §3 "replies come back the way they went" |
+| a check or a function call with no route (the registry has no owner for its tag) | the original tag, `routed_by: dispatcher` | the node's dispatcher, by §3 rule 4; after 3 of the same pattern the server proposes a rule, as §3 says, so this stays rare |
+
+A failure that cannot be routed at all (the server itself is down) is the one case
+left to the hook layer: the sender's command hook prints a notice, as `auto-relay.sh`
+does today, and `doctor` reports a day whose relays sent ≠ got (TODO.md "Relay gate
+timed out and failed open", item 3). Nothing reaches Jacob's screen except that notice.
+
+**13.4 Gates, in the same change as each part.**
+- A role fixture with `tools` lacking Edit and Write and a sandbox allowing only the
+  scratchpad: a Bash `echo > repo/file` inside it fails, and the same write sent as a
+  `write-request` succeeds through the CLI. Both directions, or the role is not
+  read-only.
+- A `plan`-mode role spawned from a `bypassPermissions` window still cannot write,
+  because the sandbox holds when the permission mode is ignored (the docs say the mode
+  is ignored; this test is what makes that harmless).
+- Kill a role process mid-delivery: `harness`'s inbox gets a `delivery-failure` with
+  the message id; the dispatcher gets nothing. Remove `harness` from the registry's
+  tag table: the dispatcher gets it, logged `routed_by: dispatcher`.
+- A `write-request` whose CLI verb is not on that tool's declared list is refused at
+  the server and answered, never run.
+- The receipt test from this incident: a relay sent while the receiver's window is
+  under load (a fixture that sleeps 11 s in the hook) is still stamped and in the
+  ledger, because the server stamped it before the window saw it.
+
+**13.5 What changes elsewhere.** `tools/hub/PLAN-hub-brief.md` §3 fixed points gain
+this section as a ninth (a dispatch to `hub`, who owns the brief). §4 "restrict its
+tools" and §5 "the role's allowed tools" now mean the 13.2 table. PLAN-agent-groups.md
+§4 silos become read-only roles by default; a silo that must write (a coder) is one
+whose `write-request`s the server honours for its own repo, which is the write lease of
+§10 phase 2. Until phase 1 exists, the interim fix is the harness item in TODO.md
+"Relay gate timed out and failed open" (decision 30).
+
+**Decisions for §13.** 31 (read-only roles, server-run writes): yes, Jacob 2026-10-04 ("I think so yes, its not hard to determine quickly what the necessary gates are if routing falls back quickly"). Decision 30, the interim harness fix: yes, same day. 32 (failures to the seam owner) he reframed as the question §14 answers: owner is decided by the registry, per seam kind. Hub brief fixed point 9 is dispatched from here;
+the remaining decisions are in §14.
+
+## 14. Stores are the truth, the server is the only path (Jacob, 2026-10-04)
+
+> Jacob: "checks should only be working when the checks aren't falling through
+> programatically, responding to the server, and being routed to where they need to go.
+> We want an agent to in ALL circumstances be the last line of defence. [...] should
+> routing servers be the only source of truth? Since we are moving more towards gated
+> dbs seeding the docs that the ai work with, should we also have a check server, hook
+> server etc?"
+
+**14.1 Truth and path are different things, and the server is only one of them.** The
+source of truth for a fact stays the gated store of the tool that owns it: recipes in
+site-scrapers' database, items in `todo.json`, the roster in the manifest, checks in
+`tools/checks/source/`, hooks in `tools/hooks/source/` (PLAN-one-source.md §1). The
+server owns exactly one store of its own: the **ledger of what moved**, messages,
+routes taken, origin stamps, leases, failures, with the registry version that produced
+each decision. It never holds a copy of a tool's facts; it reads them through that
+tool's CLI (PLAN-one-source.md §2.4) and renders nothing of its own except `hub status`.
+So: the server is the only *path* a message, a check result or a write may take, and no
+store is the only *truth* for anything but its own facts. A server that became the
+truth for recipes or checks would be a second copy, and "a second copy of anything" is
+the first seam in CLAUDE.md's table.
+
+**14.2 One server program per node, many services; not a check server and a hook
+server.** PLAN-group-servers.md §1a already fixes the program as one portable process
+per group with `/touched`, `/stop` and `/audit` (its §3.2), and §2 keeps enforcing hooks
+as command hooks because a server that is down lets everything through. Jacob's "check
+server, hook server" is right about the *services* and wrong about the *count*. Each
+extra server is a seam: its own port, its own down state, a second ledger, a second
+doctor, a second loop control. The node's server instead declares services as data in
+the registry, each backed by a CLI and nothing else:
+
+| service | what it runs | who calls it |
+|---|---|---|
+| `route` | §3, the registry | every message |
+| `check` | the repo's `dev.sh check --json` and `tools/checks/checks run .` (the §1a contract) | PostToolUse hooks, the cron `/audit`, a `check-request` message |
+| `hook` | the decision side of a hook that may be stateful (history, budgets, leases) | HTTP hooks from roles; **a hook that blocks stays a command hook** (PLAN-group-servers.md §2) and asks the server only for context |
+| `write` | a tool's gated CLI on behalf of a read-only role (§13.2) | `write-request` messages |
+
+Gate for 14.2: the no-group-names audit of PLAN-group-servers.md §1a extended to
+service names: the program contains no tool's command; every service row names its CLI
+in the registry, and a fixture node with a different CLI gets every service working.
+
+**14.3 The agent is the last line, by an ordering the server enforces.** Everything
+that can be decided without a model is decided first, in this order, and a model turn is
+spent only when a step says so:
+
+1. **Validate** the envelope (§2). Malformed never reaches anyone: dead-letter and a
+   `delivery-failure` (§13.3).
+2. **Run the gate.** A `write-request` runs the CLI; a `check-request` or a touched file
+   runs the checks. A green result is a `report` to `from`. A red result is a message
+   tagged `check-failed` whose `ref` is the failing check and the file:line, with the
+   suite output kept in the ledger, never in the message body.
+3. **Route by the registry** (§3 rules 1-3). A `check-failed` goes to the owner the
+   registry names for that seam kind (14.4), who is a role, not the dispatcher.
+4. **Only now a model:** the role that owns the seam reads the finding and makes the
+   change (a coder), or the dispatcher gets what no rule routed (§3 rule 4).
+
+"Checks only work when they aren't falling through programmatically" is step 2 before
+step 4: an agent never sees a suite's output, it sees the finding the suite produced,
+and it sees it only because a programmatic step could not act on it. Gate: `hub status`
+counts model turns by the step that caused them; a cause the registry could have routed
+that recurs 3 times proposes a rule, generalising §3's dispatcher rule from routing to
+every step. A node where step-4 turns rise without a matching rise in step-3 findings is
+a node where models are doing the server's work, and `doctor` says so.
+
+**14.4 The owner of an issue is a registry row, not a judgment (answers decision 32).**
+Jacob: "this may depend on the owner of an issue". It does, and the dependence is data:
+the registry names one owner per **seam kind**, and `delivery-failure`, `check-failed`
+and `bug-report` all route by it:
+
+| seam kind | owner |
+|---|---|
+| a route, a lease, a stamp, a delivery | the node's server owner (`harness` at the top; a child node's from its registry) |
+| a check that is itself broken (raises, wrong fixture) | the checks source repo (`tools/checks`) |
+| a red check result in repo R | R's coder role; until roles exist, R's folder agent |
+| a hook that is itself broken | the hooks source repo (`tools/hooks`) |
+| an action a hook blocked | the caller's own role, which gets the block text |
+| a tool's wrong result | that tool's repo |
+| anything the table does not name | the node's dispatcher, logged `routed_by: dispatcher` |
+
+Gate: every seam kind in the message vocabulary has an owner row, or the registry
+fails `check`; removing a row in a fixture sends that kind to the dispatcher and
+nowhere else; the 3-times rule proposes the missing row.
+
+**14.5 Siloed agents in every repo behave as site-scrapers does today.** Site-scrapers
+leans this way because its store is gated and its `dev.sh check` is one command with
+JSON output. That is exactly the §1a contract. So "the agents in other repos act
+similarly once siloed" is not a new design: it is each repo meeting the contract (its
+queued item per group), after which the node's server runs its checks and gates, and
+its roles are read-only by §13. PLAN-hard-gates.md §3 is the inventory of which rules
+already have a gate the server can run and which still need one.
+
+**Decisions for §14** (36-38) are in the top-level reply's table; §11 records them once
+answered.

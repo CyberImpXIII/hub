@@ -6,7 +6,8 @@ at a throwaway fixture. Findings name a file, a line and a KIND, never a value.
 
   inputs  docs/inputs/: SHA256SUMS verify; the README table, SHA256SUMS and
           the files on disk list the same copies; every file the brief's §2
-          names is a copy; no CLAUDE.md is stored under docs/ (it would load
+          names is a copy; every section the brief points to in a copy
+          exists there; no CLAUDE.md is stored under docs/ (it would load
           as instructions)
   files   the files this repo needs are present (dev.sh executable)
   leaks   public-safety half of the leak audit: email addresses, home-folder
@@ -121,7 +122,64 @@ def gate_inputs(root: Path):
                 f.append(f"{BRIEF} §2 names {name}; no copy of it in the {README} table")
     for p in (root / "docs").rglob("CLAUDE.md"):
         f.append(f"{p.relative_to(root)}: a CLAUDE.md under docs/ loads as instructions; store it renamed")
+    f += brief_pointers(root, rows)[0]
     return f
+
+
+SECTION_RX = re.compile(r"§(\d+[a-z]?)")
+QUOTED_RX = re.compile(r'"([^"]+)"')
+# "routing-tree §13", "PLAN-tools-folder.md §1", "Routing-tree §11 and §12", "§3–§4"
+POINTER_RX = re.compile(r"\b(?:PLAN-)?([A-Za-z]+(?:-[A-Za-z]+)+)(?:\.md)?\s+"
+                        r"(§\d+[a-z]?(?:\s*(?:,|and|[–-])\s*§\d+[a-z]?)*)")
+
+
+def headings(path: Path):
+    return [l for l in path.read_text().splitlines() if l.startswith("## ")]
+
+
+def brief_pointers(root: Path, rows):
+    """Every section the brief points into a copy exists in that copy.
+
+    Two places: the §2 table's "read" column (`§N` must be a `## N.` heading,
+    "quoted" must start a `## ` heading), and `<plan> §N` anywhere in the brief
+    where <plan> is a copied PLAN-*.md. Pointers into a plan that is not copied
+    (PLAN-hub.md, PLAN-hub-review.md) are not checked: there is nothing to check
+    them against. Not seen: a pointer split across a line break. Agreement in
+    meaning is not checked; only that the target exists.
+
+    Returns (findings, how many targets were checked), so a gate that matched
+    nothing says 0 instead of passing quietly.
+    """
+    copy_of = {o: root / c for c, o in rows}
+    f, seen = [], []
+
+    def check(name, secs, quoted, where):
+        copy = copy_of.get(name)
+        if copy is None or not copy.is_file():
+            return
+        hs = headings(copy)
+        seen.extend(secs + quoted)
+        for s in secs:
+            if not any(h.startswith(f"## {s}.") for h in hs):
+                f.append(f"{BRIEF} {where} points to {name} §{s}; no '## {s}.' heading in its copy")
+        for q in quoted:
+            if not any(h[3:].startswith(q) for h in hs):
+                f.append(f'{BRIEF} {where} points to {name} "{q}"; no heading starting so in its copy')
+
+    text = (root / BRIEF).read_text()
+    m = re.search(r"^## 2\..*?$(.*?)^## ", text, re.S | re.M)
+    for line in (m.group(1).splitlines() if m else []):
+        if not line.startswith("|") or line.startswith("|---"):
+            continue
+        cols = line.split("|")
+        names = re.findall(r"`([^`]+\.md)`", cols[1])
+        if len(names) == 1 and len(cols) > 2:
+            check(names[0], SECTION_RX.findall(cols[2]), QUOTED_RX.findall(cols[2]), "§2 table")
+    for n, line in enumerate(text.splitlines(), 1):
+        for pm in POINTER_RX.finditer(line):
+            name = "PLAN-" + re.sub(r"^plan-", "", pm.group(1).lower()) + ".md"
+            check(name, SECTION_RX.findall(pm.group(2)), [], f"line {n}")
+    return f, len(seen)
 
 
 def gate_files(root: Path):
@@ -221,7 +279,12 @@ def main(argv):
             print(f"  FAIL  {x}")
         n = len(sums_rows(root)) if cmd == "inputs" and (root / SUMS).is_file() else 0
         if not f:
-            print(f"  ok    {cmd}" + (f": {n} copies verify against {SUMS}, the README table and the brief's §2" if n else ""))
+            if n:
+                k = brief_pointers(root, readme_rows(root))[1]
+                print(f"  ok    {cmd}: {n} copies verify against {SUMS}, the README table and the brief's §2;"
+                      f" {k} section pointers in the brief resolve in their copies")
+            else:
+                print(f"  ok    {cmd}")
         return 1 if f else 0
     if cmd == "leaks":
         f = leaks_in([Path(a).resolve() for a in args], Path.cwd()) if args else gate_leaks(root)

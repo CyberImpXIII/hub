@@ -13,6 +13,13 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   `claudeTest-CLAUDE.md`, `PLAN-cloud-offload.md` (it gained §8, which the review's
   finding 8 cites), `PLAN-question-routing.md`, `PLAN-todo-tool.md`,
   `PLAN-tools-folder.md` and `PLAN-portable-env.md`.
+- **Refreshed 2026-10-04 (night)** for brief fixed point 9: `PLAN-routing-tree.md`
+  gained §13 (read-only roles, server-run writes, failures as routed messages;
+  decision 31 yes) and §14 (open, decisions 36–38); the brief gained fixed point 9
+  and its §2 row now says §13 is decided. `PLAN-hard-gates.md` had also drifted (a
+  "Not its own project" paragraph) and came along, as every refresh copies all.
+  The brief is edited at its original, the top-level `PLAN-hub-brief.md`, because
+  `./dev.sh refresh` copies the original over this repo's copy.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

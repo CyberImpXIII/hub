@@ -27,7 +27,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 |---|---|---|
 | this file | all | the task, the fixed points, the output contract |
 | `CLAUDE.md` (top level) | "How work is split here", "Gate the seams", "Make the wrong thing impossible", "Constraints that don't bend" | the house rules every plan here obeys |
-| `PLAN-routing-tree.md` | all, §11 and §12 are decided | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12) |
+| `PLAN-routing-tree.md` | all; §11, §12 and §13 are decided, §14 is open | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13); stores, services and seam owners (§14) are proposals, not fixed points |
 | `PLAN-tools-folder.md` | §1, §3 (hub row), §4, §7, §8 | the criterion, the order, what harness irreducibly is (§7), the `applies_to` declaration shared by hooks and checks |
 | `PLAN-auto-relay.md` | §3–§4, §7, §9 | what the first node's inbox already does; the hub must keep every behaviour there |
 | `PLAN-question-routing.md` | §2, §4, §9 | the question kinds and the two arbiters; the hub routes these |
@@ -74,6 +74,23 @@ live at the top of the claudeTest folder, which is not a git repo.
    `init` into `local.env` and is never in a commit.
 8. **No approval through auto mode.** Headless roles run in `dontAsk` with declared
    tools (routing-tree §5, cited).
+9. **Roles are read-only; the server runs the writes, and a failed send is a routed
+   message** (routing-tree §13, decision 31, Jacob 2026-10-04: "I think so yes, its
+   not hard to determine quickly what the necessary gates are if routing falls back
+   quickly"). A role keeps `dontAsk`, a `tools` list without Edit and Write, and a
+   sandbox whose writable set is its scratchpad only (the §13.2 table, cited there). It
+   writes by sending a `write-request`; the node's server runs that tool's gated CLI and
+   answers with the CLI's own result as a `report`, and a verb not on the tool's declared
+   list is refused, never run. A failure the server detects becomes a tagged message
+   routed by §3 like any other, to the agent in charge of the failing seam and to the
+   dispatcher when no rule names one; dead-letter is where it rests, not where it ends.
+   Only "the server is down" is left to the sender's command hook. The plan places the
+   §13.4 gates with their parts; it must not give a role a write path of its own, let
+   the stamp depend on the receiving window, or end a failure as a log line. Cold roles
+   get this at phase 1; warm roles wait for the sandbox probe in §13.2. **Not fixed:**
+   which owner each failure kind goes to (decision 32, reframed by Jacob into §14.4's
+   registry row per seam kind) and the rest of §14 (decisions 36–38) are open: they are
+   rows in the plan's Decisions table, and fixed point 2's registry is not widened here.
 
 ## 4. What the plan must settle
 

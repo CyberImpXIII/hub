@@ -24,6 +24,24 @@
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
 
+- **Where the brief is edited.** routing-tree §13.5 says hub owns the brief, but
+  `docs/inputs/README.md` makes the top-level `PLAN-hub-brief.md` its original, and
+  `./dev.sh refresh` copies the original over `PLAN-hub-brief.md` here. So fixed point
+  9 (2026-10-04) was written at the top-level original and refreshed in; an edit made
+  only to this repo's copy would be undone by the next refresh. Hinges on whether the
+  copy direction should flip for the brief (this repo the original); the planner's
+  and Jacob's call, since the top level is the planner's.
+
+## Own limits, known
+
+- **The brief-pointer gate checks that a target exists, not what it says**
+  (`hubcheck.py brief_pointers`, 2026-10-04): `§N` in the §2 table and `<plan> §N`
+  in the text must be a `## N.` heading in the copy. Not checked: that fixed point 9
+  says what routing-tree §13 decided (meaning, by reading only), `§N.M` subsections,
+  bare `§N` without a plan name, and a pointer split across a line break. The ok line
+  prints how many it checked (49 on 2026-10-04), so a regex that stops matching shows
+  as a drop, not a pass.
+
 ## Unconfirmed suspicions
 
 - **The fix pass may not see the new inputs** (hub, 2026-10-04): they are on `main`,
