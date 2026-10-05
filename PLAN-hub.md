@@ -59,7 +59,7 @@ subprocess; a rewrite in JavaScript is a later job only if a measurement asks fo
 | `auto-relay.sh` (planner Stop hook) | **moves**; the hook file becomes a one-line installed copy | its body is `hub hook planner-stop`, reading the hook JSON on stdin. The parser, dedupe and delivery live in the hub. Behaviour kept item for item (auto-relay §3, §4, §9): no section sends nothing, malformed lines go as `dispatch-malformed`, items dedupe by hash, a failed send is a one-line notice, never a block. Installed by `setup hooks` from a declaration `applies_to: roles:planner` (fixed point 5) |
 | `relay-gate.sh` (admission: identical, invalid, runaway) | **moves** into the server's `/route` | these are routing-tree §6 loop controls generalised: identical → dropped; invalid → dead-letter with notice; runaway → **held** and delivered after Jacob's next prompt. The `grant` budget (auto-relay §4 reason 4) is read from a file harness owns and `agents.sh grant` writes; the hub reads the grant file by path given in `local.env`, never the manifest |
 | `peer-cap.sh` | **splits**: the relay stamping and the hold-and-deliver move; the free-form cap stays until H4 | origin stamping is `hub origin <session> <turn>` (a transcript read, no roster). The cap on free-form `SendMessage` between the two windows is a `UserPromptSubmit` block, so it stays a command hook in harness (group-servers §2) until phase H4 replaces window-to-window `SendMessage` with `hub send`; then the interim rule `held-not-lost` retires |
-| `record-session.sh` | **stays in form, body moves** | still a `SessionStart` command hook harness installs; its body is `hub hook session-start`, which posts `session_id`, `agent_type`, `cwd`, `permission_mode` and `CLAUDE_CODE_MESSAGING_SOCKET` to `/sessions`. The hook input carries `agent_type` when started with `--agent` and `permission_mode` (<https://code.claude.com/docs/en/hooks#common-input-fields>), and the socket variable is exported before any hook runs, SessionStart included (<https://code.claude.com/docs/en/cross-session-messaging#the-sessions-inbox-socket>). With the server down it writes the same state file it writes today (fail open, tested) |
+| `record-session.sh` | **stays in form, body moves** | still a `SessionStart` command hook harness installs; its body is `hub hook session-start`, which posts `session_id`, `agent_type`, `cwd`, `permission_mode` and `CLAUDE_CODE_MESSAGING_SOCKET` to `/sessions`. The hook input carries `agent_type`, "Present when the session uses `--agent` or the hook fires inside a subagent" (<https://code.claude.com/docs/en/hooks#common-input-fields>), and `permission_mode` (same anchor); the socket variable is exported first: "In a session that starts with messaging on, Claude Code exports the variable before any hook runs, including `SessionStart`" (<https://code.claude.com/docs/en/cross-session-messaging#the-sessions-inbox-socket>). With the server down it writes the same state file it writes today (fail open, tested) |
 | `planner-role.sh` | **stays** | it is the planner's role note, policy about one roster agent; it calls `hub grammar` for the one line that moved |
 | `question-gate.sh` (dispatcher blocks once, planner notices) | **moves**; the hook file becomes an installed copy | `hub hook dispatcher-stop` and `hub hook planner-stop` run the gate **locally** in the hub program, so the one block still happens with the server down. Forwarding a `[plan]` item is a `question`-tagged envelope through `/route`; with the server down it posts to the planner's recorded socket as today. The three question types are vocabulary in the registry (§2), not in the manifest; harness renders them there from `questions.types` until the manifest drops the key |
 | the relay kinds (`item`, `dispatch-malformed`, `question`, later `sync`) | **move** as tags | they are the first entries of the node's tag vocabulary (§2). `agents.sh relays` becomes a view over `hub log` |
@@ -165,9 +165,11 @@ each side checking what it can read:
    roles start per message. Prints one line: `claudeTest up :47100, 0 queued, 0 held, 0 dead-letter, parent: none`.
 
 **How the planner's Dispatch section reaches it.** The planner's `Stop` hook is
-`hub hook planner-stop`. It reads `last_assistant_message` from the hook input (the
-documented source for a Stop hook's final text, auto-relay §3,
-<https://code.claude.com/docs/en/hooks#stop-input>), guards on `stop_hook_active`,
+`hub hook planner-stop`. It reads `last_assistant_message` from the hook input, the
+documented source for a Stop hook's final text (auto-relay §3): "Hooks that need the
+final assistant text of the current turn should use `last_assistant_message` on Stop
+and SubagentStop instead of reading the transcript"
+(<https://code.claude.com/docs/en/hooks#common-input-fields>), guards on `stop_hook_active`,
 parses the `## Dispatch` section with the moved parser, and for each line builds one
 envelope: `tag: dispatch` (or `dispatch-malformed` with the parser's reason and the
 grammar), `ref` the pointer, `body` the one-line summary, `approval` the date, `from:
@@ -216,33 +218,51 @@ Cold by default (routing-tree §11 decision 2). Three modes:
 
 | mode | what the server does | state the view sees (§11) |
 |---|---|---|
-| `window` | never spawns; delivers to the recorded inbox socket; learns busy/idle from `claude agents --json` (`kind: interactive`, `status` `busy`/`waiting`/`idle` while the process is alive, <https://code.claude.com/docs/en/agent-view>) joined on `sessionId` with `/sessions` | green busy, yellow idle or waiting, red no session |
-| `cold` | per message: `claude -p --agent <role> --permission-mode dontAsk --allowedTools <list> --permission-prompts none --output-format stream-json --verbose --max-budget-usd <cap>` in the role's `dir`, brief on stdin; parses the stream and takes the final `result` line as the report (<https://code.claude.com/docs/en/headless#stream-responses>, "The last line of the stream is a `result` message"). `dontAsk` denies anything that would prompt and denies `AskUserQuestion` outright (<https://code.claude.com/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode>); `--permission-prompts none` tells Claude not to retry denied requests (<https://code.claude.com/docs/en/headless#turn-off-permission-prompts-in-unattended-runs>). No approval through auto mode, by construction (fixed point 8). A role's final report can be forced to a shape with `--json-schema` (<https://code.claude.com/docs/en/headless#get-structured-output>); the `report` envelope's `body` is that object's one summary line. Stopping a cold role is SIGINT to end the turn, then SIGTERM; SIGTERM alone exits 143 with the turn unfinished and `SessionEnd` hooks run (<https://code.claude.com/docs/en/headless#stop-a-run-with-sigterm>) | green while the process runs; red otherwise (a cold role between messages is not spawned) |
+| `window` | never spawns; delivers to the recorded inbox socket; learns busy/idle from `claude agents --json`: `kind` is "`interactive` or `background`" and `pid`, `status` are present "While the process is alive" as "Process ID and one of `busy`, `waiting`, or `idle`" (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>), joined on `sessionId` ("the full session UUID", same anchor) with `/sessions` | green busy, yellow idle or waiting, red no session |
+| `cold` | per message: `claude -p --agent <role> --permission-mode dontAsk --allowedTools <list> --permission-prompts none --output-format stream-json --verbose --max-budget-usd <cap>` in the role's `dir`, brief on stdin; parses the stream and takes the final `result` line as the report: "The last line of the stream is a `result` message with the final response text, cost, and session metadata" (<https://code.claude.com/docs/en/headless#stream-responses>). `dontAsk`: "If you set `dontAsk` mode, Claude Code auto-denies every tool call that would otherwise prompt you" and "It also denies the built-in `AskUserQuestion` tool even if your allow rules match it" (<https://code.claude.com/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode>). `--permission-prompts none`: "Pass `--permission-prompts none` when nobody is available to answer permission prompts" and "Claude is told that nobody can approve the request and not to retry it" (<https://code.claude.com/docs/en/headless#turn-off-permission-prompts-in-unattended-runs>). No approval through auto mode, by construction (fixed point 8). A role's final report can be forced to a shape: "To get output conforming to a specific schema, use `--output-format json` with `--json-schema` and a JSON Schema definition" (<https://code.claude.com/docs/en/headless#get-structured-output>); the `report` envelope's `body` is that object's one summary line. `--max-budget-usd`: "Maximum dollar amount to spend on API calls before stopping (print mode only)" (<https://code.claude.com/docs/en/cli-reference#cli-flags>). Stopping a cold role is SIGINT to end the turn, then SIGTERM: "If you stop a `claude -p` run with SIGTERM, for example with `kill` or from a process supervisor, Claude Code exits with code 143" and "Claude Code then runs `SessionEnd` hooks and exits" (<https://code.claude.com/docs/en/headless#stop-a-run-with-sigterm>) | green while the process runs; red otherwise (a cold role between messages is not spawned) |
 | `warm` | a role kept alive between messages. Two mechanisms, chosen by the probe below (Decision 3) | green busy, yellow idle, red not started |
 
 **Warm, two candidate mechanisms.**
 
 - **W1, the supervisor.** `claude --bg --agent <role> --name <node>/<role>
   --permission-mode dontAsk --settings '{"crossSessionInbound":"accept"}'` in the role's
-  `dir`. Claude Code's own supervisor hosts it (<https://code.claude.com/docs/en/agent-view#the-supervisor-process>);
-  `claude agents --json` is "the supported interface" for reading its state from
-  outside, with `state` one of `working | blocked | done | failed | stopped` and
-  `status` `busy | waiting | idle` (same page); the server delivers each message to the
-  session's inbox socket, which a `-p`-style worker binds "like an interactive one" and
-  accepts unattended when `crossSessionInbound` is `accept` in its `--settings`
-  (<https://code.claude.com/docs/en/cross-session-messaging#non-interactive-sessions>);
-  `claude attach <id>` puts it in a tab of the view
-  (<https://code.claude.com/docs/en/cli-reference>). The server restarts it with
-  `claude respawn <id>` at the context threshold. `--bg` cannot combine with `-p`
-  (cli-reference), so the report comes from `claude logs <id>` or the session's own
-  `hub send --tag report`, not from a stdout stream.
+  `dir`. Claude Code's own supervisor hosts it: "Claude Code starts it the first time
+  you background a session or open agent view, and you don't need to manage it
+  yourself" (<https://code.claude.com/docs/en/agent-view#the-supervisor-process>).
+  "`claude agents --json` is the supported way to read session state from outside
+  Claude Code, for example from a status bar, a scheduler, or another Claude session
+  that supervises background work"
+  (<https://code.claude.com/docs/en/agent-view#read-session-state-from-a-script>); its
+  `state` is "One of `working`, `blocked`, `done`, `failed`, or `stopped`" and its
+  `status` "one of `busy`, `waiting`, or `idle`"
+  (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>). The server
+  delivers each message to the session's inbox socket: "Claude Code binds an inbox
+  socket for a `claude -p` session like an interactive one, so a long-running `-p`
+  worker can receive messages and appears in the listing", and "To let a `-p` worker
+  take messages unattended, start it with `crossSessionInbound` set to `accept` in its
+  `--settings` value"
+  (<https://code.claude.com/docs/en/cross-session-messaging#non-interactive-sessions>).
+  `claude attach <id>`, "Attach to a background session in this terminal"
+  (<https://code.claude.com/docs/en/cli-reference#cli-commands>), puts it in a tab of
+  the view. **Restart at the context threshold is `claude stop <id>` then a fresh
+  `claude --bg`, never `claude respawn <id>`**, which restarts a session "with its
+  conversation intact" (<https://code.claude.com/docs/en/cli-reference#cli-commands>)
+  and so would fail the probe's third clause by design. `--bg` with `-p`: "These flags
+  are mutually exclusive" (<https://code.claude.com/docs/en/errors#conflict-between-bg-and-print>),
+  so the report comes from `claude logs <id>`, "Print recent output from a background
+  session" (<https://code.claude.com/docs/en/cli-reference#cli-commands>), or the
+  session's own `hub send --tag report`, not from a stdout stream.
 - **W2, the stdin pipe.** `claude -p --input-format stream-json --output-format
   stream-json`, one process per role, messages written to stdin as
-  `{"type":"user","message":{"role":"user","content":"…"}}`; the SDK calls this
-  streaming input mode and lists "Queued messages: send multiple messages that process
-  sequentially" and "Context persistence" among its properties
-  (<https://code.claude.com/docs/en/agent-sdk/streaming-input>); each turn ends with a
-  `result` line. The server owns the process and restarts it at the threshold.
+  `{"type":"user","message":{"role":"user","content":"…"}}`. `--input-format`:
+  "Specify input format for print mode (options: `text`, `stream-json`)", and the
+  `--max-turns` row shows one process taking several messages: "With `--input-format
+  stream-json`, a message still queued when the limit ends a turn stays queued and
+  starts a new turn with its own limit" (<https://code.claude.com/docs/en/cli-reference#cli-flags>).
+  **Unverified:** that context persists across those turns and that each turn ends
+  with its own `result` line. The SDK's streaming-input page says so, but that page is
+  not in the knowledge-base mirror (review §2), so the claim stands only as H0's probe
+  result. The server owns the process and restarts it at the threshold.
 
 **The probe (H0), pass condition stated before it runs.** For each mechanism, in a
 fixture repo: start the role; send message A ("remember the word X"); send message B
@@ -262,14 +282,15 @@ show a saving"): per role, over seven days of `tokens --agents`, warm is adopted
 `hub check`.
 
 **Role hooks.** Routing-tree §12 renders per-class hooks into agent frontmatter.
-Frontmatter hooks run only after the workspace trust dialog is accepted for the
-folder, and "a `-p` session doesn't count as accepting it"
-(<https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents>), so for cold
-roles they would silently not run. Role hooks therefore install through `setup hooks`
-into the repo's settings proposal (fixed point 5), which a `-p` session does load
-(<https://code.claude.com/docs/en/headless#start-faster-with-bare-mode>, "Without
-`--bare`, a `-p` session runs the hooks in a project's `.claude/settings.json`"), and
-frontmatter is used only for window roles Jacob has trusted. Decision 13.
+"Frontmatter hooks in a project subagent run only after you accept the workspace trust
+dialog for the folder the agent file came from. A `-p` session doesn't count as
+accepting it" (<https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents>), so
+for cold roles they would silently not run. Role hooks therefore install through
+`setup hooks` into the repo's settings proposal (fixed point 5), which a `-p` session
+does load: "Without `--bare`, a `-p` session runs the hooks in a project's
+`.claude/settings.json` and connects the servers in its `.mcp.json`, even in a folder
+you've never trusted" (<https://code.claude.com/docs/en/headless#start-faster-with-bare-mode>).
+Frontmatter is used only for window roles Jacob has trusted. Decision 13.
 
 → H0 probe; H1b cold; H5 warm.
 
@@ -548,7 +569,7 @@ Three ways to put these panels beside a terminal, with what each costs. Jacob ch
 |---|---|---|---|
 | **A. Wave Terminal** (Apache-2.0; Go backend, Electron/React front end, <https://github.com/wavetermdev/waveterm>) | no fork at first. Wave's unit is the **block** in a per-tab layout with tabs and a right **widget sidebar** configured in `widgets.json` ("By adding a widget to this file, it is possible to add widgets to the widget bar", <https://docs.waveterm.dev/customwidgets>), and `wsh` creates and places blocks from the shell: "The run command creates a new terminal command block and executes a specified command within it", blocks can be opened magnified or placed, `wsh web` opens a URL in a web block, `wsh badge` marks a block or tab header, `wsh notify` raises a desktop notification (<https://docs.waveterm.dev/wsh-reference>). `hub view` writes a `widgets.json` entry per panel (a `web` block at the hub's URL), lays out the default tab (planner terminal, pinned `web` blocks above and below, the sidebar column), and badges a tab when its agent needs input | tabs, blocks and a configurable sidebar are native; pinned blocks are literally blocks; the gear is a widget | **docs.waveterm.dev was unreachable from this container** (egress blocked); the quotes above come from the docs' source files on GitHub and must be probed on Jacob's machine before V1 starts. Young project; layout persistence across restarts to confirm |
 | **B. Tabby** (MIT; Electron, TypeScript, xterm.js, <https://github.com/Eugeny/tabby>) | a plugin: "A plugin should only provide a default export, which should be a `NgModule` class", loaded from the user's plugins directory or `TABBY_PLUGINS` (<https://github.com/Eugeny/tabby/blob/master/HACKING.md>). The plugin adds the sidebar and pinned blocks as Angular components around the terminal tab and a settings tab for the gear; the panels are the same hub-served pages in webviews | tabs and split panes native; a mature plugin API | Angular; whether a plugin can wrap the terminal tab's DOM without a fork is unverified: probe, else fork |
-| **C. No fork: a tmux layout in the terminal Jacob already uses** | `hub view --tui` opens a tmux session: main pane (`claude --agent planner`), thin top and bottom panes (`hub pin top|bottom`), a right column of three panes (`hub panel agents|folders|cron`), one tmux window per tab. iTerm2 renders tmux panes natively (Claude Code's own `--tmux` "Uses iTerm2 native panes when available", <https://code.claude.com/docs/en/cli-reference>) | works over SSH and in a cloud session; one language; zero dependency on a host's API | glyphs not icons, no spin, no gear; panes not overlays. This is the fallback that ships with every host anyway |
+| **C. No fork: a tmux layout in the terminal Jacob already uses** | `hub view --tui` opens a tmux session: main pane (`claude --agent planner`), thin top and bottom panes (`hub pin top|bottom`), a right column of three panes (`hub panel agents|folders|cron`), one tmux window per tab. iTerm2 renders tmux panes natively (Claude Code's own `--tmux` flag "Uses iTerm2 native panes when available", <https://code.claude.com/docs/en/cli-reference#cli-flags>) | works over SSH and in a cloud session; one language; zero dependency on a host's API | glyphs not icons, no spin, no gear; panes not overlays. This is the fallback that ships with every host anyway |
 
 **Recommendation:** A, with C always present as the fallback. Wave's native concepts
 (blocks, tabs, sidebar, `wsh`) are the request's nouns, so V1 needs no fork; a fork of
@@ -563,11 +584,12 @@ pages in a plugin and nothing in the hub changes.
 plus a filesystem scan of the node root, one level), `/events` (SSE of ledger rows and
 state changes), `/view/*` (the pages), `hub cron --json`. All documented in
 `docs/API.md`, all under the help-equals-implemented gate. `claude agents --json` is
-polled every 3 s while a view is attached and not at all otherwise, since "To read
-session state from outside Claude Code ... use `claude agents --json --all`" and "The
-files under `~/.claude/jobs/<id>/` are not a stable interface"
-(<https://code.claude.com/docs/en/agent-view>). `Notification` hooks with matchers
-`agent_needs_input` and `agent_completed` (<https://code.claude.com/docs/en/hooks>)
+polled every 3 s while a view is attached and not at all otherwise, since it "is the
+supported way to read session state from outside Claude Code" and "The files under
+`~/.claude/jobs/<id>/` are not a stable interface"
+(<https://code.claude.com/docs/en/agent-view#read-session-state-from-a-script>).
+`Notification` hooks with the matchers "`agent_needs_input`, `agent_completed`"
+(<https://code.claude.com/docs/en/hooks#notification>)
 are installed as telemetry-only HTTP hooks posting to `/hooks/notification`, so a
 needs-input state reaches the panel at once rather than at the next poll; HTTP hooks
 fail open ("Connection failure: non-blocking error, execution continues",
@@ -627,13 +649,16 @@ the component is tested by the hub's own gate.
 ## Risks
 
 - **The platform moved under the design.** Since routing-tree §5 was written, Claude
-  Code gained background sessions, a supervisor and `claude agents --json`
-  (<https://code.claude.com/docs/en/agent-view>). This plan uses them for warm roles
-  (W1) and for the view's state, which is cheaper than owning stdin pipes, but several
-  flags carry version requirements ("`claude --help` does not list every flag",
-  <https://code.claude.com/docs/en/cli-reference>). Mitigation: H0's probes record the
+  Code gained background sessions, a supervisor and `claude agents --json`, "the
+  supported way to read session state from outside Claude Code"
+  (<https://code.claude.com/docs/en/agent-view#read-session-state-from-a-script>). This
+  plan uses them for warm roles (W1) and for the view's state, which is cheaper than
+  owning stdin pipes, but several flags carry version requirements: "`claude --help`
+  does not list every flag, so a flag's absence from `--help` does not mean it is
+  unavailable" (<https://code.claude.com/docs/en/cli-reference#cli-flags>). Mitigation: H0's probes record the
   `claude --version` they passed on; `hub doctor` refuses to use W1 below it.
-- **Frontmatter hooks do not run for `-p` roles in untrusted folders**
+- **Frontmatter hooks do not run for `-p` roles in untrusted folders**: "A `-p`
+  session doesn't count as accepting it"
   (<https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents>). Routing-tree
   §12 planned per-class hooks in frontmatter. §4 moves role hooks to settings via `setup
   hooks`; if Jacob prefers frontmatter, each role folder must be trusted once
@@ -646,16 +671,18 @@ the component is tested by the hub's own gate.
 - **Two writers of `hub.json`.** Harness renders it at the top; a repo without harness
   writes it by hand. `setup` refusing to write beside a manifest, and `rendered_from`
   marking the rendered kind, keep the two apart; the gate is in §2.
-- **Origin stamping reads transcripts, which "may lag the in-memory conversation"**
+- **Origin stamping reads transcripts**, and "The transcript file is written
+  asynchronously and may lag the in-memory conversation"
   (<https://code.claude.com/docs/en/hooks#common-input-fields>). Auto-relay already lives
   with this; the stamp retries once after 500 ms before defaulting to `model`, and
   `model` is the safe default (a missed `jacob` costs a question, a false `jacob` would
   cost an approval).
 - **Cold starts make chatty routing expensive.** Every cold message pays ~1u. The
   budget per conversation and the ping-pong hold bound it; H5's measurement decides
-  which roles go warm; `hub log --cost` (from the `result` line's `total_cost_usd`,
-  <https://code.claude.com/docs/en/headless#pipe-data-through-claude>) shows the spend
-  per conversation so the number is seen, not assumed.
+  which roles go warm; `hub log --usage` (from the `result` line, whose payload
+  "includes metadata about the request (session ID, usage, etc.)",
+  <https://code.claude.com/docs/en/headless#get-structured-output>) shows the tokens
+  per conversation in units of 1u, so the number is seen, not assumed.
 - **Local trust.** Any local process can POST to 127.0.0.1. The token in `local.env`
   gates every request; the server runs only `claude` with registry arguments and the
   commands `hub.json` names; a spoofed envelope cannot be `origin: jacob` because the
