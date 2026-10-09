@@ -71,7 +71,13 @@
 
 ## Reported to other owners
 
-- None open. The planner's §4a report was overtaken by the fix pass (above); the
+- **hooks** (via the dispatcher, 2026-10-08): `./dev.sh check` is red on `checks`
+  (`hooks-installed`: `prefer-recipes.sh` and `test-prefer-recipes.sh` drift) against
+  tools/hooks' UNCOMMITTED `source/hooks/` edits (their tree: those two files and
+  TODO.md modified, HEAD 43d2a1e). Not re-copied here: the source is mid-task.
+  Re-copy once they commit. Unconfirmed: whether tools/checks should compare against
+  the committed source rather than the working tree.
+- The planner's §4a report was overtaken by the fix pass (above); the
   dispatcher's top-level `CLAUDE.md` row now says hub's check is a real gate since
   47eea1a (read 2026-10-08). The hub's requests to other owners are drafted in
   `origin/plan/hub:TODO.md`, to send after Jacob's yes on PLAN-hub.md's Decisions.
