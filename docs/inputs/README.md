@@ -32,6 +32,11 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   into it, so brief fixed point 2 stands; §14.7's worked example no longer reports a
   duplicate item 9. The brief's fixed point 10 (and §4 item 2) were edited at the
   top-level original to match and lose their "Not fixed" paragraph. Nothing else drifted.
+- **The brief alone re-copied 2026-10-08** for §4 question 11 (a session the hub runs,
+  from PLAN-context-hygiene.md §0 "Later"; §5 now says eleven questions). Edited at the
+  top-level original, copied over by hand, and only its `SHA256SUMS` line rewritten.
+  Not a refresh: seven other copies had drifted and were left as they were, since
+  refreshing them is a decision (TODO.md).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

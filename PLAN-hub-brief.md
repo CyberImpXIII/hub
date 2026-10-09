@@ -171,6 +171,21 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
    leaves the system working and the interim rules retire as their replacements land.
 10. **What it does not do**, explicitly: no model in routing, no agent teams as the
     backbone (routing-tree §5 says why), no editing of code by the dispatcher.
+11. **A session the hub runs.** PLAN-context-hygiene.md §0 ("Later", made a hub
+    requirement by Jacob 2026-10-08; that plan is not a §2 input, so the requirement is
+    stated here whole) wants a session a program drives, through `-p --input-format
+    stream-json --output-format stream-json` or the Agent SDK
+    (<https://code.claude.com/docs/en/cli-reference#cli-flags>). The program holds the
+    message list, so it clears and rebuilds the context on its own, with no keystroke
+    and no restart, and can edit one block while the session continues. It takes the
+    idle point (the turn and every agent it started have finished) from the event
+    stream, not from ledgers. Settle: whether the hub runs these sessions, and through
+    stream-json or the SDK, with the probe that decides and its pass condition; which
+    events make the idle point, and the test that no rebuild lands while an agent runs;
+    what the hub exposes to clear, rebuild and address one block, and who may call it;
+    how it relates to the context-hygiene launcher that restarts a whole session; and
+    how that plan's rebuild guards hold here (no tool output in the system prompt, a
+    rebuild never read as Jacob's prompt, nothing lost).
 
 ## 5. Output contract
 
@@ -178,7 +193,7 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 
 - a `> **Status:**` header with the date, "plan, written in the cloud from
   PLAN-hub-brief.md", the owners, and a "Builds on" list;
-- numbered `## N.` sections, §4's ten questions answered in order, then `## Gates`,
+- numbered `## N.` sections, §4's eleven questions answered in order, then `## Gates`,
   `## Phases`, `## Setup component` (what `setup` installs for a hub node; required by
   PLAN-repo-setup.md §1), `## Risks`;
 - every claim about Claude Code's behaviour (permission modes, stream-json, hooks,
@@ -191,7 +206,7 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 - token costs per phase as ranges, with the measured starting context of a roster
   agent (about 29k, 2026-10-02) as the unit.
 
-**Done when:** the file exists on a branch named `plan/hub`, answers all ten questions,
+**Done when:** the file exists on a branch named `plan/hub`, answers all eleven questions,
 has the four closing sections, and every platform claim has a URL. Nothing else in the
 repo is changed.
 
