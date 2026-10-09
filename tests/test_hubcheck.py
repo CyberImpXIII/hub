@@ -275,6 +275,67 @@ class TestChecks(Base):
         self.assertEqual((p.returncode, p.stdout), (1, "  FAIL  dev.sh:3: x [a]\n"))
 
 
+class TestHooktests(unittest.TestCase):
+    """dev.sh's hooktests gate on fixture test files: an UNCHECKED test file (exit 3
+    ending on `UNCHECKED: <why>`) makes the gate 3, never 0 and never 1; any real
+    failure, or an exit 3 that does not say UNCHECKED, makes it 1."""
+
+    DEV = Path(__file__).resolve().parent.parent / "dev.sh"
+    BODIES = {
+        "pass": 'echo "  ok    a case"\necho "all cases passed"\n',
+        "unchecked": 'echo "  UNCHECKED  no sibling"\necho "UNCHECKED: site-scrapers not found"\nexit 3\n',
+        "silent3": 'echo "  ok    a case"\nexit 3\n',
+        "fail": 'echo "  FAIL  a case"\nexit 1\n',
+        "quiet0": 'echo "  ok    a case"\n',
+    }
+
+    def run_gate(self, *kinds):
+        with tempfile.TemporaryDirectory() as d:
+            for i, k in enumerate(kinds):
+                t = Path(d) / f"test-{i}-{k}.sh"
+                t.write_text("#!/usr/bin/env bash\n" + self.BODIES[k])
+                t.chmod(0o755)
+            p = subprocess.run([str(self.DEV), "hooktests"], capture_output=True, text=True,
+                               env={**os.environ, "HUB_HOOKS_DIR": d})
+        return p.returncode, p.stdout
+
+    def test_all_pass_is_ok(self):
+        code, out = self.run_gate("pass", "pass")
+        self.assertEqual(code, 0, out)
+        self.assertIn("ok    hooktests: 2 hook test files, all cases passed", out)
+
+    def test_unchecked_is_3_and_says_why(self):
+        code, out = self.run_gate("pass", "unchecked")
+        self.assertEqual(code, 3, out)
+        self.assertIn("UNCHECKED  hooktests: ", out)
+        self.assertIn("site-scrapers not found", out)
+        self.assertNotIn("FAIL", out)
+        self.assertNotIn("all cases passed", out)
+        sys.path.insert(0, str(self.DEV.parent / "devtools"))
+        import checkjson
+        row = checkjson.check("hooktests", "code", code, out)
+        self.assertEqual(row["status"], "unchecked")
+        self.assertIn("site-scrapers not found", row["reason"])
+
+    def test_exit_3_without_saying_unchecked_is_a_failure(self):
+        code, out = self.run_gate("pass", "silent3")
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL  ", out)
+
+    def test_a_failure_beside_an_unchecked_is_1(self):
+        code, out = self.run_gate("unchecked", "fail")
+        self.assertEqual(code, 1, out)
+
+    def test_exit_0_without_all_cases_passed_is_a_failure(self):
+        code, out = self.run_gate("quiet0")
+        self.assertEqual(code, 1, out)
+
+    def test_no_test_files_is_a_failure(self):
+        code, out = self.run_gate()
+        self.assertEqual(code, 1, out)
+        self.assertIn("no ", out)
+
+
 class TestDriftAndRefresh(Base):
     def test_in_step(self):
         self.assertEqual(hc.drift(self.r), ([], []))

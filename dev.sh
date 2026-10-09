@@ -21,7 +21,8 @@ usage() {
              via devtools/checkjson.py: one check per gate, each finding a failure;
              drift is a note, not a check, so it is not there: ./dev.sh drift --json)
   test       the unit tests (tests/): every hubcheck gate shown red on a fixture
-  hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh)
+  hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh); one ending
+             `UNCHECKED: <why>` with exit 3 makes the gate unchecked, never ok
   files      the files this repo needs are present; dev.sh is executable
   inputs     docs/inputs/ copies match SHA256SUMS; README table, SHA256SUMS and disk agree; brief §2 covered
   leaks      no email address, home-folder path or phone number in what would be committed
@@ -43,19 +44,30 @@ cmd_test() {
   printf '%s\n' "$out"; echo "  FAIL  test"; return 1
 }
 
+# A test file that exits 3 AND ends on its `UNCHECKED: <why>` line could not find
+# what it tests against (a lone clone: no site-scrapers beside it). That is
+# UNCHECKED, said out loud, never ok and never a failure of the hook; exit 3
+# without that line is a FAIL. Any FAIL makes the gate 1; otherwise any UNCHECKED
+# makes it 3. HUB_HOOKS_DIR exists for tests/test_hubcheck.py's fixtures.
 cmd_hooktests() {
-  local t out code fails=0 n=0
-  for t in .claude/hooks/test-*.sh; do
-    [ -e "$t" ] || { echo "  FAIL  hooktests: no .claude/hooks/test-*.sh"; return 1; }
+  local dir="${HUB_HOOKS_DIR:-.claude/hooks}" t out code last fails=0 unchecked=0 n=0
+  for t in "$dir"/test-*.sh; do
+    [ -e "$t" ] || { echo "  FAIL  hooktests: no $dir/test-*.sh"; return 1; }
     n=$((n+1))
     out=$("$t" 2>&1); code=$?
-    if [ $code -ne 0 ] || ! printf '%s\n' "$out" | tail -1 | grep -q 'all cases passed'; then
+    last=$(printf '%s\n' "$out" | tail -1)
+    if [ $code -eq 0 ] && printf '%s\n' "$last" | grep -q 'all cases passed'; then
+      :
+    elif [ $code -eq 3 ] && printf '%s\n' "$last" | grep -q '^UNCHECKED: '; then
+      echo "  UNCHECKED  hooktests: $t: ${last#UNCHECKED: }"; unchecked=$((unchecked+1))
+    else
       # the test's tail under its FAIL line, indented: --json joins it into the message
       echo "  FAIL  $t: exit $code"; printf '%s\n' "$out" | tail -5 | sed 's/^/        /'; fails=$((fails+1))
     fi
   done
-  [ $fails -eq 0 ] && echo "  ok    hooktests: $n hook test files, all cases passed"
-  [ $fails -eq 0 ]
+  [ $fails -gt 0 ] && return 1
+  [ $unchecked -gt 0 ] && { echo "  note  hooktests: $((n-unchecked)) of $n hook test files passed, $unchecked unchecked"; return 3; }
+  echo "  ok    hooktests: $n hook test files, all cases passed"
 }
 
 cmd_files()   { python3 devtools/hubcheck.py files; }
