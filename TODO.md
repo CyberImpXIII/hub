@@ -28,6 +28,14 @@
   copy direction should flip for the brief (this repo the original); the planner's
   and Jacob's call, since the top level is the planner's.
 
+- **Merging `plan/hub` into `main` conflicts in `TODO.md`, and only there** (confirmed
+  2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one
+  CONFLICT, TODO.md; heads aa949b2 / e80d6b7). When to merge waits on Jacob's yes on
+  PLAN-hub.md's Decisions. On the merge, take `plan/hub`'s TODO.md as the base and drop
+  its own-bug entry "`./dev.sh check` counts an UNCHECKED hook test as a FAIL": fixed
+  on `main` 2026-10-08 (`cmd_hooktests` returns 3; `tests/test_hubcheck.py`
+  `TestHooktests`). The local `plan/hub` branch is stale (a803ccf); use `origin/plan/hub`.
+
 ## Own limits, known
 
 - **`check --json` (2026-10-05, PLAN-agent-groups §4.4)**: `devtools/checkjson.py`, the
@@ -57,23 +65,13 @@
 
 ## Unconfirmed suspicions
 
-- **The fix pass may not see the new inputs** (hub, 2026-10-04): they are on `main`,
-  and PLAN-hub-review.md §4a tells the cloud session to work on `plan/hub`, branched
-  before them, and does not mention `main`. docs/inputs/README.md says to read them
-  with `git show origin/main:docs/inputs/<file>`, but the cloud session reads the
-  prompt first. Probe: whether the fix pass's commits cite PLAN-usage-reporting.md §3
-  and PLAN-hard-gates.md §2. Reported to the planner (below).
-- **`TODO.md` will conflict when `plan/hub` merges into `main`**: §4a step 4 has the
-  cloud session write this file on `plan/hub`. Probe: `git merge-tree` of the two
-  heads after the fix pass.
+- None open. (The fix pass did see the new inputs: it merged `origin/main` into
+  `plan/hub` first, 0e779c1, and PLAN-hub.md cites PLAN-usage-reporting.md §3 and
+  PLAN-hard-gates.md §2; checked 2026-10-08.)
 
 ## Reported to other owners
 
-- **planner** (via the dispatcher, 2026-10-04): PLAN-hub-review.md §4a's prompt should
-  say "read `docs/inputs/` from `origin/main`" (or `main` be merged into `plan/hub`
-  first), and should expect the TODO.md conflict above. Jacob's view message (§4a step
-  3) is in no input; only the resumed session's transcript has it.
-- **dispatcher** (2026-10-04): the top-level `CLAUDE.md` tools row for `tools/hub/`
-  still says its `./dev.sh check` is setup's stub; it is a real check now.
-- None other open. (The setup `.gitignore` report was fixed in tools/setup 7336f9f and
-  applied here 2026-10-04.)
+- None open. The planner's §4a report was overtaken by the fix pass (above); the
+  dispatcher's top-level `CLAUDE.md` row now says hub's check is a real gate since
+  47eea1a (read 2026-10-08). The hub's requests to other owners are drafted in
+  `origin/plan/hub:TODO.md`, to send after Jacob's yes on PLAN-hub.md's Decisions.
