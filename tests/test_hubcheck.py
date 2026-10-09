@@ -6,6 +6,7 @@ run time so this file does not trip the leak audit it tests.
 import hashlib
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -192,6 +193,79 @@ class TestInputs(Base):
         p = self.r / "docs/inputs/SHA256SUMS"
         p.write_text(p.read_text() + "not a sum line\n")
         self.assertFinding(hc.gate_inputs(self.r), "not a '<sha256>  <path>' line")
+
+
+class TestSealed(Base):
+    """The copies are 0444: shown red on a writable copy, green once sealed. The mode
+    is a marker; the content guard stays gate_inputs, which must still catch an edit
+    that gets past the mode (as Edit and Write do)."""
+
+    COPIES = ["PLAN-hub-brief.md", "docs/inputs/claudeTest-CLAUDE.md", "docs/inputs/PLAN-a.md"]
+
+    def modes(self):
+        return [stat.S_IMODE((self.r / c).stat().st_mode) for c in self.COPIES]
+
+    def test_writable_copies_are_findings_then_seal_makes_them_green(self):
+        for c in self.COPIES:   # what a clone leaves, whatever this umask is
+            (self.r / c).chmod(0o644)
+        f, n = hc.gate_sealed(self.r)
+        self.assertEqual(n, 3)
+        self.assertEqual(len(f), 3, f)
+        self.assertFinding(f, "docs/inputs/PLAN-a.md: writable (mode 0644)")
+        self.assertFinding(f, "PLAN-hub-brief.md: writable")
+        self.assertEqual(hc.seal(self.r), 3)
+        self.assertEqual(self.modes(), [0o444] * 3)
+        self.assertEqual(hc.gate_sealed(self.r), ([], 3))
+        self.assertEqual(hc.gate_inputs(self.r), [])
+
+    def test_any_write_bit_is_writable(self):
+        hc.seal(self.r)
+        for mode in (0o644, 0o464, 0o446, 0o604):
+            (self.r / "docs/inputs/PLAN-a.md").chmod(mode)
+            self.assertEqual(hc.gate_sealed(self.r)[0],
+                             [f"docs/inputs/PLAN-a.md: writable (mode {mode:04o}); copies are 0444: ./dev.sh seal"
+                              " (after a clone or a checkout; ./dev.sh refresh seals what it writes)"])
+
+    def test_no_copy_on_disk_is_not_a_pass(self):
+        for c in self.COPIES:
+            (self.r / c).unlink()
+        self.assertFinding(hc.gate_sealed(self.r)[0], "names no copy on disk")
+
+    def test_refresh_writes_over_sealed_copies_and_leaves_them_sealed(self):
+        hc.seal(self.r)
+        (self.fx.top / "PLAN-a.md").write_text("plan a, v2\n")
+        self.assertEqual(hc.refresh(self.r), [])
+        self.assertEqual((self.r / "docs/inputs/PLAN-a.md").read_text(), "plan a, v2\n")
+        self.assertEqual(self.modes(), [0o444] * 3)
+        self.assertEqual(hc.gate_inputs(self.r), [])
+        self.assertEqual(sorted(p.name for p in (self.r / "docs/inputs").iterdir() if p.name.startswith(".")), [])
+
+    def test_refresh_seals_writable_copies(self):
+        self.assertEqual(hc.refresh(self.r), [])
+        self.assertEqual(hc.gate_sealed(self.r), ([], 3))
+
+    def test_the_mode_is_not_the_guard_inputs_is(self):
+        # what Edit/Write do to a 0444 file: replace it and keep the mode. sealed
+        # cannot see it; inputs must.
+        hc.seal(self.r)
+        p = self.r / "docs/inputs/PLAN-a.md"
+        tmp = p.with_name("edit.tmp")
+        tmp.write_text("edited past the mode\n")
+        tmp.chmod(0o444)
+        os.replace(tmp, p)
+        self.assertEqual(hc.gate_sealed(self.r), ([], 3))
+        self.assertFinding(hc.gate_inputs(self.r), "PLAN-a.md does not match its sum")
+
+    def test_main_prints_the_gate_shape(self):
+        env = {**os.environ, "HUB_ROOT": str(self.r)}
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "sealed"], capture_output=True, text=True, env=env)
+        self.assertEqual(p.returncode, 1, p.stdout)
+        self.assertEqual(p.stdout.count("  FAIL  "), 3, p.stdout)
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "seal"], capture_output=True, text=True, env=env)
+        self.assertEqual((p.returncode, p.stdout), (0, "  ok    seal: 3 copies set to mode 0444, content untouched\n"))
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "sealed"], capture_output=True, text=True, env=env)
+        self.assertEqual(p.returncode, 0, p.stdout)
+        self.assertIn("ok    sealed: 3 copies at mode 0444", p.stdout)
 
 
 class TestFiles(Base):

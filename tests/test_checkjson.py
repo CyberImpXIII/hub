@@ -111,7 +111,7 @@ def mutated(src, dest, old, new):
 # dev.sh's own check --json with its gates swapped for canned ones. A gate that
 # assigns names the loop uses (setup's cmd_hooks once leaked one that way,
 # emptying every later gate's findings) must change nothing outside itself.
-GATES_LINE = 'GATES="test hooktests files inputs leaks plans checks"\n'
+GATES_LINE = 'GATES="test hooktests files inputs sealed leaks plans checks"\n'
 DISPATCH = 'case "${1:-}" in\n'
 CANNED = ('cmd_test() { json=0; rows=(); code=0; dest=/dev/null; capdir=/nonexistent; ok=(); fail=(); g=x\n'
           '  echo "FAIL: test_x (test_hubcheck.T.test_x)"; return 1; }\n'

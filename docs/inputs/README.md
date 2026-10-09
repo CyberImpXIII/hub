@@ -53,6 +53,13 @@ from the repo root. `./dev.sh drift` compares each copy with its original (only 
 the originals are reachable, not in a clone), and `./dev.sh refresh` copies them all
 again, running the leak audit on the originals first and refusing on any finding.
 
+**The copies are mode 0444** (no write bit), set by `./dev.sh refresh` as it writes
+them and by `./dev.sh seal`; `./dev.sh check` fails (`sealed`) on a writable one.
+That mode is a marker, not a guard: it stops a plain `cp` or `>` over a copy, but
+Edit, Write, `sed -i` and `mv` replace a 0444 file and leave it 0444. The guard is
+the `SHA256SUMS` check above. Git does not keep the mode, so a clone, or a checkout
+that rewrites a copy, leaves it 0644: run `./dev.sh seal` then.
+
 | copy | original (claudeTest top level) | read by |
 |---|---|---|
 | `../../PLAN-hub-brief.md` | `PLAN-hub-brief.md` | brief |

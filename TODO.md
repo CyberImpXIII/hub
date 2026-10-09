@@ -29,6 +29,7 @@
 - **Seven inputs drifted, not refreshed** (2026-10-08, `./dev.sh drift`):
   claudeTest-CLAUDE.md, routing-tree, agent-groups, repo-setup, portable-env,
   usage-reporting, check-progress. Only the brief was re-copied for question 11.
+  Eight on 2026-10-09: PLAN-todo-tool.md has drifted too.
   Refresh (leak audit first) before the next cloud pass.
 
 - **Where the brief is edited.** routing-tree §13.5 says hub owns the brief, but
@@ -74,6 +75,14 @@
   prints how many it checked (49 on 2026-10-04), so a regex that stops matching shows
   as a drop, not a pass.
 
+- **`sealed` is red on a fresh clone** (2026-10-09, PLAN-architecture-review.md §4 U1):
+  git keeps no mode bits, so a clone (the cloud pass) and any checkout or merge that
+  rewrites a copy leave it 0644, and `./dev.sh check` fails until `./dev.sh seal`. Each
+  FAIL line names that command. The mode is a marker only (W6: Edit/Write replace a
+  0444 file and keep 0444); the guard is `inputs` against SHA256SUMS
+  (`TestSealed.test_the_mode_is_not_the_guard_inputs_is` holds that). Not sealed:
+  README.md and SHA256SUMS (refresh rewrites SHA256SUMS in place).
+
 ## Unconfirmed suspicions
 
 - None open. (The fix pass did see the new inputs: it merged `origin/main` into
@@ -81,6 +90,18 @@
   PLAN-hard-gates.md §2; checked 2026-10-08.)
 
 ## Reported to other owners
+
+- **planner** (via the dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
+  "its TODO.md:541 says 0444", but hub's TODO.md has no such line (94 lines); 541 is
+  claudeTest's top-level TODO.md, Decision 39 (open), which proposes that the TOP-level
+  `PLAN-hub-brief.md` become a 0444 copy of hub's brief, gated by hub's check. The
+  docs/inputs copies are now 0444 anyway (`sealed`). Decision 39's own gate (top copy
+  differs or is writable) is not built: it waits on that decision.
+- **hooks** (via the dispatcher, 2026-10-09): `./dev.sh check` is red on `checks`
+  only: `hooks copies printed no report (exit 2): FAIL lib/extra-stores.sh: no test`
+  and "the source is not well-formed" [hooks-installed]. Cause: tools/hooks' UNTRACKED
+  `source/lib/extra-stores.sh` (with `store-guard.sh` and its test modified; HEAD
+  a953a98), i.e. their work in progress. Nothing changed here for it.
 
 - **hooks** (via the dispatcher, 2026-10-08): `./dev.sh check` is red on `checks`
   (`hooks-installed`: `prefer-recipes.sh` and `test-prefer-recipes.sh` drift) against

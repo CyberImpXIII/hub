@@ -25,11 +25,14 @@ usage() {
              `UNCHECKED: <why>` with exit 3 makes the gate unchecked, never ok
   files      the files this repo needs are present; dev.sh is executable
   inputs     docs/inputs/ copies match SHA256SUMS; README table, SHA256SUMS and disk agree; brief §2 covered
+  sealed     every copy is mode 0444: a marker, not a guard (Edit and Write change a 0444 file);
+             the guard is inputs. git does not keep the mode: after a clone, ./dev.sh seal
   leaks      no email address, home-folder path or phone number in what would be committed
   plans      setup plans . (every PLAN-*.md not done has a Setup component heading)
   checks     tools/checks: checks run . --json, every failing line (credential-shaped values, hooks, rules, TODO, help)
   drift      each copy against its original at the workspace top (a note in check, never a fail)
-  refresh    copy every original over its copy (leak audit first), rewrite SHA256SUMS
+  refresh    copy every original over its copy (leak audit first) at mode 0444, rewrite SHA256SUMS
+  seal       set every copy to mode 0444, content untouched (after a clone or a checkout)
 EOF
 }
 
@@ -72,6 +75,8 @@ cmd_hooktests() {
 
 cmd_files()   { python3 devtools/hubcheck.py files; }
 cmd_inputs()  { python3 devtools/hubcheck.py inputs; }
+cmd_sealed()  { python3 devtools/hubcheck.py sealed; }
+cmd_seal()    { python3 devtools/hubcheck.py seal; }
 cmd_leaks()   { python3 devtools/hubcheck.py leaks "$@"; }
 cmd_drift()   { python3 devtools/hubcheck.py drift "$@"; }
 cmd_refresh() { python3 devtools/hubcheck.py refresh; }
@@ -91,7 +96,7 @@ cmd_checks() {
   python3 devtools/hubcheck.py checks "$CHECKS_BIN"
 }
 
-GATES="test hooktests files inputs leaks plans checks"
+GATES="test hooktests files inputs sealed leaks plans checks"
 
 # The role each gate's failure belongs to, in --json (PLAN-agent-groups.md §4.1:
 # code, tests, audit, docs). A failing test is code's (as in tools/setup and
@@ -99,7 +104,7 @@ GATES="test hooktests files inputs leaks plans checks"
 # and tools/checks' findings are audit's.
 gate_role() {
   case "$1" in
-    inputs|plans) echo docs ;;
+    inputs|sealed|plans) echo docs ;;
     leaks|checks) echo audit ;;
     *) echo code ;;
   esac
@@ -150,6 +155,8 @@ case "${1:-}" in
   hooktests) cmd_hooktests ;;
   files)     cmd_files ;;
   inputs)    cmd_inputs ;;
+  sealed)    cmd_sealed ;;
+  seal)      cmd_seal ;;
   leaks)     shift; cmd_leaks "$@" ;;
   plans)     cmd_plans ;;
   checks)    cmd_checks ;;
