@@ -148,13 +148,16 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
 
 ## Open decisions
 
-- **`.claude/settings.json` lacks 12 hook registrations** (Jacob's step; setup
-  2026-10-05): the shared hooks are installed but not registered, so they do not fire
-  here, in a local session or a cloud one. setup wrote `.claude/settings.proposed.json`
-  (untracked); applying it is `cp .claude/settings.proposed.json .claude/settings.json`.
-  setup also installed `.githooks/{pre-commit,commit-msg,check-pass}`, but
-  `core.hooksPath` is unset and `githooks.checks` has no checks CLI, so those gates are
-  off (setup reports `needs-jacob`).
+- **The 12 hook registrations are applied locally but not committed** (Jacob's step).
+  Jacob's `wiring --apply` on 2026-10-09 left the local `main` checkout's
+  `.claude/settings.json` byte-equal to `.claude/settings.proposed.json` (`cmp` equal,
+  checked 2026-10-09): 15 hook registrations, against 3 in the committed file (`main`
+  03f33d2: no-inline-blobs, troubleshooting, prefer-recipes). The change is uncommitted,
+  so a session started in that checkout reads all 15, but a clone (the cloud pass, this
+  branch) still gets the committed 3. Committing it is Jacob's step; no agent touches
+  settings.json. setup also installed `.githooks/{pre-commit,commit-msg,check-pass}`,
+  but `core.hooksPath` is still unset (checked 2026-10-09) and `githooks.checks` has
+  no checks CLI, so those gates are off (setup reports `needs-jacob`).
 - **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`). Last
@@ -199,7 +202,9 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   file as the base, dropping the two own bugs `main` had closed (the UNCHECKED hook test
   counted as FAIL, fixed 2026-10-08; hand-copied hook reinstalls, dropped in 94dea2b).
   A merge back conflicts again only if `main`'s TODO.md moves meanwhile: probe with
-  `git merge-tree --write-tree origin/main origin/plan/hub` first.
+  `git merge-tree --write-tree origin/main origin/plan/hub` first. `plan/hub` also
+  carries a code fix `main` lacks until then: 995bc61, `./dev.sh leaks FILE` printed ok
+  for a file it could not read (a relative path, since `dev.sh` cds to the repo).
 
 ## Own limits, known
 
