@@ -518,7 +518,7 @@ Jacob: "I want to be sure I understand EXACTLY what you mean, so please elaborat
 
 *The process.* `hub up` starts **one** server process for this node (the claudeTest top;
 later one more for site-scrapers when it becomes a child node, §10 phase 3). It listens
-on a localhost port or a Unix socket named in `.claude/local.env`. It is configured by
+on the localhost port its registry names (`server.port`; corrected 2026-10-05 at the re-read in PLAN-hub-review.md §5, this sentence said "a localhost port or a Unix socket named in `.claude/local.env`", which holds only the token and the parent URL). It is configured by
 one data file and nothing else: the node's **registry** (roles with their `claude -p`
 arguments, tags, children, the four services with the CLI each one runs, the owner
 table of §14.7, and the server's own port and keep-alive, which harness's `gen` renders into the registry from the manifest's `servers.<group>` entry: the hub never opens the manifest, PLAN-hub-brief.md §3 fixed point 2). It contains no tool's

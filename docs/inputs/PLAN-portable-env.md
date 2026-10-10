@@ -105,6 +105,56 @@ Rerunning it is safe: it asks only for values that are missing.
   memory, excluding data, secrets, `local.env` and `node_modules`. No git change, but
   no history or sync between machines either.
 
+
+### 3.3a What the top level holds that no repo does (planner, 2026-10-05)
+
+Jacob asked (2026-10-05) whether enough sits here to be worth a repo, or whether this
+is setup's job. Counted: `CLAUDE.md`, `TODO.md`, 26 `PLAN-*.md`, `PLANNER-HANDOFF.md`,
+`RENAME-TO-claudeTools.md`, `samples/`, and `.claude/` (agents.sh, the manifest with
+the roster, nine top-level-only hooks, the libraries, their tests, and the state
+ledgers; already its own git repo with history and no remote). Setup can render the
+generic parts of a top level (the rules block, the hooks it installs, a settings
+proposal) and that is its job; it cannot regenerate the plans, the TODO, the roster
+or `.claude`'s history, which are this instance's record. So the question is only
+where that record lives: A, a private repo (git history, sync between machines, the
+rename is then a clone), or B, a tarball (no history). The planner's view is A, with
+`.claude`'s history carried in by subtree, and setup owning the generic parts within
+it.
+
+### 3.3b Decision 1 answered: a private repo, once setup can regenerate it (Jacob, 2026-10-05)
+
+Jacob: "as long as we can determine that we can 'regenerate' the directory with setup,
+a private repo is good. But that should look like a small series of files that can
+generate the content of what we need and I'm not sure setup is set up that way right
+now." He is right that it is not. What the top level holds, by kind:
+
+| kind | files | who makes it |
+|---|---|---|
+| **generators** (the small series) | `agents.manifest.json`, `wiring.json`, `agents.sh`, the nine top-level-only hooks, `lib/`, their tests, `temp-rules.json`; setup's `templates/` in its own repo | committed; hand-written source |
+| **generated from them** | `agents/*.md` (17, from the manifest by `agents.sh gen`), `settings.proposed.json` (from `wiring.json`), the three shared hook copies (from `tools/hooks/source/`), the shared-rules block of `CLAUDE.md`, `TODO.md`'s headings | rendered; must be reproducible byte for byte |
+| **the record** (content, not generated) | `CLAUDE.md`'s own prose, `TODO.md`'s items, the 26 `PLAN-*.md`, `PLANNER-HANDOFF.md`, `RENAME-TO-claudeTools.md` | committed as content; nothing generates a plan |
+| **instance state** | `state/`, `settings.local.json`, `.progress/`, `samples/`, `archive/`, `local.env` | gitignored, as `.claude/.gitignore` already does |
+
+Setup today has no top-level mode: `setup components` lists `repo`, `rules`, `hooks`,
+`todo`, `check`, `ignore`, `commit`, `remote`, and two placeholders (`agent`, `server`),
+each for one repo; `agents.sh gen` and `wiring` render the rest. So "regenerate the
+directory" means, concretely:
+
+1. **`setup . --node`** (PLAN-repo-setup.md §7.5) renders the top level's generated
+   row from the generators row, and recurses into the children named in
+   `children.json`. Harness's `gen` stays the renderer of `agents/*.md`; setup calls
+   it as a declared verb (§7.3), not by reimplementing it.
+2. **The `regenerate` gate**, the proof Jacob asked for: in a fresh clone in a
+   temporary directory, delete every file in the generated row, run `setup . --node`,
+   and `git status` must be clean. Red on any difference, naming the file. It is the
+   §7.5 fixture, run as a test in setup's repo and as a check at the top level, so a
+   generated file edited by hand is red before it is committed.
+3. **Then the repo**: `git init` at the top level, `.claude`'s history carried in by
+   `git subtree`, the instance row ignored, private, `init.sh` (§3.2) as the entry.
+
+Decision 1 is therefore **yes, option A, gated on step 2 being green.** Steps 1-2 are
+setup's work under §7.5 and wait on §7.8 (the ownership model) being confirmed; step 3
+is one dispatch after, with Jacob running the `--github --private` creation with `!`.
 ### 3.4 Framework vs instance in the manifest
 - **The manifest holds both kinds now:** the framework (roles, defaults, the
   dispatcher, harness, deep-work) and this machine's repos (the five folder agents and
@@ -149,7 +199,7 @@ Rerunning it is safe: it asks only for values that are missing.
 
 ## 7. Decisions for Jacob
 
-1. **Packing:** A (claudeTest becomes a private git repo, framework only), or B (a
+1. **Packing (answered 2026-10-05: A, gated on the regenerate proof, §3.3b):** A (claudeTest becomes a private git repo, framework only), or B (a
    tarball)? I suggest A. It reverses "claudeTest is not a repo", which is yours to
    reverse.
 2. **Split the manifest into framework and instance** (§3.4)?

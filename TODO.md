@@ -157,7 +157,8 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   off (setup reports `needs-jacob`).
 - **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
-  hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
+  hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`). Last
+  refresh 2026-10-09 on `plan/hub` (eight copies had drifted; docs/inputs/README.md).
 
 - **Brief §4 question 11 (a session the hub runs) is unanswered** (added 2026-10-08,
   Jacob's yes relayed by the planner): PLAN-hub.md on `origin/plan/hub` answers ten.
@@ -165,12 +166,6 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   PLAN-context-hygiene.md §0 (and that plan at PLAN-services.md §3); neither is a §2
   input or a copy here, so the brief states the requirement whole. Whether to add them
   to §2 (and copy them) is the planner's call; the pointer gate skips uncopied plans.
-- **Seven inputs drifted, not refreshed** (2026-10-08, `./dev.sh drift`):
-  claudeTest-CLAUDE.md, routing-tree, agent-groups, repo-setup, portable-env,
-  usage-reporting, check-progress. Only the brief was re-copied for question 11.
-  Eight on 2026-10-09: PLAN-todo-tool.md has drifted too.
-  Refresh (leak audit first) before the next cloud pass.
-
 - **Where the brief is edited: answered, no flip** (Jacob 2026-10-09,
   `docs/REVIEW-2026-10-09.md` §5.10, 5.6). The top-level `PLAN-hub-brief.md` stays the
   original and `./dev.sh refresh` copies it here; routing-tree §13.5's "owner" means

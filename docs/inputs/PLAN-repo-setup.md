@@ -194,3 +194,179 @@ a rendered file at any level; the node's server does, through setup, and nothing
 Gate added to 7.5's fixture: a `write-request` for a rendered file in a child is served
 by the child's server with no message to the parent (the parent's ledger shows none),
 and the result carries the parent's template version.
+
+### 7.9 `settings.json` is committed, as generic wiring (Jacob, 2026-10-05)
+
+Jacob: "yes!" to every repo committing its `.claude/settings.json`. The file holds
+hook registrations by relative path and the permission mode: wiring, not instance
+data. Instance values stay in the gitignored `.claude/local.env`
+(PLAN-portable-env.md §3.1). It changes nothing about who edits the file: settings
+stay Jacob's (§2, "Settings stay Jacob's"); the change is that the file travels with a
+clone, so the hooks it registers run there without his copy step.
+
+- **Today:** site-scrapers and tools/setup track theirs; tools/checks, tools/hooks,
+  tools/hub and tools/todo have the file on disk, not ignored, and untracked. Each of
+  those four agents adds its existing file to git unchanged and commits, one commit
+  per repo, "settings.json: track the hook wiring (PLAN-repo-setup.md §7.9)".
+- **A repo setup creates** (`setup <new folder>`): nothing of Jacob's exists there yet,
+  so setup writes `settings.json` itself from the same render that produces
+  `settings.proposed.json`, and includes it in the one commit it makes. For an
+  existing repo the proposal stays the path, and `wiring` reports the drift.
+- **Gate:** `tools/checks` gains `settings-tracked`: red when `.claude/settings.json`
+  exists and `git ls-files` does not list it, or when `.gitignore` matches it; fixture
+  pair as for every check. `hooks-installed` stays what it is.
+
+### 7.10 Ownership confirmed; the top-level repo is built to be eliminated (Jacob, 2026-10-05)
+
+Jacob confirmed §7.8: "so long as we know the private git repo is designed so it can be
+manipulated in service of it being eliminated with a config file, it may be the most
+efficient way to reform the same repo a few times to see what sort of progress needs to
+be made." Read as a design rule for the top-level repo PLAN-portable-env.md §3.3b
+proposes:
+
+- **The repo exists to be replaced by one config file plus the generators.** Its
+  measure of success is how little of it is not regenerated from that file. The
+  config is the node's one input: `children.json` from §7.5 grows into `node.json`,
+  naming the children, the generated files and their sources, and the record files
+  (the ones committed as content and never generated). One file, so "regenerate from
+  a config file" is literally one path.
+- **`setup . --node --rebuild`** is the loop Jacob describes: delete every file
+  `node.json` lists as generated, render them again, and print one line per file,
+  `regenerated` (byte-identical to the committed one), `drift` (rendered differently;
+  the diff is the finding), `record` (content, skipped), or `unaccounted` (present in
+  the tree, named by neither list). The `unaccounted` and `drift` counts are the
+  progress to be made; the run is cheap, so it can be repeated after every change.
+  The regenerate gate of PLAN-portable-env.md §3.3b step 2 is this command with the
+  rule "zero drift, zero unaccounted" in a fresh clone.
+- **Gates, same change:** the §7.5 two-level fixture; a fixture whose generated file
+  was edited by hand is `drift`; a stray file is `unaccounted`; a record file is never
+  deleted by `--rebuild` (a test that plants one and checks it survives); the top-level
+  run of `--rebuild` is a check in `tools/checks` (`regenerate`), red on either count.
+- **Order:** this (setup) first; then the §14.8 contract files, whose
+  `rendered-matches` is the same test at the repo level; then the repo itself
+  (PLAN-portable-env.md §3.3b step 3), with harness carrying `.claude`'s history in.
+
+
+### 7.11 The stores are generated from a separate data repo; the database stays the one source (Jacob, 2026-10-05)
+
+Jacob: "Can we also include the untracked data in the other repos for their setup
+scripts? The recipes should be able to give the setup script their data and have the
+untracked database emerge." And, correcting the planner's first draft: "rebuild and
+verify commands should use scaffolding built by the service providers we've already
+created. the database IS the one source, but I don't want it transferred. It should be
+generatable with setup and site-scrapers and a data source. I should be able to clone
+setup, site-scrapers, and have a private repo with some form of the information it has
+now, and generate the same setup I have, but I don't want it all in one place.
+site-scrapers is a tool. setup is a tool. the information is separate."
+
+**The survey** (2026-10-05, `git status --ignored` per repo): site-scrapers keeps every
+recipe only in `data/scrapers.db` (the builtin actions are the exception: a generated,
+read-only `lib/builtinActions.js`, committed, re-seeded on open); data-bridge keeps its
+schemas and mappings only in `data/data-bridge.db`; knowledge-base's `data/kb.sqlite`
+is downloaded by `refresh`; `failures.db`, `.sessions/`, `.fills/`, `.debug/`,
+`.captures/`, `state/check-baseline.tsv`, emailTools' CSVs and addon-bench's installed
+candidate are run state. A fresh clone of site-scrapers has no recipes and a clone of
+data-bridge no mappings.
+
+**Three kinds of repo, and the information lives in the third.**
+
+| kind | examples | holds |
+|---|---|---|
+| tool | site-scrapers, data-bridge, knowledge-base, setup, checks | code, tests, fixtures, the generic parts; nothing of this instance |
+| framework | the top level (§7.10, PLAN-portable-env.md §3.3b) | the rules, the roster, the plans, the record |
+| **data** (new, one private repo) | `<DATA_REPO>/site-scrapers/`, `<DATA_REPO>/data-bridge/`, `<DATA_REPO>/knowledge-base/` | the exported form of each tool's store, one folder per tool |
+
+Setup finds it through `DATA_REPO` in `.claude/local.env` (PLAN-portable-env.md
+§3.1), so the path is instance data and no tool holds it. Clone the tools, clone the
+framework, clone the data repo, run setup: the same stores emerge.
+
+**The database stays the one source.** Nothing writes a store except the tool's own
+CLI, and nothing reads the data repo at run time. The data repo is the store's
+*serialised form*, written by the tool and read by setup once, when the store is
+absent. The direction is store to files always, except at generation, when it is files
+to store. So "some form of the information it has now" is what the tool declares
+exportable: for site-scrapers, recipes with their params, statuses and the builtin
+actions, never `failures.db`, sessions, fills or captures; whether the version history
+(`change_log`, snapshots) is exported is site-scrapers' call, said in its contract.
+Writing the files still goes through the sanctioned write, as `mutate()` already
+rewrites `builtinActions.js` after the row, so the files never lead the store.
+
+**Scaffolding, nothing new invented.** Each piece is a verb or a component of a tool
+that exists:
+
+| piece | where it lives | what it reuses |
+|---|---|---|
+| the tool's `export`, `import`, `verify` verbs | its CLI, declared in its `cli.json` (PLAN-routing-tree.md §14.8) | the accessor audit: the only way in |
+| `export` after every sanctioned write | the `write` service (PLAN-routing-tree.md §14.6): a write that touches a store ends with that store's `export` into `$DATA_REPO/<tool>/` | the builtin-actions pattern, generalised |
+| `import` on a fresh clone | setup's `data` component (components.json): when the tool's `cli.json` declares `stores` and the store is absent, run `import` from `$DATA_REPO/<tool>/`; an existing store is never dropped | the `rules`/`hooks` component shape, `needs-jacob` when `DATA_REPO` is unset |
+| the proof | `tools/checks` `stores-exported`: runs each declared `verify`, red on any item `differs` or `missing`; a fixture pair as for every check | the check-json schema, `checks all` |
+| the loop | `setup . --node --rebuild` (§7.10) adds a store row: `emerged`, `same`, `drift`, `state` | the §7.10 report |
+| the data repo's commits | setup's `commit` component, scoped to the exporting tool's folder: one commit of exactly the files the export wrote | "never add -A" |
+
+**Gates, same change.** In a fresh clone with no store and the data repo present,
+setup makes the store and `verify` is all `same`. Counterfactual: change one recipe
+through the CLI, and the export in the data repo carries it (red in `stores-exported`
+until it does). A clone with `DATA_REPO` unset gets `needs-jacob`, not an empty store
+that looks installed. A `state` path never appears in the data repo (`no-secrets` and
+a path allowlist run over the export). knowledge-base's export is the mirror's page
+list with hashes; a clone without network reports `unavailable`, not `drift`.
+
+**Order.** After setup's §7.10 work and the §14.8 contract files (the `cli.json` and
+`components.json` shapes exist then): setup's `data` component and the `DATA_REPO`
+key; checks' `stores-exported`; then site-scrapers and data-bridge, the two repos empty
+on a clone today; knowledge-base's manifest last. Jacob creates the private data repo
+himself (`!`, `--github --private`), as every repo creation here.
+
+### 7.12 Setup renders hook copies from `tools/hooks/source`, never from its own copy (planner, 2026-10-05)
+
+Evidence, relayed by the dispatcher from the income agent (inc-55) and verified:
+`setup income --dry-run` prints "0 installed, 6 unchanged of 6" while checks'
+`hooks-installed` fails income with 16 findings. Setup compares a target against
+its own `.claude/hooks/`, which holds the three old hooks, while `tools/hooks/source`
+now holds eleven hooks and two libraries (hard-gates phases 1 and 3). `hooks copies`
+on 2026-10-05 at 10:05: 16 locations, 352 files, 238 MISSING and 5 DRIFT (four in
+site-scrapers). The same class was seen on 2026-10-04 (data-bridge, setup's TODO
+"Defaulting the hooks source"): "unchanged" means "agrees with my stale copy".
+
+**What §7.8 already settles.** Jacob confirmed on 2026-10-05 (§7.10) that the parent
+owns the template, the node owns its rendered files and renders them locally through
+setup, and no role hand-writes a rendered file. For hooks the parent is `tools/hooks`
+and the template is `tools/hooks/source`. So PLAN-tools-folder.md §9 (1) is answered
+by that confirmation and is not a separate yes: setup's `hooks` component takes its
+list from `tools/hooks/hooks list --json` (name, path, dest, test) and its files from
+`tools/hooks/source`; `--hooks-from DIR` stays as the override for a workspace without
+`tools/hooks`; the comparison goes through `hookslib`, the one comparator. Setup's own
+`.claude/hooks/` is a rendered copy like any other and is never the source. Its "lazy
+reinstall" paragraph is overtaken: 238 missing files is not "all agree".
+
+**Setup naming a sibling tool** (its TODO, "collides with the content audit"): yes.
+§7.11 already has setup reading each tool's `cli.json`; a dependency is not a target.
+One data file, `dependencies.json`, names the sibling tools setup installs FROM
+(`tools/hooks`, `tools/checks`), exempt from the content audit as `audit-terms.json`
+is, gated by "each named dependency resolves to a discovered repo, or UNCHECKED".
+
+**Drift.** A copy whose logic differs from the template is reported `drift` and left
+alone by a plain `setup <path>`, as today. `setup <path> --rebuild` (§7.10) re-renders
+every rendered file, hook copies included, and prints per file regenerated/drift;
+that is the replace path setup's TODO asks for, and the only one. Whether `--rebuild`
+may overwrite a drifted copy in a repo setup did not create is the one point left for
+Jacob (decision below); until his yes the five DRIFT files stay as they are and
+everything MISSING installs.
+
+**Order.** 1. `setup`: the component above, with its gates (a fixture copy missing
+comes back `installed`; header-only difference `installed`, "header refreshed";
+logic difference `drift`, byte-unchanged; `setup components` matches; the dependency
+file gate; direction audit clean). 2. Every location `hooks copies` names, each a
+dispatch to its owner: `tools/setup/setup <repo>` and commit; the owner never copies
+by hand. 3. `hooks copies` green is the proof, then checks' `hooks-installed` green.
+
+**Decision for Jacob:** may `setup <path> --rebuild` overwrite a hook copy whose
+logic drifted from `tools/hooks/source`, in a repo setup did not create? Setup's
+CLAUDE.md "What setup never does" says no today. Recommend yes: §7.8 says the file is
+the renderer's, and a hand edit to a rendered copy is the thing §7.8 forbids.
+
+**Jacob, 2026-10-05: yes.** `setup <path> --rebuild` overwrites a hook copy whose logic
+drifted from `tools/hooks/source` in any repo, with the per-file report §7.10 names.
+Setup's "What setup never does" line changes to say so. The 75 drifted copies across
+13 repos on 2026-10-05 are the first pass: setup first, then `setup . --rebuild` in
+each repo by its owner, then `hooks copies` green.

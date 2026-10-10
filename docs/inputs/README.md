@@ -37,6 +37,14 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   top-level original, copied over by hand, and only its `SHA256SUMS` line rewritten.
   Not a refresh: seven other copies had drifted and were left as they were, since
   refreshing them is a decision (TODO.md).
+- **Refreshed 2026-10-09** for the next cloud pass (PLAN-hub-review.md §5.11 step 1,
+  copied as `docs/REVIEW-2026-10-09.md` on `plan/hub`). The leak audit was run on the
+  originals first and found nothing; then `./dev.sh refresh`. Eight copies had
+  drifted: `claudeTest-CLAUDE.md`, `PLAN-routing-tree.md`, `PLAN-agent-groups.md`,
+  `PLAN-todo-tool.md`, `PLAN-repo-setup.md`, `PLAN-portable-env.md`,
+  `PLAN-usage-reporting.md`, `PLAN-check-progress.md`. `main` was merged into
+  `plan/hub` first, so the branch has these copies (the paragraph after the next
+  table describes the 2026-10-04 fix pass, before that merge).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

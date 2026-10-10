@@ -7,7 +7,7 @@ whose output is `PLAN-hub.md`.
 | doing this | use |
 |---|---|
 | the task, its fixed points and its output contract | `PLAN-hub-brief.md` |
-| the brief's inputs and the review's fix-pass inputs (copies, refreshed 2026-10-04) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
+| the brief's inputs and the review's fix-pass inputs (copies, refreshed 2026-10-09) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
 | before committing | `./dev.sh check`: unit tests, hook tests, required files, the inputs against `SHA256SUMS`, the copies at mode 0444 (`sealed`: a marker, not a guard; after a clone, `./dev.sh seal`), the leak audit, `setup plans .`, `checks run .`; a missing sibling tool is UNCHECKED, never ok. `./dev.sh check --json` prints only the one schema (tools/checks' `check-json.schema.json`, via `devtools/checkjson.py`; `tests/test_checkjson.py` holds it) |
 | copies against their originals | `./dev.sh drift`; `./dev.sh refresh` re-copies them (leak audit first) at mode 0444 and rewrites `SHA256SUMS` |
 | what is open | `TODO.md` |

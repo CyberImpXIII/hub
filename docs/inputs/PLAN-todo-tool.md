@@ -107,7 +107,17 @@ todo history [ID | --since D | --repo R | --kind K | --grep T]   closed items, n
 todo render --history                    TODO-HISTORY.md, read-only, never checked
 todo ready [--repo ..] [--work ..]       open items with repo, work and done_when set: dispatchable at a glance
 todo brief ID                            the item as a dispatch brief: what, why (evidence), files, done_when
+todo get ID                              one record by id, as JSON, with its tags (PLAN-services.md §3)
+todo find TAG...                         ids and titles of the records holding every tag named
+todo refs ID                             the records whose ref: tag names this id
+todo approve ID [--source S] [--date D] [--clear]   record Jacob's approval: the day and where he gave it
+todo dispatch ID [--note N] [--clear]    mark an approved item handed out; --clear when it comes back
+todo dispatchable                        approved, not dispatched, ready: what can be dispatched now
+todo stale-plans [--repo R] [--json]     open items whose pinned plan section changed, is gone, or was never pinned
 ```
+
+Added 2026-10-09 (todo's td-27): the seven commands built past this list, so the test
+that keeps plan and CLI equal can drop them from its `BEYOND_PLAN` exemptions.
 
 - **Cross-repo by scanning, not by configuration:** `todo repos` finds every
   `todo.json` under the parent of the current repo. `tree` and `list --all` read them.
@@ -236,3 +246,142 @@ exception or maybe a special case such as 'done-depricated'." So: an imported DO
 bullet with no resolution gets the resolution value `done-deprecated` (spelled so in
 the vocabulary), set by the import, shown as such, and the §5 red stays for every
 other closed item. The todo agent builds it with its gate and a mutant.
+
+## 9. Load only what the work needs: ids, tags and the top-level store (Jacob, 2026-10-09)
+
+> **Jacob:** "I also think that using IDs and tags could help reduce usage regarding
+> TODO and PLAN. We shouldn't necissarily be reloading everything on a todo if there
+> are items that are blocking and finished todo items might better exist as things
+> that only are loaded when needed to see if a task WAS completed. Perhaps we could
+> convert todo to a database and CLI so that it can be better integrated with checks
+> and hooks."
+
+**Most of this is built; the top level never moved onto it.** `tools/todo` is already
+a store behind a CLI that is the only way in. Closed items already leave the open
+store for `todo-history.json` (§2a, his own 2026-10-04 request) and are read only by
+`todo history` and `todo show`. `todo ready` lists only what can be dispatched, and
+`tools/checks` runs `todo-valid` in every repo. The cost is in the one file that was
+never migrated: the top-level `TODO.md`, measured 2026-10-09 at 2,100 lines and
+155,662 characters, about 39k tokens. Every session that reads it pays for all of it:
+- `## Needs Jacob` is 102k characters, with 12 inline "DONE" bullets still in it;
+- `## Confirmed` and `## Unconfirmed` together are 13k characters of settled findings;
+- the `## Resolved` sections are 9k characters.
+
+Phase 3 (§6) planned that migration, and it waits on two things:
+- `dispatch-guard.sh` must let the planner write `todo.json` and `todo-history.json`
+  at the top level (a harness change);
+- the CLI must accept a store in a folder that is not a git repo. Today `todo -C .`
+  answers "no todo.json ... run `todo init --prefix XX` there first", so `init` may be
+  all it needs. Unconfirmed until the todo agent runs it.
+
+**What changes:**
+1. **The top level moves into the store** (phase 3, as planned). The planner runs
+   `todo init --prefix tl`, then `todo import TODO.md --dry-run`, reviews the result,
+   imports and renders. DONE bullets and Resolved sections go to history. A confirmed
+   finding becomes a closed item with its evidence, so it stays findable by
+   `todo history --grep` without being loaded. `TODO.md` is rendered from then on, and
+   holds open items only.
+2. **Agents read lines, not the file.** A session uses `todo list` (one line per item),
+   `todo show ID` and `todo ready`. It never reads the rendered `TODO.md`, which is for
+   Jacob. Whether a task was done is `todo show ID`, which falls through to history.
+3. **Blocking is a field, so a blocked item is not loaded with the ready ones.** A new
+   field, `blocked_by: [ids]`, names the items that must close first. `todo ready`
+   leaves out an item until every id it names is in history, and `todo list --ready`
+   and `--blocked` split the two. The gates: a `blocked_by` id that exists in neither
+   file fails, and a cycle fails.
+4. **Ids and tags as PLAN-services.md §3 says:**
+   - `todo:<id>` everywhere;
+   - tags from the vocabulary (`repo:`, `plan:`, `kind:`, `origin:`, `status:`, `ref:`);
+   - `get`, `find` and `refs` at its server.
+
+   `find plan:PLAN-context-hygiene.md§0` lists every item a plan section produced.
+5. **Hooks and checks call the CLI:**
+   - a Dispatch line may point at `todo:<id>`, and `auto-relay.sh` refuses a line whose
+     id is closed or blocked (phase 5's "pointers accept `todo:ID`", now with a check);
+   - `todo brief <id>` is the dispatch brief, so the dispatcher no longer copies an
+     item's text into it;
+   - the "Keep an active TODO" rule becomes checkable: setup's zero-drift test (§7)
+     already requires a store.
+6. **Plans get the same treatment.** Every plan section already has an address,
+   `plan:PLAN-x.md§n`. What is missing:
+   - a verb that prints one section, so an agent loads §3 rather than 550 lines;
+   - a `status:` per section (open, approved, done), so `setup plans` can list what is
+     still live, and done sections are skipped unless asked for.
+
+   This is the plans gate's job, so it belongs to setup.
+
+**Storage format.** "A database and CLI" holds already, as far as any caller can tell:
+the CLI is the only way in. So whether the file behind it is JSON or SQLite is internal
+to the tool. JSON stays for now, for two reasons:
+- **It shows in a diff.** A change to an item reads in the repo's history; a SQLite
+  file is binary.
+- **History's append-only check reads it.** That check works against the git log of
+  `todo-history.json` (§2a gates).
+
+SQLite is the answer once a query is slow or a store holds thousands of items, and the
+switch is the todo agent's alone, because no caller reads the file.
+
+**Measure** (CLAUDE.md "To change an agent", step 4): the planner's starting context and
+its per-turn reads of `TODO.md`, before and after step 1. Read with
+`agents.sh tokens --prompts --since <the migration date>`.
+
+**Jacob's answers, 2026-10-09:** "1) yes 2) yes 3) yes 4) I dont understand this 5)
+sure, though I don't understand how this fits our read-only and gated goals".
+- **Steps 1-2, 3, 4-5: approved: Jacob 2026-10-09.** For tags, step 4 uses only the
+  seven shared namespaces in PLAN-services.md §3's table. The hinges cell of his row 3
+  named that, so nothing new gets added before the architecture service exists.
+- **Step 6 (one plan section at a time): not approved.** It is explained again in the
+  planner's reply and asked again.
+- **Storage stays JSON: approved: Jacob 2026-10-09,** with the guard below added,
+  because his question found a gap.
+
+**The gap his question found: the store files are not guarded.** The rendered
+`TODO.md` is written read-only (mode 0444) and carries a seal, so a hand edit fails
+`todo check`. But `todo.json` and `todo-history.json` are plain writable files: on
+2026-10-09 both were mode 0644 in `tools/todo/`. Any session with the Edit tool can
+change an item without the CLI. Whatever it writes passes so long as it is
+well-formed, and the "only way in" is then a convention rather than a gate. History's
+append-only audit only catches it after a commit. SQLite would not close this either:
+the `sqlite3` command writes to it just as Edit writes JSON. The format is not what
+gates it. What gates it:
+1. **The store files are written read-only.** The CLI makes a file writable for its
+   one write, then sets it back, as `TODO.md` is handled now.
+2. **The store carries a seal** over its own content, the same digest `TODO.md`
+   carries. `todo check` fails on a store whose seal does not match its last write by
+   the CLI.
+3. **A PreToolUse hook refuses Edit and Write on `todo.json` and `todo-history.json`,**
+   and names the `todo` command to use. It lives with the shared hooks in
+   `tools/hooks/source/`, so every repo gets it through setup. Bash writes are caught
+   as well as `lib/write-targets.sh` can see them.
+
+The tests:
+- a hand edit to a planted store fails `todo check`;
+- the hook blocks Edit on the store, and passes Edit on any other file;
+- a CLI write still succeeds on a read-only file.
+
+**Jacob's answers to the planner's two rows, 2026-10-09:** "1) ues 2) yes".
+- **Step 6: approved: Jacob 2026-10-09,** widened by his request in the same session:
+  "You often make references to specific plans and todos without showing me the full
+  text. Can we have hooks that pulls that data by reference rather than having you
+  retrieve it and output it to me?" Design:
+  - **setup** adds `setup plans show <FILE> §<n>`, which prints one section, and a
+    status for each section;
+  - **harness** adds a Stop hook, `show-refs.sh`, on both windows. It finds each
+    pointer in the final reply: `FILE §n`, `TODO.md "title"`, `<repo>/TODO.md "title"`
+    and `todo:<id>`. It resolves each one through its owner's CLI (`setup plans show`,
+    `todo show`, and a bold-title match in a hand-written TODO.md until that file is
+    migrated). It prints the text to Jacob as the hook's `systemMessage`.
+    - A synchronous hook's `systemMessage` "shows a message to the user, not the
+      model" (agent-sdk/hooks#systemmessage-not-appearing-in-output). An async hook's
+      goes to the model instead (hooks#how-async-hooks-execute), so this one must be
+      synchronous.
+    - **No model tokens are spent:** the model writes a pointer, and the hook shows
+      the text.
+    - **Caps:** up to 25 lines per reference, plus the path of a file holding the full
+      section.
+    - **A pointer that does not resolve is shown as `does not resolve`,** which also
+      checks every pointer the planner writes.
+    - It runs only after Jacob registers it in `settings.json`.
+- **The store guard: approved: Jacob 2026-10-09,** and widened to every store: see
+  PLAN-services.md §3 "Every data store is gated and read-only". That section's single
+  hook replaces the todo-only hook in step 3 above.

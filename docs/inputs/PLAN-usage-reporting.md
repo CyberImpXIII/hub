@@ -146,3 +146,48 @@ and the hub depends on it only at phase 4.
 the account's); installs the three scripts' registrations and the status line into
 `settings.proposed.json`, creates `~/.claude/usage/`, and reports `needs-jacob` until the
 live settings carry them. No per-repo install.
+
+## 8. Decisions answered (Jacob, 2026-10-05)
+
+1. **Build `tools/usage/`: yes.** §5 phase 1, deep-work, in the order §5 gives.
+2. **Thresholds `warn: 75`, `hold: 90`, stale after 15 minutes: yes**, moved only by
+   `calibrate` from evidence.
+
+## 9. Phase 1 built; §7 corrected (2026-10-05)
+
+Deep-work built phase 1 (tools/usage, local commit ea3db4d, no origin yet: all ten §4
+gates, 54 tests, `check --json` green). Two corrections from the build, relayed by the
+dispatcher and verified:
+
+- **§7 cannot hold as written.** Setup refuses a path that is not a repo, and the
+  user-level settings file is not in any repo, so no setup component can write the
+  registrations. The tool only *prints* them: `usage registrations` prints the status
+  line and the three hook entries as JSON with absolute paths (this machine's, which is
+  right for a user-level file and never enters the repo). Until they are in
+  `~/.claude/settings.json` and `usage init` has run, the tool is inert and `gate`
+  answers "unknown, hold". Who merges them is the open point: the live file is Jacob's
+  and already has content, so a copy-over is wrong and a hand merge of nested JSON is
+  the kind of step that goes wrong silently. Options: (a) Jacob merges by hand from the
+  printed output; (b) `usage registrations --merge-into <file>` writes a merged copy
+  *beside* the file (`<file>.proposed`), never the live one, with a check that the copy
+  parses and keeps every key of the original, and Jacob copies it over. (b) is the
+  `settings.proposed.json` pattern at user level. Planner: (b).
+- **The GitHub repo** waits on Jacob (`setup ../usage --github`, public: the tool holds
+  nothing of this instance; the absolute paths are in its output only).
+- **Two suspicions in its TODO.md**, labelled as such with their probes: a subagent's
+  last message may be missed when the transcript lags the Stop hook; the per-token
+  percentage runs high while some usage is unrecorded. Phase 3's week of samples is
+  the probe for the second.
+
+**§9 decision: yes, as an export (Jacob, 2026-10-05).** "This would be effectively an
+'export' feature, not a merge feature, as this would be a static copy." So the verb is
+`usage registrations --export [<settings file>]` (default `~/.claude/settings.json`):
+it reads the live file, adds the status line and the three hook entries, and writes
+the result as a static copy beside it, `<file>.proposed`, never touching the live file.
+It is declared in the tool's `cli.json` with the other verbs (PLAN-routing-tree.md
+§14.8). Gates, same change: the copy parses; every key of the original is present and
+unchanged in the copy; the registrations are present once, so a second export of an
+already-registered file is byte-identical to the first (no duplicate hook entries); a
+live file that fails to parse gives an error and no copy. Jacob's steps after it lands:
+copy the proposal over the live file, then `usage init`. Builder: deep-work, until
+harness adds the usage roster entry (its request is queued).

@@ -172,3 +172,20 @@ drift is a repo whose check command runs with no writer present. Wiring the writ
 each repo's check (§5, phases 2 and 3) stays with that repo's agent, because only it
 knows the repo's steps. Content-agnostic: the file format (§2) names steps and counts,
 never a repo or a command.
+
+## 9. Decisions answered (Jacob, 2026-10-05)
+
+1. **All repos: yes.**
+2. **A resumed pass counts as the pre-commit gate when its fingerprint matches: yes,
+   on one condition.** Jacob: "as long as that fact is passed into the commit message.
+   If there are issues that arise from a split test suite it can be determined there."
+   So the stamp that PLAN-hard-gates.md §7 phase 2 puts into the commit message
+   (`commit-msg`, the check stamp) carries `check: resumed from k/N` with the
+   fingerprint when the gating pass was resumed, and `check: full` otherwise. A commit
+   whose gating pass was resumed is then findable from the log alone. Gate, same
+   change: a fixture repo where one commit follows a resumed pass and one a full pass;
+   the test requires the two trailers, and `git log --grep 'check: resumed'` finds
+   exactly the first. Where the trailer is written is hard-gates' phase 2 (setup, the
+   `git-hooks` component); what it says is this plan's §7, so phase 1 here (harness,
+   `progress.sh`) ships the status-file field the stamp reads, `resumed_from`, and the
+   stamp reads it rather than recomputing.
