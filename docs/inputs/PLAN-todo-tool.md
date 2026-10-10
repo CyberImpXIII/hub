@@ -281,6 +281,12 @@ Phase 3 (§6) planned that migration, and it waits on two things:
    finding becomes a closed item with its evidence, so it stays findable by
    `todo history --grep` without being loaded. `TODO.md` is rendered from then on, and
    holds open items only.
+
+   **The import rule (todo td-22), approved: Jacob 2026-10-09 ("2) Yes"):** a dry run
+   that day sent the 24 blocks under "## Confirmed" to the store as open notes. One
+   vocab.json import rule closes them: a heading matching `confirmed` (word boundary,
+   so "Unconfirmed" stays open) imports as `done`. It comes with its test, and it
+   applies to every repo's import.
 2. **Agents read lines, not the file.** A session uses `todo list` (one line per item),
    `todo show ID` and `todo ready`. It never reads the rendered `TODO.md`, which is for
    Jacob. Whether a task was done is `todo show ID`, which falls through to history.
