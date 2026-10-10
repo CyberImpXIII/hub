@@ -4,7 +4,9 @@ A gate that cannot be shown red is not a gate. Leak-shaped strings are built at
 run time so this file does not trip the leak audit it tests.
 """
 import hashlib
+import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -193,6 +195,79 @@ class TestInputs(Base):
         self.assertFinding(hc.gate_inputs(self.r), "not a '<sha256>  <path>' line")
 
 
+class TestSealed(Base):
+    """The copies are 0444: shown red on a writable copy, green once sealed. The mode
+    is a marker; the content guard stays gate_inputs, which must still catch an edit
+    that gets past the mode (as Edit and Write do)."""
+
+    COPIES = ["PLAN-hub-brief.md", "docs/inputs/claudeTest-CLAUDE.md", "docs/inputs/PLAN-a.md"]
+
+    def modes(self):
+        return [stat.S_IMODE((self.r / c).stat().st_mode) for c in self.COPIES]
+
+    def test_writable_copies_are_findings_then_seal_makes_them_green(self):
+        for c in self.COPIES:   # what a clone leaves, whatever this umask is
+            (self.r / c).chmod(0o644)
+        f, n = hc.gate_sealed(self.r)
+        self.assertEqual(n, 3)
+        self.assertEqual(len(f), 3, f)
+        self.assertFinding(f, "docs/inputs/PLAN-a.md: writable (mode 0644)")
+        self.assertFinding(f, "PLAN-hub-brief.md: writable")
+        self.assertEqual(hc.seal(self.r), 3)
+        self.assertEqual(self.modes(), [0o444] * 3)
+        self.assertEqual(hc.gate_sealed(self.r), ([], 3))
+        self.assertEqual(hc.gate_inputs(self.r), [])
+
+    def test_any_write_bit_is_writable(self):
+        hc.seal(self.r)
+        for mode in (0o644, 0o464, 0o446, 0o604):
+            (self.r / "docs/inputs/PLAN-a.md").chmod(mode)
+            self.assertEqual(hc.gate_sealed(self.r)[0],
+                             [f"docs/inputs/PLAN-a.md: writable (mode {mode:04o}); copies are 0444: ./dev.sh seal"
+                              " (after a clone or a checkout; ./dev.sh refresh seals what it writes)"])
+
+    def test_no_copy_on_disk_is_not_a_pass(self):
+        for c in self.COPIES:
+            (self.r / c).unlink()
+        self.assertFinding(hc.gate_sealed(self.r)[0], "names no copy on disk")
+
+    def test_refresh_writes_over_sealed_copies_and_leaves_them_sealed(self):
+        hc.seal(self.r)
+        (self.fx.top / "PLAN-a.md").write_text("plan a, v2\n")
+        self.assertEqual(hc.refresh(self.r), [])
+        self.assertEqual((self.r / "docs/inputs/PLAN-a.md").read_text(), "plan a, v2\n")
+        self.assertEqual(self.modes(), [0o444] * 3)
+        self.assertEqual(hc.gate_inputs(self.r), [])
+        self.assertEqual(sorted(p.name for p in (self.r / "docs/inputs").iterdir() if p.name.startswith(".")), [])
+
+    def test_refresh_seals_writable_copies(self):
+        self.assertEqual(hc.refresh(self.r), [])
+        self.assertEqual(hc.gate_sealed(self.r), ([], 3))
+
+    def test_the_mode_is_not_the_guard_inputs_is(self):
+        # what Edit/Write do to a 0444 file: replace it and keep the mode. sealed
+        # cannot see it; inputs must.
+        hc.seal(self.r)
+        p = self.r / "docs/inputs/PLAN-a.md"
+        tmp = p.with_name("edit.tmp")
+        tmp.write_text("edited past the mode\n")
+        tmp.chmod(0o444)
+        os.replace(tmp, p)
+        self.assertEqual(hc.gate_sealed(self.r), ([], 3))
+        self.assertFinding(hc.gate_inputs(self.r), "PLAN-a.md does not match its sum")
+
+    def test_main_prints_the_gate_shape(self):
+        env = {**os.environ, "HUB_ROOT": str(self.r)}
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "sealed"], capture_output=True, text=True, env=env)
+        self.assertEqual(p.returncode, 1, p.stdout)
+        self.assertEqual(p.stdout.count("  FAIL  "), 3, p.stdout)
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "seal"], capture_output=True, text=True, env=env)
+        self.assertEqual((p.returncode, p.stdout), (0, "  ok    seal: 3 copies set to mode 0444, content untouched\n"))
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "sealed"], capture_output=True, text=True, env=env)
+        self.assertEqual(p.returncode, 0, p.stdout)
+        self.assertIn("ok    sealed: 3 copies at mode 0444", p.stdout)
+
+
 class TestFiles(Base):
     def test_missing_and_not_executable(self):
         (self.r / "TODO.md").unlink()
@@ -224,6 +299,115 @@ class TestLeaks(Base):
                 "2026-10-04, 2026-10-04T20:14Z, 250-400k, 29k\n")
         (self.r / "ok.md").write_text(text)
         self.assertEqual(hc.gate_leaks(self.r), [])
+
+
+class TestChecks(Base):
+    """gate_checks reads `checks run --json`'s report: every failing line, never the truncated text."""
+
+    def fake_cli(self, report, code):
+        """A stand-in checks CLI: prints `report` (a dict, or raw text) and exits `code`; logs its argv."""
+        (self.r / "report.out").write_text(report if isinstance(report, str) else json.dumps(report))
+        cli = self.r / "fake-checks"
+        cli.write_text(f'#!/usr/bin/env bash\necho "$@" > "{self.r}/argv.out"\n'
+                       f'cat "{self.r}/report.out"\necho "a stderr line" >&2\nexit {code}\n')
+        cli.chmod(0o755)
+        return cli
+
+    def results(self, *rows):
+        return {"results": [{"check": c, "status": s, "lines": ls} for c, s, ls in rows]}
+
+    def test_green_with_unchecked_is_ok_and_names_them(self):
+        rep = self.results(("a", "ok", []), ("b", "unchecked", ["no node.json"]))
+        f, notes = hc.gate_checks(self.fake_cli(rep, 0), self.r)
+        self.assertEqual((f, notes), ([], ["b: no node.json"]))
+        self.assertEqual((self.r / "argv.out").read_text().split(), ["run", str(self.r), "--json"])
+
+    def test_every_failing_line_is_a_finding_path_first(self):
+        lines = [f".claude/hooks/h{i}.sh: missing" for i in range(12)]   # the text run shows 8, then "... and 4 more"
+        rep = self.results(("hooks-installed", "fail", lines), ("x", "error", []), ("a", "ok", []))
+        f, _ = hc.gate_checks(self.fake_cli(rep, 1), self.r)
+        self.assertEqual(f, [f"{l} [hooks-installed]" for l in lines] + ["x: error, with no line saying why"])
+
+    def test_exit_disagreeing_with_the_report_is_a_finding(self):
+        f, _ = hc.gate_checks(self.fake_cli(self.results(("a", "ok", [])), 1), self.r)
+        self.assertEqual(f, ["checks run . exit 1 disagrees with its report (1 checks)"])
+        f, _ = hc.gate_checks(self.fake_cli(self.results(("a", "fail", ["l"])), 0), self.r)
+        self.assertEqual(f, ["l [a]", "checks run . exit 0 disagrees with its report (1 checks)"])
+
+    def test_no_report_or_an_empty_one_is_not_a_pass(self):
+        f, _ = hc.gate_checks(self.fake_cli("checks run: 1 ok -> green\n", 0), self.r)
+        self.assertFinding(f, "printed no report with results (exit 0; a stderr line)")
+        f, _ = hc.gate_checks(self.fake_cli(self.results(), 0), self.r)
+        self.assertFinding(f, "reported no checks (exit 0)")
+        f, _ = hc.gate_checks(self.r / "absent-cli", self.r)
+        self.assertFinding(f, "could not start")
+
+    def test_main_prints_findings_in_the_gate_shape(self):
+        cli = self.fake_cli(self.results(("a", "fail", ["dev.sh:3: x"])), 1)
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "checks", str(cli)], capture_output=True,
+                           text=True, env={**os.environ, "HUB_ROOT": str(self.r)})
+        self.assertEqual((p.returncode, p.stdout), (1, "  FAIL  dev.sh:3: x [a]\n"))
+
+
+class TestHooktests(unittest.TestCase):
+    """dev.sh's hooktests gate on fixture test files: an UNCHECKED test file (exit 3
+    ending on `UNCHECKED: <why>`) makes the gate 3, never 0 and never 1; any real
+    failure, or an exit 3 that does not say UNCHECKED, makes it 1."""
+
+    DEV = Path(__file__).resolve().parent.parent / "dev.sh"
+    BODIES = {
+        "pass": 'echo "  ok    a case"\necho "all cases passed"\n',
+        "unchecked": 'echo "  UNCHECKED  no sibling"\necho "UNCHECKED: site-scrapers not found"\nexit 3\n',
+        "silent3": 'echo "  ok    a case"\nexit 3\n',
+        "fail": 'echo "  FAIL  a case"\nexit 1\n',
+        "quiet0": 'echo "  ok    a case"\n',
+    }
+
+    def run_gate(self, *kinds):
+        with tempfile.TemporaryDirectory() as d:
+            for i, k in enumerate(kinds):
+                t = Path(d) / f"test-{i}-{k}.sh"
+                t.write_text("#!/usr/bin/env bash\n" + self.BODIES[k])
+                t.chmod(0o755)
+            p = subprocess.run([str(self.DEV), "hooktests"], capture_output=True, text=True,
+                               env={**os.environ, "HUB_HOOKS_DIR": d})
+        return p.returncode, p.stdout
+
+    def test_all_pass_is_ok(self):
+        code, out = self.run_gate("pass", "pass")
+        self.assertEqual(code, 0, out)
+        self.assertIn("ok    hooktests: 2 hook test files, all cases passed", out)
+
+    def test_unchecked_is_3_and_says_why(self):
+        code, out = self.run_gate("pass", "unchecked")
+        self.assertEqual(code, 3, out)
+        self.assertIn("UNCHECKED  hooktests: ", out)
+        self.assertIn("site-scrapers not found", out)
+        self.assertNotIn("FAIL", out)
+        self.assertNotIn("all cases passed", out)
+        sys.path.insert(0, str(self.DEV.parent / "devtools"))
+        import checkjson
+        row = checkjson.check("hooktests", "code", code, out)
+        self.assertEqual(row["status"], "unchecked")
+        self.assertIn("site-scrapers not found", row["reason"])
+
+    def test_exit_3_without_saying_unchecked_is_a_failure(self):
+        code, out = self.run_gate("pass", "silent3")
+        self.assertEqual(code, 1, out)
+        self.assertIn("FAIL  ", out)
+
+    def test_a_failure_beside_an_unchecked_is_1(self):
+        code, out = self.run_gate("unchecked", "fail")
+        self.assertEqual(code, 1, out)
+
+    def test_exit_0_without_all_cases_passed_is_a_failure(self):
+        code, out = self.run_gate("quiet0")
+        self.assertEqual(code, 1, out)
+
+    def test_no_test_files_is_a_failure(self):
+        code, out = self.run_gate()
+        self.assertEqual(code, 1, out)
+        self.assertIn("no ", out)
 
 
 class TestDriftAndRefresh(Base):

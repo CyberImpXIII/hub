@@ -1,0 +1,9 @@
+{"ok": true, "checks": [
+ {"name": "test", "status": "ok", "counts": {"failed": 0}, "failures": []},
+ {"name": "hooktests", "status": "ok", "counts": {"failed": 0}, "failures": []},
+ {"name": "files", "status": "ok", "counts": {"failed": 0}, "failures": []},
+ {"name": "inputs", "status": "ok", "counts": {"failed": 0}, "failures": []},
+ {"name": "leaks", "status": "ok", "counts": {"failed": 0}, "failures": []},
+ {"name": "plans", "status": "unchecked", "reason": "plans: ../setup/setup not found (set HUB_SETUP_BIN)", "counts": {"failed": 0}, "failures": []},
+ {"name": "checks", "status": "ok", "counts": {"failed": 0}, "failures": []}
+]}

@@ -10,10 +10,19 @@ at a throwaway fixture. Findings name a file, a line and a KIND, never a value.
           exists there; the brief's numbered lists have no repeated or
           skipped number; no CLAUDE.md is stored under docs/ (it would load
           as instructions)
+  sealed  every copy is at mode 0444 (no write bit). A MARKER, not a guard:
+          Edit, Write, sed -i and mv all change a 0444 file and leave it
+          0444. What it stops is a plain `cp` or `>` over a copy. The guard
+          is `inputs` (content against SHA256SUMS); this gate never stands
+          in for it. Git does not keep the mode, so a clone or a checkout
+          that rewrites a copy leaves it 0644 until `seal`
+  seal    set every copy to 0444 (content untouched); refresh does it too
   files   the files this repo needs are present (dev.sh executable)
   leaks   public-safety half of the leak audit: email addresses, home-folder
           paths, phone numbers. The credential half is tools/checks'
           no-secrets (run by `checks run .`), not re-implemented here.
+  checks  tools/checks' `checks run . --json`, every failing line (the text run
+          truncates); its exit code must agree with its report
   drift   each copy against its original at the workspace top (informational)
   refresh copy every original over its copy, leak audit first, then rewrite
           SHA256SUMS
@@ -22,6 +31,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -211,6 +221,45 @@ def brief_pointers(root: Path, rows):
     return f, len(seen)
 
 
+SEALED = 0o444
+WRITE_BITS = stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH
+
+
+def gate_sealed(root: Path):
+    """No copy in the README table has a write bit. Returns (findings, copies looked at).
+
+    A marker only (module docstring): the content check is gate_inputs. A copy that
+    is missing is gate_inputs' finding, not this one's; a table with no copy on disk
+    is a finding here, so the gate never passes having looked at nothing.
+    """
+    if not (root / README).is_file():
+        return [f"{README}: missing"], 0
+    f, n = [], 0
+    for c, _ in readme_rows(root):
+        p = root / c
+        if not p.is_file():
+            continue
+        n += 1
+        mode = stat.S_IMODE(p.stat().st_mode)
+        if mode & WRITE_BITS:
+            f.append(f"{c}: writable (mode {mode:04o}); copies are {SEALED:04o}: ./dev.sh seal"
+                     " (after a clone or a checkout; ./dev.sh refresh seals what it writes)")
+    if n == 0:
+        f.append(f"{README}: its table names no copy on disk; nothing to check")
+    return f, n
+
+
+def seal(root: Path):
+    """chmod 0444 every copy in the README table that exists. Returns how many."""
+    n = 0
+    for c, _ in readme_rows(root):
+        p = root / c
+        if p.is_file():
+            p.chmod(SEALED)
+            n += 1
+    return n
+
+
 def gate_files(root: Path):
     f = [f"{r}: missing" for r in REQUIRED if not (root / r).is_file()]
     if (root / "dev.sh").is_file() and not os.access(root / "dev.sh", os.X_OK):
@@ -291,17 +340,69 @@ def refresh(root: Path):
     found = leaks_in([o for _, o in ps], top)
     if found:
         return ["leak audit refused the refresh, nothing copied:"] + found
+    # Each copy is written beside itself, sealed, then renamed over the old one: a
+    # 0444 copy cannot be opened for writing, and the copy is never writable.
     for copy, orig in ps:
         copy.parent.mkdir(parents=True, exist_ok=True)
-        copy.write_bytes(orig.read_bytes())
+        tmp = copy.with_name(f".{copy.name}.refresh")
+        tmp.write_bytes(orig.read_bytes())
+        tmp.chmod(SEALED)
+        os.replace(tmp, copy)
     lines = [f"{sha256(c)}  {c.relative_to(root)}" for c, _ in ps]
     (root / SUMS).write_text("\n".join(lines) + "\n")
     return []
 
 
+CHECKS_PASS = ("ok", "unchecked")
+
+
+def gate_checks(cli, root: Path):
+    """tools/checks' `checks run <root> --json`, read from its report, not its text.
+
+    Returns (findings, notes): one finding per line of each check that is neither
+    ok nor unchecked, `<line> [<check>]` so a leading path stays first; notes name
+    the unchecked ones (never a pass, never a fail here, as in `checks run`). The
+    text run truncates a long check's lines ("... and N more"); the report has all.
+    A report that does not parse, lists no checks, or disagrees with the exit code
+    is itself a finding.
+    """
+    try:
+        p = subprocess.run([str(cli), "run", str(root), "--json"], capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL)
+    except OSError as e:
+        return [f"checks run could not start: {e}"], []
+    tail = (p.stderr.strip().splitlines() or ["no stderr"])[-1]
+    try:
+        results = json.loads(p.stdout)["results"]
+        rows = [(r["check"], r["status"], r.get("lines") or []) for r in results]
+    except (ValueError, KeyError, TypeError):
+        return [f"checks run . --json printed no report with results (exit {p.returncode}; {tail})"], []
+    if not rows:
+        return [f"checks run . --json reported no checks (exit {p.returncode}): a report of nothing is not a pass"], []
+    f, notes = [], []
+    for name, status, lines in rows:
+        if status in CHECKS_PASS:
+            if status == "unchecked":
+                notes.append(f"{name}: {lines[0] if lines else 'no reason given'}")
+            continue
+        f += [f"{l} [{name}]" for l in lines] or [f"{name}: {status}, with no line saying why"]
+    if (p.returncode == 0) == bool(f):
+        f.append(f"checks run . exit {p.returncode} disagrees with its report ({len(rows)} checks)")
+    return f, notes
+
+
 def main(argv):
     root = Path(os.environ.get("HUB_ROOT") or Path(__file__).resolve().parent.parent)
     cmd, args = (argv[0], argv[1:]) if argv else ("", [])
+    if cmd == "checks" and len(args) == 1:
+        f, notes = gate_checks(args[0], root)
+        for x in f:
+            print(f"  FAIL  {x}")
+        for x in notes:
+            print(f"  note  unchecked {x}")
+        if not f:
+            print(f"  ok    checks: checks run . green, {len(notes)} unchecked (never a pass, listed above)")
+        return 1 if f else 0
     if cmd in ("inputs", "files"):
         f = gate_inputs(root) if cmd == "inputs" else gate_files(root)
         for x in f:
@@ -317,6 +418,18 @@ def main(argv):
             else:
                 print(f"  ok    {cmd}")
         return 1 if f else 0
+    if cmd == "sealed":
+        f, n = gate_sealed(root)
+        for x in f:
+            print(f"  FAIL  {x}")
+        if not f:
+            print(f"  ok    sealed: {n} copies at mode {SEALED:04o} (a marker; the guard is"
+                  f" `inputs`, content against {SUMS})")
+        return 1 if f else 0
+    if cmd == "seal":
+        n = seal(root)
+        print(f"  ok    seal: {n} copies set to mode {SEALED:04o}, content untouched")
+        return 0
     if cmd == "leaks":
         f = leaks_in([Path(a).resolve() for a in args], Path.cwd()) if args else gate_leaks(root)
         for x in f:
@@ -346,7 +459,7 @@ def main(argv):
         if not f:
             print(f"  ok    refresh: {len(readme_rows(root))} copies written, {SUMS} rewritten")
         return 1 if f else 0
-    print("usage: hubcheck.py inputs|files|leaks [FILE...]|drift [--json]|refresh", file=sys.stderr)
+    print("usage: hubcheck.py inputs|sealed|seal|files|leaks [FILE...]|drift [--json]|refresh|checks <checks CLI>", file=sys.stderr)
     return 2
 
 

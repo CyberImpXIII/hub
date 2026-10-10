@@ -32,6 +32,11 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   into it, so brief fixed point 2 stands; §14.7's worked example no longer reports a
   duplicate item 9. The brief's fixed point 10 (and §4 item 2) were edited at the
   top-level original to match and lose their "Not fixed" paragraph. Nothing else drifted.
+- **The brief alone re-copied 2026-10-08** for §4 question 11 (a session the hub runs,
+  from PLAN-context-hygiene.md §0 "Later"; §5 now says eleven questions). Edited at the
+  top-level original, copied over by hand, and only its `SHA256SUMS` line rewritten.
+  Not a refresh: seven other copies had drifted and were left as they were, since
+  refreshing them is a decision (TODO.md).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's
@@ -47,6 +52,13 @@ brief's §2 names has a row here. By hand: `shasum -a 256 -c docs/inputs/SHA256S
 from the repo root. `./dev.sh drift` compares each copy with its original (only where
 the originals are reachable, not in a clone), and `./dev.sh refresh` copies them all
 again, running the leak audit on the originals first and refusing on any finding.
+
+**The copies are mode 0444** (no write bit), set by `./dev.sh refresh` as it writes
+them and by `./dev.sh seal`; `./dev.sh check` fails (`sealed`) on a writable one.
+That mode is a marker, not a guard: it stops a plain `cp` or `>` over a copy, but
+Edit, Write, `sed -i` and `mv` replace a 0444 file and leave it 0444. The guard is
+the `SHA256SUMS` check above. Git does not keep the mode, so a clone, or a checkout
+that rewrites a copy, leaves it 0644: run `./dev.sh seal` then.
 
 | copy | original (claudeTest top level) | read by |
 |---|---|---|

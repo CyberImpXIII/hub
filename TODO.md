@@ -141,22 +141,6 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
 
 ## Own bugs
 
-- **`./dev.sh check` counts an UNCHECKED hook test as a FAIL** (hub, cloud fix pass,
-  2026-10-05): `cmd_hooktests` treats a test file's exit 3 as a failure, so in a clone
-  without `site-scrapers` beside it (this cloud container) `check` is red on
-  `test-prefer-recipes.sh` and `test-troubleshooting.sh`, which themselves print
-  `UNCHECKED: site-scrapers not found`. The contract at the top of `dev.sh` says a
-  missing sibling is UNCHECKED, never ok, and `plans`/`checks` honour it; `hooktests`
-  should return 3 for an all-UNCHECKED run and 1 only for a real failure. Probe: run
-  `./dev.sh check` in a lone clone and read the summary line. Not fixed in the fix pass
-  (outside its five steps).
-- **Hook copies are reinstalled by hand-copying, because setup has no replace path**
-  (hub, 2026-10-04): `setup . --dry-run` reports a drifted hook as `drift ... (not
-  overwritten)` and nothing more. So after tools/hooks 0ddb31d, the six
-  `.claude/hooks/` files were copied byte for byte from `tools/hooks/source/hooks/`
-  (`cmp` equal, mode kept). That includes `prefer-recipes.sh`, which `hooks copies`
-  did not flag because it differed only in its header. The next source change needs
-  the same copy until setup gains an update mode (tools/setup's call).
 - **The leak audit's terms are three shapes** (email, home-folder path, phone); the
   credential half is tools/checks `no-secrets`. Names of people and of private repos
   are not caught: `claudeTest-CLAUDE.md` names private repos, as it did in the first
@@ -164,20 +148,33 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
 
 ## Open decisions
 
-- **`.claude/settings.json` is absent** (Jacob's step): the three shared hooks are
-  installed but not registered, so they do not fire here, in a local session or a
-  cloud one. setup wrote `.claude/settings.proposed.json` (untracked); applying it is
-  `cp .claude/settings.proposed.json .claude/settings.json`.
+- **`.claude/settings.json` lacks 12 hook registrations** (Jacob's step; setup
+  2026-10-05): the shared hooks are installed but not registered, so they do not fire
+  here, in a local session or a cloud one. setup wrote `.claude/settings.proposed.json`
+  (untracked); applying it is `cp .claude/settings.proposed.json .claude/settings.json`.
+  setup also installed `.githooks/{pre-commit,commit-msg,check-pass}`, but
+  `core.hooksPath` is unset and `githooks.checks` has no checks CLI, so those gates are
+  off (setup reports `needs-jacob`).
 - **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
-- **Where the brief is edited.** routing-tree §13.5 says hub owns the brief, but
-  `docs/inputs/README.md` makes the top-level `PLAN-hub-brief.md` its original, and
-  `./dev.sh refresh` copies the original over `PLAN-hub-brief.md` here. So fixed point
-  9 (2026-10-04) was written at the top-level original and refreshed in; an edit made
-  only to this repo's copy would be undone by the next refresh. Hinges on whether the
-  copy direction should flip for the brief (this repo the original); the planner's
-  and Jacob's call, since the top level is the planner's.
+
+- **Brief §4 question 11 (a session the hub runs) is unanswered** (added 2026-10-08,
+  Jacob's yes relayed by the planner): PLAN-hub.md on `origin/plan/hub` answers ten.
+  The next cloud pass adds its section and any Decisions rows. Question 11 points at
+  PLAN-context-hygiene.md §0 (and that plan at PLAN-services.md §3); neither is a §2
+  input or a copy here, so the brief states the requirement whole. Whether to add them
+  to §2 (and copy them) is the planner's call; the pointer gate skips uncopied plans.
+- **Seven inputs drifted, not refreshed** (2026-10-08, `./dev.sh drift`):
+  claudeTest-CLAUDE.md, routing-tree, agent-groups, repo-setup, portable-env,
+  usage-reporting, check-progress. Only the brief was re-copied for question 11.
+  Eight on 2026-10-09: PLAN-todo-tool.md has drifted too.
+  Refresh (leak audit first) before the next cloud pass.
+
+- **Where the brief is edited: answered, no flip** (Jacob 2026-10-09,
+  `docs/REVIEW-2026-10-09.md` §5.10, 5.6). The top-level `PLAN-hub-brief.md` stays the
+  original and `./dev.sh refresh` copies it here; routing-tree §13.5's "owner" means
+  the copy and the refresh. Delete this item once the planner closes its Decision 39.
 - **The fix pass placed brief fixed points 9 and 10 on its own reading** (cloud,
   2026-10-05): the review predates them and did not ask for it; PLAN-hub.md's Risks
   and Decisions 10–11 flag the two readings that are the pass's own (the port in the
@@ -190,7 +187,8 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   host: **Wave with tmux as the fallback** (PLAN-hub-view.md Decision 1, answered
   2026-10-05; V0 still confirms Wave on his machine); (6) the owed reports below wait
   for the planner's re-read; (7) the read-only tool list: "I think so", with the
-  question below.
+  question below. **2026-10-09:** Decisions 10 (the port), 11 (G1 after H2) and 12
+  (the read-only tool list) approved: Jacob (`docs/REVIEW-2026-10-09.md` §5.9).
 - **How a coder's code change travels as a `write-request`** (cloud, 2026-10-05,
   raised to Jacob on question 7): routing-tree §13.5 makes a coder's writes
   write-requests the server honours for its own repo, and PLAN-hub.md §3 and §4 follow
@@ -200,7 +198,27 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   `git apply` through `write`; the server applies it, runs the repo's check and commits
   with the `Agent:` trailer. The planner's call; not written into the plan.
 
+- **Merging `plan/hub` back into `main`** (REVIEW-2026-10-09 §5.11 step 3, after the
+  planner's re-read). `origin/main` (03f33d2) was merged into `plan/hub` on 2026-10-09
+  for the next cloud pass; the one conflict, TODO.md, was resolved with `plan/hub`'s
+  file as the base, dropping the two own bugs `main` had closed (the UNCHECKED hook test
+  counted as FAIL, fixed 2026-10-08; hand-copied hook reinstalls, dropped in 94dea2b).
+  A merge back conflicts again only if `main`'s TODO.md moves meanwhile: probe with
+  `git merge-tree --write-tree origin/main origin/plan/hub` first.
+
 ## Own limits, known
+
+- **`check --json` (2026-10-05, PLAN-agent-groups §4.4)**: `devtools/checkjson.py`, the
+  third copy of the same emitter (setup, hooks, hub), each with its own finding
+  readers. The shape is held by the shared validator; the readers are per repo. If a
+  fourth repo copies it, the row format and verdict belong in one place (tools/checks'
+  call). Drift is not in `--json` (a note, not a check): `./dev.sh drift --json`. Exit
+  codes other than 0/1/3 from a gate are `error`. `checks one check-json ../hub` took
+  140 s on 2026-10-05 (limit 280 s; the plain check alone took 70 s, the 44 unit tests
+  ~30 s of it, mostly the mutant and validator runs).
+- **Roles are the §4.1 starting set** (`gate_role` in dev.sh): inputs, plans -> docs;
+  leaks, checks -> audit; the rest -> code. That each names a role in hub's group
+  waits on the node registry (§4.4's second gate); hub has no group in the manifest yet.
 
 - **The numbering gate reads column-0 items only** (`hubcheck.py brief_numbering`,
   2026-10-05): each must be previous + 1 or 1 (a new list). Not seen: a duplicate in a
@@ -222,16 +240,27 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
   and Tabby quotes (PLAN-hub-view.md §4, outside Claude Code's docs; docs.waveterm.dev
   was blocked from the container, so its source files on GitHub were read instead).
 
+- **`sealed` is red on a fresh clone** (2026-10-09, PLAN-architecture-review.md §4 U1):
+  git keeps no mode bits, so a clone (the cloud pass) and any checkout or merge that
+  rewrites a copy leave it 0644, and `./dev.sh check` fails until `./dev.sh seal`. Each
+  FAIL line names that command. The mode is a marker only (W6: Edit/Write replace a
+  0444 file and keep 0444); the guard is `inputs` against SHA256SUMS
+  (`TestSealed.test_the_mode_is_not_the_guard_inputs_is` holds that). Not sealed:
+  README.md and SHA256SUMS (refresh rewrites SHA256SUMS in place).
+
 ## Unconfirmed suspicions
 
 - **A long-lived `claude -p` may not keep its sandbox across messages** (routing-tree
   §13.2's open question, carried into PLAN-hub.md H0): until the probe passes, no role
   is `warm`. Probe: H0's sandbox clause, a `--bg` role asked to write outside its
-  scratchpad on its second message.
+  scratchpad on its second message. **Moot once D1 is applied:** warm roles are dropped
+  (approved: Jacob 2026-10-09, `docs/REVIEW-2026-10-09.md` §5.10); the next cloud pass
+  removes the warm probe with H5's warm half, and this item with it.
 - **Context may not persist across stream-json turns in one `-p` process** (PLAN-hub.md
   §4 W2, marked unverified): the cli-reference says a queued message starts a new turn;
   whether the new turn sees the old one is the SDK page's claim, not the mirror's.
-  Probe: H0's three-clause warm probe.
+  Probe: H0's three-clause warm probe. Moot with the item above if nothing else in
+  PLAN-hub.md relies on W2.
 
 ## Reported to other owners
 
@@ -269,5 +298,24 @@ PLAN-hub.md's Decisions**, each once, from this list. None sent yet (2026-10-05)
   2026-10-05:** it merged `origin/main` into `plan/hub` first (commit 0e779c1), so the
   new inputs were read from the branch and this file was edited from `main`'s version;
   `git merge-tree` of the two heads is the probe before the merge back.
+- **planner** (via the dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
+  "its TODO.md:541 says 0444", but hub's TODO.md has no such line (94 lines); 541 is
+  claudeTest's top-level TODO.md, Decision 39 (open), which proposes that the TOP-level
+  `PLAN-hub-brief.md` become a 0444 copy of hub's brief, gated by hub's check. The
+  docs/inputs copies are now 0444 anyway (`sealed`). Decision 39's own gate (top copy
+  differs or is writable) is not built: it waits on that decision.
+- **hooks** (via the dispatcher, 2026-10-09): `./dev.sh check` is red on `checks`
+  only: `hooks copies printed no report (exit 2): FAIL lib/extra-stores.sh: no test`
+  and "the source is not well-formed" [hooks-installed]. Cause: tools/hooks' UNTRACKED
+  `source/lib/extra-stores.sh` (with `store-guard.sh` and its test modified; HEAD
+  a953a98), i.e. their work in progress. Nothing changed here for it.
+
+- **hooks** (via the dispatcher, 2026-10-08): `./dev.sh check` is red on `checks`
+  (`hooks-installed`: `prefer-recipes.sh` and `test-prefer-recipes.sh` drift) against
+  tools/hooks' UNCOMMITTED `source/hooks/` edits (their tree: those two files and
+  TODO.md modified, HEAD 43d2a1e). Not re-copied here: the source is mid-task.
+  Re-copy once they commit. Unconfirmed: whether tools/checks should compare against
+  the committed source rather than the working tree.
 - **dispatcher** (2026-10-04): the top-level `CLAUDE.md` tools row for `tools/hub/`
-  still says its `./dev.sh check` is setup's stub; it is a real check now.
+  said its `./dev.sh check` was setup's stub. Settled: that row says hub's check is a
+  real gate since 47eea1a (read 2026-10-08).

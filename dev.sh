@@ -5,7 +5,8 @@
 # about those (devtools/hubcheck.py) plus the shared ones from the sibling tools.
 # A sibling tool that is not there (a lone clone, a cloud session) is UNCHECKED,
 # printed as such, never counted as ok. Each gate's REPORTED result is read, not
-# only its exit code.
+# only its exit code. `./dev.sh check --json` prints only the one schema
+# (tools/checks' schema/check-json.schema.json), held by tests/test_checkjson.py.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit 2
 
@@ -16,16 +17,22 @@ usage() {
   cat <<'EOF'
 ./dev.sh <command>
 
-  check      every gate below, in order; non-zero if any fails (--json: {"ok": bool, "gates": {...}})
+  check      every gate below, in order; non-zero if any fails (--json: the one schema,
+             via devtools/checkjson.py: one check per gate, each finding a failure;
+             drift is a note, not a check, so it is not there: ./dev.sh drift --json)
   test       the unit tests (tests/): every hubcheck gate shown red on a fixture
-  hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh)
+  hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh); one ending
+             `UNCHECKED: <why>` with exit 3 makes the gate unchecked, never ok
   files      the files this repo needs are present; dev.sh is executable
   inputs     docs/inputs/ copies match SHA256SUMS; README table, SHA256SUMS and disk agree; brief §2 covered
+  sealed     every copy is mode 0444: a marker, not a guard (Edit and Write change a 0444 file);
+             the guard is inputs. git does not keep the mode: after a clone, ./dev.sh seal
   leaks      no email address, home-folder path or phone number in what would be committed
   plans      setup plans . (every PLAN-*.md not done has a Setup component heading)
-  checks     tools/checks: checks run . (credential-shaped values, hooks, rules, TODO, help)
+  checks     tools/checks: checks run . --json, every failing line (credential-shaped values, hooks, rules, TODO, help)
   drift      each copy against its original at the workspace top (a note in check, never a fail)
-  refresh    copy every original over its copy (leak audit first), rewrite SHA256SUMS
+  refresh    copy every original over its copy (leak audit first) at mode 0444, rewrite SHA256SUMS
+  seal       set every copy to mode 0444, content untouched (after a clone or a checkout)
 EOF
 }
 
@@ -40,22 +47,36 @@ cmd_test() {
   printf '%s\n' "$out"; echo "  FAIL  test"; return 1
 }
 
+# A test file that exits 3 AND ends on its `UNCHECKED: <why>` line could not find
+# what it tests against (a lone clone: no site-scrapers beside it). That is
+# UNCHECKED, said out loud, never ok and never a failure of the hook; exit 3
+# without that line is a FAIL. Any FAIL makes the gate 1; otherwise any UNCHECKED
+# makes it 3. HUB_HOOKS_DIR exists for tests/test_hubcheck.py's fixtures.
 cmd_hooktests() {
-  local t out code fails=0 n=0
-  for t in .claude/hooks/test-*.sh; do
-    [ -e "$t" ] || { echo "  FAIL  hooktests: no .claude/hooks/test-*.sh"; return 1; }
+  local dir="${HUB_HOOKS_DIR:-.claude/hooks}" t out code last fails=0 unchecked=0 n=0
+  for t in "$dir"/test-*.sh; do
+    [ -e "$t" ] || { echo "  FAIL  hooktests: no $dir/test-*.sh"; return 1; }
     n=$((n+1))
     out=$("$t" 2>&1); code=$?
-    if [ $code -ne 0 ] || ! printf '%s\n' "$out" | tail -1 | grep -q 'all cases passed'; then
-      printf '%s\n' "$out" | tail -5; echo "  FAIL  hooktests: $(basename "$t") exit $code"; fails=$((fails+1))
+    last=$(printf '%s\n' "$out" | tail -1)
+    if [ $code -eq 0 ] && printf '%s\n' "$last" | grep -q 'all cases passed'; then
+      :
+    elif [ $code -eq 3 ] && printf '%s\n' "$last" | grep -q '^UNCHECKED: '; then
+      echo "  UNCHECKED  hooktests: $t: ${last#UNCHECKED: }"; unchecked=$((unchecked+1))
+    else
+      # the test's tail under its FAIL line, indented: --json joins it into the message
+      echo "  FAIL  $t: exit $code"; printf '%s\n' "$out" | tail -5 | sed 's/^/        /'; fails=$((fails+1))
     fi
   done
-  [ $fails -eq 0 ] && echo "  ok    hooktests: $n hook test files, all cases passed"
-  [ $fails -eq 0 ]
+  [ $fails -gt 0 ] && return 1
+  [ $unchecked -gt 0 ] && { echo "  note  hooktests: $((n-unchecked)) of $n hook test files passed, $unchecked unchecked"; return 3; }
+  echo "  ok    hooktests: $n hook test files, all cases passed"
 }
 
 cmd_files()   { python3 devtools/hubcheck.py files; }
 cmd_inputs()  { python3 devtools/hubcheck.py inputs; }
+cmd_sealed()  { python3 devtools/hubcheck.py sealed; }
+cmd_seal()    { python3 devtools/hubcheck.py seal; }
 cmd_leaks()   { python3 devtools/hubcheck.py leaks "$@"; }
 cmd_drift()   { python3 devtools/hubcheck.py drift "$@"; }
 cmd_refresh() { python3 devtools/hubcheck.py refresh; }
@@ -69,47 +90,62 @@ cmd_plans() {
   echo "  FAIL  plans: setup plans . exit $code"; return 1
 }
 
+# Its report, not its text: the text run truncates a long check's lines.
 cmd_checks() {
-  local out code
   [ -x "$CHECKS_BIN" ] || { echo "  UNCHECKED  checks: $CHECKS_BIN not found (set HUB_CHECKS_BIN)"; return 3; }
-  out=$("$CHECKS_BIN" run . 2>&1); code=$?
-  printf '%s\n' "$out"
-  if [ $code -eq 0 ] && printf '%s\n' "$out" | tail -1 | grep -q -- '-> green$'; then return 0; fi
-  echo "  FAIL  checks: checks run . exit $code"; return 1
+  python3 devtools/hubcheck.py checks "$CHECKS_BIN"
 }
 
-GATES="test hooktests files inputs leaks plans checks"
+GATES="test hooktests files inputs sealed leaks plans checks"
 
+# The role each gate's failure belongs to, in --json (PLAN-agent-groups.md §4.1:
+# code, tests, audit, docs). A failing test is code's (as in tools/setup and
+# tools/hooks); the inputs and the plans' headings are documents; the leak audit
+# and tools/checks' findings are audit's.
+gate_role() {
+  case "$1" in
+    inputs|sealed|plans) echo docs ;;
+    leaks|checks) echo audit ;;
+    *) echo code ;;
+  esac
+}
+
+# --json: stdout is exactly one document in the one schema (devtools/checkjson.py),
+# each gate's output captured to a scratch file so its finding lines become the
+# failures. Every gate runs in a subshell, in both modes: it cannot touch this
+# loop's variables (setup's cmd_hooks once leaked one, emptying later gates' findings).
 cmd_check() {
-  local json=0 g code ok=() fail=() unchecked=() out drift_note
+  local json=0 g code ok=() fail=() unchecked=() out drift_note capdir="" dest rows=()
   [ "${1:-}" = "--json" ] && json=1
+  [ $json -eq 1 ] && capdir=$(mktemp -d 2>/dev/null)
   for g in $GATES; do
-    out=$("cmd_$g" 2>&1); code=$?
-    [ $json -eq 0 ] && printf '%s\n' "$out"
+    if [ $json -eq 1 ]; then
+      dest=/dev/null; [ -n "$capdir" ] && dest="$capdir/$g"
+      ( "cmd_$g" ) >"$dest" 2>&1; code=$?
+      rows+=("$g:$(gate_role "$g"):$code:$dest")
+    else
+      out=$("cmd_$g" 2>&1); code=$?
+      printf '%s\n' "$out"
+    fi
     case $code in
       0) ok+=("$g") ;;
       3) unchecked+=("$g") ;;
       *) fail+=("$g") ;;
     esac
   done
+  if [ $json -eq 1 ]; then
+    python3 devtools/checkjson.py "${rows[@]}"; code=$?
+    [ -n "$capdir" ] && rm -rf "$capdir"
+    return $code
+  fi
   out=$(cmd_drift 2>&1); code=$?
   case $code in
     0) drift_note="in step" ;;
     3) drift_note="unchecked" ;;
     *) drift_note="$(printf '%s\n' "$out" | grep -c -E '^  (DIFF|GONE) ') differ" ;;
   esac
-  if [ $json -eq 1 ]; then
-    local parts=() x
-    for x in "${ok[@]+"${ok[@]}"}"; do parts+=("\"$x\": \"ok\""); done
-    for x in "${unchecked[@]+"${unchecked[@]}"}"; do parts+=("\"$x\": \"unchecked\""); done
-    for x in "${fail[@]+"${fail[@]}"}"; do parts+=("\"$x\": \"fail\""); done
-    local IFS=,
-    printf '{"ok": %s, "gates": {%s}, "drift": "%s"}\n' \
-      "$([ ${#fail[@]} -eq 0 ] && echo true || echo false)" "${parts[*]}" "$drift_note"
-  else
-    echo "  note  drift: $drift_note (./dev.sh drift; refresh is a decision, not a gate)"
-    echo "check: ${#ok[@]} ok, ${#unchecked[@]} unchecked, ${#fail[@]} fail -> $([ ${#fail[@]} -eq 0 ] && echo green || echo "red (${fail[*]})")"
-  fi
+  echo "  note  drift: $drift_note (./dev.sh drift; refresh is a decision, not a gate)"
+  echo "check: ${#ok[@]} ok, ${#unchecked[@]} unchecked, ${#fail[@]} fail -> $([ ${#fail[@]} -eq 0 ] && echo green || echo "red (${fail[*]})")"
   [ ${#fail[@]} -eq 0 ]
 }
 
@@ -119,6 +155,8 @@ case "${1:-}" in
   hooktests) cmd_hooktests ;;
   files)     cmd_files ;;
   inputs)    cmd_inputs ;;
+  sealed)    cmd_sealed ;;
+  seal)      cmd_seal ;;
   leaks)     shift; cmd_leaks "$@" ;;
   plans)     cmd_plans ;;
   checks)    cmd_checks ;;
