@@ -272,7 +272,12 @@ def leaks_in(paths, base: Path):
     for p in paths:
         try:
             text = p.read_text()
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError:
+            continue    # binary: no text to audit
+        except OSError as e:
+            # A file named but not read is a finding, never a pass: `dev.sh` cds to the
+            # repo, so a relative FILE from elsewhere used to vanish here and print ok.
+            f.append(f"{p}: not read, so not audited ({type(e).__name__})")
             continue
         for n, line in enumerate(text.splitlines(), 1):
             for rx, kind in LEAK_KINDS:
