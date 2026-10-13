@@ -694,6 +694,218 @@ PLAN-hub-view.md in this repo: a client of this server's API and of `claude agen
 `/folders`, `/events`, `/view/*`, `hub cron --json`) is listed there and lands in its
 phases, under this plan's help-equals-implemented gate.
 
+## 11. A session the hub runs
+
+The requirement is brief §4 question 11, stated there whole from PLAN-context-hygiene.md
+§0 "Later" (not an input here): a session a program drives, where the program holds the
+message list, clears and rebuilds the context on its own with no keystroke and no
+restart, edits one block while the session continues, and takes the idle point from the
+event stream, not from ledgers. The answers, in the brief's order.
+
+**Whether the hub runs these sessions: yes, as a third role mode, `driven`, for a
+session the hub starts.** A `driven` session is kept alive for one reason, that its
+context is the hub's to shape; it is not a warm role by another name (Decision 1 dropped
+those because a kept process saves no start and grows a history, §4). A rebuild is what
+cuts that history, so `driven` is used only where a conversation must carry across many
+messages and a rebuild is worth more than a cold start. Cold stays the default. Who is
+`driven` first is Decision 14; until it is answered, no committed registry names one,
+and D1 lands the mode on a fixture.
+
+**Through stream-json, not the SDK.** The server starts `claude -p --input-format
+stream-json --output-format stream-json --verbose --replay-user-messages` in the role's
+`dir` with the role's tool list (§4's cold flags; the Edit rule where the role holds a
+lease), and is the only writer to its stdin. `--input-format`: "Specify input format
+for print mode (options: `text`, `stream-json`)"; `--replay-user-messages`: "Re-emit
+user messages from stdin back on stdout for acknowledgment. Requires `--input-format
+stream-json` and `--output-format stream-json`"
+(<https://code.claude.com/docs/en/cli-reference#cli-flags>). The SDK is "A library that
+runs the Claude Code binary"
+(<https://code.claude.com/docs/en/agent-sdk/overview#compare-the-agent-sdk-to-other-claude-tools>),
+the same process behind a Node or Python dependency the hub does not need, and the hub
+already parses this stream for cold roles. The streaming-input page, which the
+2026-10-05 review found absent from the mirror, read live on 2026-10-13: streaming
+input "allows the agent to operate as a long lived process that takes in user input,
+handles interruptions, surfaces permission requests, and handles session management",
+with "Context persistence: maintain conversation context across multiple turns
+naturally" (<https://code.claude.com/docs/en/agent-sdk/streaming-input#benefits>). That
+is the draft's unverified W2 clause, now cited; the planner's `kb check` settles the
+citation, and D0's first clause runs it regardless, because a page is not a run.
+
+**The message list.** The hub writes each message as
+`{"type":"user","message":{"role":"user","content":"…"}}` and keeps, per session, the
+list of what it wrote (confirmed by the replayed user messages), every `assistant` line
+and every `result` line, in the ledger under the session id. The process holds the
+conversation too; the hub's list is the one it rebuilds from and the one `hub session
+history <id>` prints.
+
+**The rebuild: three mechanisms, one probe (D0), pass conditions stated before it runs.**
+Context-hygiene decides *what* the rebuilt context is and hands the hub a `ctx:` id of
+the rendered list (§12); the hub decides *when* (the idle point below) and *how*:
+
+- **M1, the recorded prompt, for one block.** "By default, Claude Code builds the system
+  prompt once, on a conversation's first request, with the text from any system prompt
+  flags applied, and records it in the session. Until the conversation is compacted,
+  every later request uses that recorded prompt"; with `--system-prompt-snapshot off`,
+  Claude Code "rebuilds the prompt on every request"
+  (<https://code.claude.com/docs/en/cli-reference#system-prompt-flags-in-resumed-conversations>).
+  So a session started with `--system-prompt-snapshot off --append-system-prompt-file
+  <block>` takes a rewrite of that file at its next request, with no restart and no
+  keystroke: the edited block. Its cost is a prefix change, "A change to the system
+  prompt invalidates everything, because all later content now sits behind a different
+  prefix" (<https://code.claude.com/docs/en/prompt-caching#how-the-cache-is-organized>),
+  so M1 is for an edit, not for every turn. Pass: after the file is rewritten from X to
+  Y, the next answer knows Y and not X, and the pid is unchanged.
+- **M2, resume from a transcript the hub writes, for clear-and-rebuild.** `--resume`
+  takes "the absolute path to a session's `.jsonl` transcript file, and Claude Code
+  continues the conversation stored in that file"
+  (<https://code.claude.com/docs/en/headless#continue-conversations>). The hub writes a
+  transcript holding the rebuilt list and starts a new `-p` process resumed from it:
+  the list is the hub's, the context is shorter, and nothing a person sees restarts,
+  since the view's tab is a client of the hub (PLAN-hub-view.md §1). Pass: the resumed
+  session's `system/init` line reports the session; the next answer knows Y (in the
+  rebuilt list) and not X (dropped from it); the first `result`'s `usage` shows
+  `cache_read_input_tokens`, "Tokens served from cache on this turn"
+  (<https://code.claude.com/docs/en/prompt-caching#check-cache-performance>), at least
+  the size of the unchanged prefix. Risk: the transcript's line format is not a
+  documented interface (the docs say where transcripts are stored, not what a line
+  holds); D0 records the `claude --version` it passed on and `hub doctor` refuses M2
+  below it.
+- **M3, the floor.** A fresh `-p` process with the rebuilt list as
+  `--append-system-prompt-file` and the new message: a new conversation, always
+  available. It is what `agents.sh run <role>` does for a window today, "relaunched with
+  `--append-system-prompt-file <rebuild>` only when its restart request carries
+  `signalled_at` and its own `launcher_pid`" (`docs/inputs/claudeTest-CLAUDE.md`), with
+  the hub doing the relaunch at the idle point and no keystroke. Pass: trivially; it is
+  what runs when M2 fails its clause.
+
+Recommendation: M2 for the rebuild, M1 for the block edit, M3 as the floor (Decision
+14). The hub holds no threshold of its own: when to rebuild is context-hygiene's
+measurement, not the hub's.
+
+**The idle point, from the stream.** Three conditions, all read from the output stream,
+none from the ledger's own bookkeeping:
+
+1. the `result` line of the last message the hub wrote has arrived: "The last line of
+   the stream is a `result` message with the final response text, cost, and session
+   metadata" (<https://code.claude.com/docs/en/headless#stream-responses>);
+2. every subagent run is closed. Subagent messages "appear in the stream as `assistant`
+   and `user` messages. Their `parent_tool_use_id` field says which run each one belongs
+   to. Messages from the main conversation carry `null` in that field"
+   (<https://code.claude.com/docs/en/headless#follow-subagent-messages>); a run opens at
+   the Agent `tool_use` block and closes at its `tool_result`. A background subagent
+   keeps a run open past its turn: "Background subagents and workflows: the run stays
+   open until that work completes, because its result is part of the final output"
+   (<https://code.claude.com/docs/en/headless#background-tasks-at-exit>). Whether a
+   turn's `result` line can precede that completion in a stream-json session is D0's
+   fourth clause; the hub waits for the `tool_result` either way;
+3. nothing is queued: the hub wrote nothing since.
+
+The test (§8 "driven session"): a fixture turn starts a background subagent that sleeps
+20 s; no rebuild lands before its `tool_result`, and one lands within a poll after. The
+`Stop` hook's `background_tasks` ("Stop hooks receive `stop_hook_active`,
+`last_assistant_message`, `background_tasks`, and `session_crons`",
+<https://code.claude.com/docs/en/hooks#stop>) reaches the hub through `hub hook stop` as
+a cross-check, never as the only source.
+
+**What the hub exposes, and who may call it.** `hub session start <role> | stop <id> |
+send <id> | rebuild <id> --from ctx:<id> (M2) | edit-block <id> <block> --from ctx:<id>
+(M1) | history <id>`, and the same over `/sessions/<id>/…` with the token, all in
+`docs/API.md` under the help-equals-implemented gate. Callers: the context-hygiene CLI
+(its monitor says when, it renders the list and hands the id), and Jacob through the
+view. Never a role: `hub session` is not on the read-only list (§4) and is not a
+`write-request` verb, so a role's call is refused at the server and answered as
+`tool-result`, never run.
+
+**Relation to the context-hygiene launcher.** The launcher restarts a whole window. A
+window the hub runs as a `driven` session needs no relaunch: the hub applies the
+rebuild at the idle point. Which windows the hub runs is Decision 14: today's two
+windows are interactive terminals (`claude --agent planner` in a view tab,
+PLAN-hub-view.md §2), and `-p` is print mode, "Print response without interactive mode"
+(<https://code.claude.com/docs/en/cli-reference#cli-flags>), so a window becomes
+`driven` only when its tab becomes a hub-served page over `/sessions/<id>`, a view phase
+after V3, costed there when decided. Until then the launcher stays for the windows, and
+it retires per window as each moves.
+
+**The rebuild guards, held here.** (1) No tool output in the system prompt: the hub
+refuses a rebuild file (M1, M3) that contains a line of a recorded `tool_result`; M2
+carries tool results only as the transcript's own `user` lines, where they belong. (2)
+A rebuild is never read as Jacob's prompt: it enters as a system prompt or a
+transcript, never as a `user` message on stdin, and `hub origin` says `jacob` only for a
+turn whose prompt the user-prompt hook recorded (§1), which a rebuild never does; the
+test: after a rebuild, the next `hub origin` is `model`. (3) Nothing lost: the
+pre-rebuild list is a `ctx:` snapshot named in the rebuild's ledger row, and `hub
+session history <id>` prints both; the test: every message of the old list is in the
+snapshot.
+
+→ D0 (the probe, local), D1 (the mode, cloud by default); the view's tab, if Jacob
+wants it, after V3.
+
+## 12. References by id, shown as a stub and expanded on demand
+
+The requirement is brief §4 question 12 (Jacob, 2026-10-12): the sender writes an id,
+never the record; the hub resolves the id's prefix, renders a stub from the store's own
+line, and expands only when asked. PLAN-services.md §3 (not an input here) gives each
+store `get <id>` and a short readable line per record; this section uses those two
+facts and nothing else of that plan.
+
+**Stores in the first phase.** H1a-2: `ctx:` (context-hygiene), because `origin_id`
+needs it (Decision 3). R1: `todo:`, whose `todo get ID` prints "one record by id, as
+JSON, with its tags" (PLAN-todo-tool.md §3). R2, by their owners: kb section ids,
+research `rs-<n>`, data-bridge records, each when its `get` exists (Decision 16).
+
+**How a store joins.** It declares in its own `services.json` (§2):
+`"ids": [{"prefix": "todo:", "pattern": "todo:td-\\d+", "get": "get"}]`: the prefix,
+the id's shape, and the verb of its declared CLI that prints one record. The registry's
+`stores` is the union, derived like `repos`; the hub holds no store and no prefix of its
+own (routing-tree §14.1). `hub check`: every prefix in `stores` has an executable
+`get`, and a store that does not answer is `UNCHECKED` with the row red, never ok; every
+`ids` declaration is in `stores`; two repos declaring one prefix fail.
+
+**The syntax inside a message.** A reference is the bare id in the body (`ctx:7f3a`,
+`todo:td-27`, `rs-12`), found by the declared patterns, or named with `--ref` on `hub
+send`, which already carries the pointer and takes an id as it takes a path. The server
+scans the body at `/route`, fills the envelope's `refs` list beside `body` (`{id,
+store, line, source, date, hash, status}`), and overwrites any `refs` a sender set, as
+it overwrites `origin`. A `--ref` with an undeclared prefix is refused at `hub send`
+with the declared prefixes named; an id-shaped token no pattern claims is prose and is
+left alone.
+
+**The stub.** Rendered by the server from the store's `get`, never from the sender: the
+id; the store's one line, cut at `limits.stub_chars` (200, §2); the source (the store's
+name and the location it reports); the date the store reports; the status. The
+delivered text is the body with each reference followed by its stub on the next line,
+so a model recipient reads `todo:td-27  "<line>"  (todo, 2026-10-09)` and decides
+whether to expand. A sender cannot misdescribe a record, and spends nothing on it.
+
+**Expanding.** For a model recipient: `hub get <id>`, one allowlisted Bash command
+(`Bash(hub get *)`, Decision 15), which resolves the prefix, runs the store's `get`, and
+prints its output unchanged; the full text costs tokens only in the session that runs
+it. For the view: the stub is a collapsed element, a click fetches `GET /refs/<id>` and
+shows the text inline. Both make the same store call; the §8 row holds that the output
+equals the store's byte for byte.
+
+**A record that changed since it was cited.** The server keeps the hash of the `get`
+output it rendered the stub from (the `hash` in `refs`). On expand it runs `get` again:
+equal → the text; different → status `changed since cited`, the text as it is now, and
+the cited line kept above it so the difference is visible; the view shows both. A sender
+who needs the text as it was cites a `ctx:` snapshot of it; whether a `ctx:` record is
+immutable is context-hygiene's to say, and the hub's hash reads either way.
+
+**A dangling or unreachable id.** `get` finds nothing → the stub renders `unresolved:
+not found`, still in the delivered text, never dropped. The store's CLI missing or
+failing → `unchecked: <store> unreachable`, and `hub status --doctor` names the store.
+Neither is a pass: a stub's status is never `ok` by default.
+
+**The paste gate.** For each resolved reference, and for `origin_id`, the server
+compares the body against the record's text: more than `stub_chars` of it verbatim and
+the envelope is still delivered, but the ledger row carries `pasted: <id>` with the
+count and the sender gets a `report` saying so. Not a block, since a message may be
+right to carry a quote; `hub log --pasted` shows the count per sender, so the habit is
+seen, not assumed.
+
+→ H1a-2 (`ctx:` and `origin_id`), R1 (the rest, with `todo:`), R2 (the other stores by
+their owners); gates in §8 "references by id".
+
 ---
 
 ## Gates
@@ -710,7 +922,8 @@ asks for by name, each pointing at its rows:
 4. **A conformance fixture that is not claudeTest**: §8 "conformance", H1b and H3.
 
 Plus the direction audit (every phase), the per-branch report (H1b), the five rows for
-fixed points 9 and 10, and the view contract (PLAN-hub-view.md). `./dev.sh check` in
+fixed points 9 and 10, "limits both ways" (Decision 4), "references by id" (§12),
+"driven session" (§11), and the view contract (PLAN-hub-view.md). `./dev.sh check` in
 this repo already runs the inputs check (SHA256SUMS, the brief's §2 list, the README
 table), the leak audit, the hook tests and `setup plans .` and `checks run .` where the
 sibling tools are present (UNCHECKED where they are not); H1a-1 adds `hub check` on the
@@ -809,6 +1022,19 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
   <https://code.claude.com/docs/en/headless#get-structured-output>) shows the tokens
   per conversation in units of 1u, with `cache_read_input_tokens` beside them, so the
   number is seen, not assumed.
+- **The rebuild without a restart rests on a probe.** §11's M1 and M2 use documented
+  flags for a purpose the docs do not describe: a system prompt file rewritten under
+  `--system-prompt-snapshot off`, and a transcript the hub wrote passed to `--resume`.
+  D0 settles each with a run and a `claude --version`; M3 is the floor and is today's
+  launcher behaviour, so a failed probe costs the plan a mechanism, not the mode.
+- **The idle point and background subagents.** Whether a turn's `result` line can
+  precede a background subagent's completion in a stream-json session is unverified;
+  the headless page speaks of exit ("Background tasks at exit"). The hub waits for the
+  run's `tool_result` either way, and D0's fourth clause records what the stream does.
+- **A stub is only as good as a store's one line.** A store whose `get` prints a page
+  makes every stub a cut at `stub_chars`; PLAN-services.md §3's contract (one short
+  line per record) is depended on and not built here, and `hub check` can hold only
+  that `get` answers, not that its line is short.
 - **Local trust.** Any local process can POST to 127.0.0.1. The token in `local.env`
   gates every request; the server runs only `claude` with registry arguments and the
   commands `hub.json` names; a spoofed envelope cannot be `origin: jacob` because the
@@ -859,3 +1085,6 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
 | 11 | §9: G1 (the `check` and `hook` services) runs after H2 and before H3, with its site-scrapers pilot as a local follow-up | whether a `check-red` message may flow before the loop controls and the lease exist | after H2. **Approved: Jacob 2026-10-09** |
 | 12 | §4: a role's read-only tool list is exactly Read, Grep, Glob and `Bash(hub send *)`, plus a test runner only where its repo's `services.json` declares one for a tester | routing-tree §13.2's list, which also names the runner; whether `Glob` is worth listing beside Grep | yes, with `Glob`. **Approved: Jacob 2026-10-09**; Decision 15 asks to add one read verb |
 | 13 | §4: the coder under the write lease gets one extra permission rule, `Edit(<its repo>/**)`, the sandbox follows it, and `write` commits its edit with `Agent: <role>` on green only; no patch route | whether a lease-scoped Edit rule is as strong a gate as a patch through `write` (it is: check-then-commit is the gate in both) | the Edit rule. **Approved: Jacob 2026-10-09** (REVIEW §5.5; "even more thoroughly gated once we have the linter/architecture services running", G1 after H2) |
+| 14 | §11: the hub runs `driven` sessions through stream-json, with M2 (resume from a hub-written transcript) as the rebuild, M1 (the recorded prompt under `--system-prompt-snapshot off`) for a block edit and M3 (a fresh process) as the floor; D0 and D1 land the mode on a fixture now, and the first real `driven` session is a window whose view tab becomes a hub-served page, after V3 | D0's result per mechanism; and whether Jacob wants a window's context rebuilt with no relaunch at the price of the interactive terminal in that tab (print mode is not interactive) | D0 and D1 now; the planner window first, after V3, only if D0 passes M2. Open |
+| 15 | §12: `Bash(hub get *)` joins the read-only tool list beside `Bash(hub send *)`, widening Decision 12 by one read verb that runs only a store's `get` | the alternative is each store's own CLI on the list, one entry per store, which D3's `hygiene get` wording implied; one verb keeps the list short and the stores' CLIs off every role | yes. Open |
+| 16 | §12: the first-phase stores are `ctx:` (H1a-2, for `origin_id`) and `todo:` (R1); kb section ids, research `rs-<n>` and data-bridge records join in R2 by their owners' `ids` declarations, each when its `get` exists | which stores answer `get <id>` today (todo does, PLAN-todo-tool.md §3; the others are PLAN-services.md §3's, not an input) | yes. Open |
