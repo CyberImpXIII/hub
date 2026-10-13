@@ -161,7 +161,21 @@ are `deep-work` jobs and Jacob's own hours, not cloud items.
 - **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`). Last
-  refresh 2026-10-09 on `plan/hub` (eight copies had drifted; docs/inputs/README.md).
+  refresh 2026-10-12 on `plan/hub` (REVIEW §5.12: the brief and claudeTest-CLAUDE.md
+  had drifted; docs/inputs/README.md), with `docs/REVIEW-2026-10-09.md` re-copied.
+  The local `main` checkout's copies are older still (2026-10-09 refresh is on
+  `plan/hub` only); they arrive with the merge.
+
+- **Hub: references by id, as a stub you can expand** (brief §4 question 12, Jacob
+  2026-10-12, REVIEW §5.12). Unanswered: PLAN-hub.md answers ten, and the next cloud
+  pass (REVIEW §5.11 prompt, step 2) adds sections and gates for 11 and 12. The brief
+  copy here carries it since the 2026-10-12 refresh.
+- **The brief's §5 still says "eleven questions"** (lines "§4's eleven questions
+  answered in order" and "answers all eleven questions"), while §4 now has twelve.
+  Reported to the planner (2026-10-12), whose original it is; an edit here would be
+  undone by the next refresh. No gate counts §4's questions against §5's number;
+  `brief_numbering` checks only that the items count without repeat or gap. Unconfirmed
+  whether a gate is worth it (the number appears in prose, twice).
 
 - **Brief §4 question 11 (a session the hub runs) is unanswered** (added 2026-10-08,
   Jacob's yes relayed by the planner): PLAN-hub.md on `origin/plan/hub` answers ten.
