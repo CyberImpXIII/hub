@@ -5,11 +5,15 @@
 > hub's merge and build do not wait on a terminal-host choice that rests on a probe
 > nobody has run. Nothing is built. **Built after PLAN-hub.md's H3**, locally (every
 > phase opens a terminal on Jacob's machine, so none is cloud-eligible under
-> PLAN-cloud-offload.md §3).
+> PLAN-cloud-offload.md §3). **Revised in the cloud 2026-10-13:** Decisions 3–6 are
+> answered (`docs/REVIEW-2026-10-09.md` §5.10), V0 runs locally by an agent, and the
+> `warm` mode it showed is gone with PLAN-hub.md Decision 1 (a `driven` session, §11
+> there, takes its place in the panel).
 >
 > **Owners:** `deep-work` for `tools/hub/view/` (the pages, the TUI fallback, `hub view`,
 > the gates); the `cron-scheduler` agent for `chron.py list --json` (§2); Jacob for the
-> host terminal (Decision 1) and the hour-long probe that precedes V1 (V0).
+> host terminal (Decision 1); a local agent for the probe that precedes V1 (V0,
+> Decision 6).
 >
 > **Builds on:** PLAN-hub.md §2 (the registry the panels read), §3 (`/sessions`, the
 > ledger the feed streams), §4 (the three modes and the state each one exposes), §7
@@ -78,8 +82,8 @@ recorded in `/sessions`:
 
 | glyph | state | source |
 |---|---|---|
-| green circle | working | `cold`/`warm`: the server's own process state (running); `window`: `claude agents --json` `status: busy` for the recorded session. The JSON's `pid`, `status` are present "While the process is alive" as "Process ID and one of `busy`, `waiting`, or `idle`" (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>) |
-| yellow circle | awaiting commands | `window`/`warm`: `status: idle` or `waiting`, with `waitingFor` as the tooltip: "`permission prompt` for an approval, `input needed` for a question from Claude or an MCP server's input request" (same anchor) |
+| green circle | working | `cold`/`driven`: the server's own process state (running, and for `driven` a turn open: no `result` yet for the last message); `window`: `claude agents --json` `status: busy` for the recorded session. The JSON's `pid`, `status` are present "While the process is alive" as "Process ID and one of `busy`, `waiting`, or `idle`" (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>) |
+| yellow circle | awaiting commands | `driven`: the hub's idle point (PLAN-hub.md §11); `window`: `status: idle` or `waiting`, with `waitingFor` as the tooltip: "`permission prompt` for an approval, `input needed` for a question from Claude or an MCP server's input request" (same anchor) |
 | red circle | in the registry, not spawned | the role exists in `hub.json` and no process or session is known. Jacob said "in the manifest.json"; `hub.json` is rendered from the manifest at the top node, so the set is the same, and the view never opens the manifest (Decision 4) |
 
 To the left of each circle, an **on/off switch** controlling whether that agent's events
@@ -90,7 +94,8 @@ dispatcher) are always in the tab bar; the switch does not close a tab (Decision
 Jacob to confirm this reading of "what I am seeing in the single terminal view").
 Clicking an agent's name opens its tab: `claude attach <id>`, "Attach to a background
 session in this terminal" (<https://code.claude.com/docs/en/cli-reference#cli-commands>),
-for a warm or window session; `hub log --role <name>` for a cold role, which has no
+for a window session; `hub session history <id>` (PLAN-hub.md §11) for a `driven`
+session, which has no terminal; `hub log --role <name>` for a cold role, which has no
 session to attach to between messages.
 
 **Folders panel (middle third).** One row per direct subfolder of the node root, from
@@ -137,7 +142,7 @@ Three ways to put these panels beside a terminal, with what each costs. Jacob ch
 (Decision 1); the panels are the same in all three. **These rows cite software outside
 Claude Code's documentation, so `kb check` cannot verify them; the quotes were read from
 the projects' own source files on GitHub on 2026-10-04 and are to be re-read on Jacob's
-machine in V0.**
+machine in V0, by the agent that runs it.**
 
 | host | how the view arrives | fits the request | risk |
 |---|---|---|---|
@@ -206,7 +211,7 @@ SSE spend wall clock and no tokens.
 | **pinned block tracks its source** | changing a file source changes the block within one watch interval; a changed endpoint changes it on the next SSE event; a deleted source shows `source missing` | V3 |
 | **settings write one file** | every gear action changes only `hub-view.json` (a checksum of the tree before and after, excluding it); "add folder" with `--github` is refused without a confirmation | V2 |
 | **cron panel reads, never writes** | `hub cron --json` against a fixture `chron.py` renders the rows; no gear action produces a `chron.py` write verb | V2 |
-| **host probe** | the V0 script's pass conditions, recorded as a result file: a `web` block shows `/view/agents`; `wsh run -m` places a block; `wsh badge` marks a tab; the layout survives a restart. Each is a line in the file with pass or fail; a fail picks B or C | V0 |
+| **host probe** | the V0 script's pass conditions, recorded as a result file: a `web` block shows `/view/agents`; `wsh run -m` places a block; `wsh badge` marks a tab; the layout survives a restart. Each is a line in the file with `pass`, `fail` or `unverified`; a clause the agent that runs it cannot see on screen (a panel showing, a badge visible) is `unverified`, never `pass`, and Jacob looks at those; a `fail` picks C (Decision 1) | V0 |
 | **idempotent host install** | `hub view` run twice leaves one `widgets.json` entry; `hub view --uninstall` leaves none and the rest of the file byte-identical | V1 |
 | **direction audit** | PLAN-hub.md §8's audit, run over `tools/hub/view/` too | every phase |
 
@@ -217,7 +222,7 @@ over 200k (PLAN-check-progress.md §7, as in the hub plan).
 
 | # | phase | contents | cost |
 |---|---|---|---|
-| **V0** | the host probe (Jacob's hour) and the docs | with Wave installed: a `web` block at `http://127.0.0.1:<port>/view/agents` against a stub page, `wsh run -m`, `wsh badge`, a restart; the result file in `tools/hub/probes/`. If Wave fails any clause, C (Jacob, 2026-10-05: Wave with tmux; Tabby is out). In the same step, Wave's docs and tmux's manual enter the knowledge-base mirror (§4), and the §4 quotes are re-checked with `kb check` | 20–40k (1u) + the knowledge-base job |
+| **V0** | the host probe, run locally by an agent (Decision 6), and the docs | the agent installs Wave with Homebrew (reversible) and runs the script: a `web` block at `http://127.0.0.1:<port>/view/agents` against a stub page, `wsh run -m`, `wsh badge`, a restart; the result file in `tools/hub/probes/`, one line per clause, `pass`, `fail` or `unverified` (a clause it cannot see on screen is `unverified`, never `pass`; Jacob looks at those). If Wave fails any clause, C (Jacob, 2026-10-05: Wave with tmux; Tabby is out). In the same step, Wave's docs and tmux's manual enter the knowledge-base mirror (§4), and the §4 quotes are re-checked with `kb check` | 20–40k (1u) + the knowledge-base job |
 | **V1** | agents and folders | `/agents`, `/folders`, `/events` (SSE); the hub-served pages for the two panels and the feed; the switch; expand to a child's `/agents`; `hub view` writing the host's layout (two tabs, planner and dispatcher, the sidebar column) and `--uninstall`; `hub view --tui` for the same two panels; the V1 gates | 150–200k (5–7u) |
 | **V2** | cron and settings | `hub cron --json` (after `chron.py list --json` exists), the cron panel, the gear with `node`, `tabs`, `folders`, `icons`, `feed.default_on`, "add folder" through `setup <path> --node` with the `--github` confirmation; `hub-view.json`; the V2 gates | 150–200k (5–7u) |
 | **V3** | pinned blocks and polish | top and bottom blocks from file, endpoint and text sources; per-state icon overrides; click-to-attach (`claude attach <id>` in a tab); tab badges on `agent_needs_input`; TUI parity for pins and cron; the V3 gates | 120–180k (4–6u) |
@@ -261,7 +266,7 @@ fallback installs nothing. `setup` gains no component for the view.
 |---|---|---|---|
 | 1 | §4: the terminal host: A (Wave Terminal, no fork, hub-served panels in web blocks), B (a Tabby plugin), or C (tmux layout only) | whether the request's icons, switches and spin need a DOM, and V0's result on Jacob's machine | A, with C as the fallback that ships in every case. **Jacob, 2026-10-05: A, "wave with tmux"**; V0 confirms Wave on his machine, and a failed clause falls to C, not B |
 | 2 | §2: the on/off switch controls an agent's membership in the feed block, not whether its tab exists | what Jacob meant by "what I am seeing in the single terminal view" | yes. **Jacob, 2026-10-05: yes** |
-| 3 | §1: the view lives in `tools/hub/view/`, same repo and CLI (`hub view`), not a separate `tools/hub-view/` | keeping the API and its only client in one commit against the cost of a larger repo | yes |
-| 4 | §2: red in the agents panel means "in `hub.json`, not spawned", where Jacob said "in the manifest.json"; `hub.json` is rendered from the manifest so the set is the same, and the view never opens the manifest | the fixed point that the hub reads no roster | yes |
-| 5 | §2: the gear's "add folder" runs `setup <path> --node` and asks before `--github`; "change directory" switches the node the view talks to | whether settings may run `setup` from the view | yes |
-| 6 | Phases: V0 is Jacob's own hour on his machine before V1 is dispatched, and its result file decides the host | whether Jacob would rather deep-work run the probe in a local session | Jacob runs it |
+| 3 | §1: the view lives in `tools/hub/view/`, same repo and CLI (`hub view`), not a separate `tools/hub-view/` | keeping the API and its only client in one commit against the cost of a larger repo | yes. **Approved: Jacob 2026-10-09** (`docs/REVIEW-2026-10-09.md` §5.10) |
+| 4 | §2: red in the agents panel means "in `hub.json`, not spawned", where Jacob said "in the manifest.json"; `hub.json` is written by `setup` from the role list harness renders from the manifest (PLAN-hub.md Decision 2), so the set is the same, and the view never opens the manifest | the fixed point that the hub reads no roster | yes. **Approved: Jacob 2026-10-09** |
+| 5 | §2: the gear's "add folder" runs `setup <path> --node` and asks before `--github`; "change directory" switches the node the view talks to | whether settings may run `setup` from the view | yes. **Approved: Jacob 2026-10-09** |
+| 6 | Phases: V0 is run **locally by an agent, not by Jacob**, before V1 is dispatched, and its result file decides the host; the agent installs Wave with Homebrew (reversible) and records a clause it cannot see on screen as `unverified`, never as pass | whether an agent's run can settle clauses that need eyes (it cannot; those stay `unverified` for Jacob) | an agent runs it, locally, after H3 and before V1. **Approved: Jacob 2026-10-09** ("lets do it locally") |
