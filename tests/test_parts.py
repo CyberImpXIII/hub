@@ -188,6 +188,28 @@ class Wired(unittest.TestCase):
         self.assertEqual(self.ran(), [])
         self.assertEqual((Path(self._tmp.name) / "ran").read_text().split(), ["c"])
 
+    def test_a_gate_exiting_3_is_unchecked_never_ok_and_never_kept(self):
+        # hub's gates exit 3 when a sibling tool is absent (a lone clone);
+        # runner 1.2.0's contract: UNCHK in text, `unchecked` in --json, and
+        # rerun by --resume, never counted as passed.
+        other = Path(self._tmp.name) / "other.json"
+        other.write_text(json.dumps({"parts": [
+            {"name": "c", "run": "echo c >> ran; echo '  UNCHECKED  c: no sibling'; exit 3",
+             "files": ["c.txt"], "timeout_s": 60}]}))
+        (Path(self._tmp.name) / "c.txt").write_text("c\n")
+        extra = {"CHECK_PARTS": str(other), "PROGRESS_FILE": str(Path(self._tmp.name) / "p.json")}
+        p = self.dev("check", **extra)
+        self.assertIn("UNCHK", p.stdout)
+        self.assertIn("unchecked: c (", p.stdout)
+        self.assertIn("check: 0 of 1 passed", p.stdout)
+        p = self.dev("check", "--json", **extra)
+        doc = json.loads(p.stdout)
+        self.assertEqual([(c["name"], c["status"]) for c in doc["checks"]], [("c", "unchecked")])
+        self.assertIn("no sibling", doc["checks"][0]["reason"])
+        (Path(self._tmp.name) / "ran").unlink()
+        self.dev("check", "--resume", **extra)
+        self.assertEqual((Path(self._tmp.name) / "ran").read_text().split(), ["c"])
+
     def shared(self, check):
         if CHECKS_CLI is None:
             self.skipTest(LONE)

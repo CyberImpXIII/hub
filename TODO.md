@@ -53,16 +53,25 @@ re-run that merge-tree before merging.
 ## Own limits, known
 
 - **The check runs in parts (Q7, 2026-10-13, PLAN-small-tasks §3/§7)**: `check.parts.json`
-  through `devtools/parts.py` 1.1.0 (setup's render, byte-equal to tools/checks'
+  through `devtools/parts.py` 1.2.0 (setup's render b33b571, byte-equal to tools/checks'
   source; `tests/test_parts.py` holds that, the parts == test modules + gates both
   ways, and the wiring on a scratch copy, incl. the shared check-json and
   check-partial). `devtools/checkjson.py` is gone: `--json` is the runner's, one check
-  per part, a part's FAIL lines as its failures (no file/line any more). Limits: the
-  runner has no `unchecked` outcome, so a gate exiting 3 (a lone clone or a worktree
-  without site-scrapers: hooktests, plans, checks) is a FAILED part, named by its last
-  line -- red, never ok (reported to checks, below). `--resume` skips little: five
-  gate parts read `.`, and six parts are `always` (they read other repos or file modes).
-  A full check under other agents' suites took 20 min on 2026-10-13 (hooktests most).
+  per part, a part's FAIL lines as its failures. A gate exiting 3 (a lone clone or a
+  worktree without site-scrapers: hooktests, plans, checks) is `UNCHK`/`unchecked`
+  and **does not make the run red** (runner 1.2.0's contract; 1.1.0 called it a fail;
+  `test_a_gate_exiting_3_is_unchecked_never_ok_and_never_kept` holds it and fails on
+  1.1.0). Open: whether hub wants an unchecked gate to block a commit; today only the
+  summary line says so. `--resume` skips little: five gate parts read `.`, and six are
+  `always` (they read other repos or file modes). A full check under other agents'
+  suites took 15-20 min on 2026-10-13 (hooktests 904 s).
+- **`checks` is red on the hooks rollout of 2026-10-13 03:40** (tools/hooks 9e9a2e3):
+  `.claude/bin/commit.sh`, `hooks/git-funnel.sh` and its test missing; `prefer-recipes.sh`,
+  its test and `lib/write-targets.sh` drift by logic; `setup tools/hub --only hooks`
+  says "--rebuild overwrites it" and settings.json lacks 3 registrations (Jacob's
+  apply). Not re-rendered here: Q6b's render (172a994) matched the source at its time,
+  and the new hooks need Jacob's settings proposal. Next: `setup tools/hub --only hooks
+  --rebuild`, then Jacob applies the proposal.
 - **Roles are the §4.1 starting set** (`gate_role` in dev.sh): inputs, plans -> docs;
   leaks, checks -> audit; the rest -> code. That each names a role in hub's group
   waits on the node registry (§4.4's second gate); hub has no group in the manifest yet.
@@ -101,13 +110,6 @@ re-run that merge-tree before merging.
   PLAN-hard-gates.md §2; checked 2026-10-08.)
 
 ## Reported to other owners
-
-- **checks** (via the dispatcher, 2026-10-13): the shared runner `parts.py` 1.1.0 maps
-  any non-zero exit to `fail`; it has no `unchecked` outcome for a part that exits 3
-  (the convention hub, setup and hooks use for "a sibling tool is absent"). So a lone
-  clone's check goes red where it was unchecked, and `--json` says `fail` where the
-  schema has `unchecked`. Input: a part `{"run": "echo 'UNCHECKED: x'; exit 3"}`.
-  Expected: `unchecked` with its reason (never ok). Hub adopted it anyway.
 
 - **planner** (via the dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
   "its TODO.md:541 says 0444", but hub's TODO.md has no such line (94 lines); 541 is
