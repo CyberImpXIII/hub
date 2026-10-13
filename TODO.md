@@ -11,22 +11,36 @@ leaves the system working. **Cloud is the default, not a commitment** (PLAN-hub.
 Decision 9, Jacob 2026-10-09): when the credits run low or an item stalls, the same
 item runs locally as a `deep-work` job, and the next pass of PLAN-hub.md says so in §9.
 
-**Before item 1, locally (not a cloud item): H1a-0, the write gate and the read route**
-(PLAN-hub.md §3 "H1a-0"; §9 row H1a-0; §8 rows "write gate and read route", "help ==
-implemented", "kill the server" first part, "direction audit", "no names in the
-program"; Decision 17; PLAN-services.md §3 steps 3 (and its 2026-10-13 widening) and
-7). Size 80–130k (3–5u) for the skeleton and write half plus the read half, **unknown**
-(PLAN-hub.md §9: no declaration it rests on exists yet), a local `deep-work` job, plus
-~1u of harness for the hook. Not dispatchable as one job until the read half is costed;
-over 200k, the read half splits off as H1a-0b. Done when: `hub up|down|status` and the
-token check work; `POST /write-request` allows exactly a declared verb on a repo the
-role may write (derived from `owners` at render time, Decision 17; no per-role `writes`
-list) and denies the rest with the verb to use; `POST /read-request` answers a
-declared-prefix id with its store's `get`, allows a declared file and denies the rest
-with the verb to use; `hub hook gate` sees every tool call and a Read of an unowned
-path makes no server call; the hook denies writes and routable reads with the server
-killed; every §8 "write gate and read route" clause passes in `tests/`. The hook is registered in the planner
-window only after `setup plans edit|add` and todo's import exist.
+**Before item 1, locally (not a cloud item): H1a-0, the write gate** (PLAN-hub.md §3
+"H1a-0"; §9 row H1a-0; §8 rows "write gate", "help == implemented", "kill the server"
+first part, "direction audit", "no names in the program"; Decisions 13 and 17;
+PLAN-services.md §3 steps 3 (its 2026-10-13 widening and "The hub owner's four
+questions") and 7). Size 80–130k (3–5u), a local `deep-work` job, plus ~1u of harness
+for the hook. Done when: `hub up|down|status` and the token check work; `POST
+/write-request` allows exactly a declared verb on a store the role may write (derived
+from `owners` at render time, Decision 17: the planner's and dispatcher's from the
+`workspace` row) and denies the rest with the verb to use, found by resolving the path
+to its owner and reading that owner's `cli.json` `store` field; `hub hook gate` sees
+every tool call and passes every read with no server call; the hook denies writes with
+the server killed; `hub check` fails a `workspace` role that is not a `roles` key and a
+`workspace` path under a `repos` row; every §8 "write gate" clause passes in `tests/`.
+The hook is registered in the planner window only after `setup plans edit|add` and
+todo's import exist, and a `cli.json` declares the top-level `PLAN-*.md` as a store
+(none does: `tools/setup/cli.json` does not exist, checked 2026-10-13 with `ls`).
+
+**After H1a-0, cloud (default), any time before or after item 1: H1a-0b, the read
+route** (PLAN-hub.md §3 "H1a-0b"; §9 row H1a-0b; §8 row "read route"). Size 50–90k
+(2–3u), costed as H1a-0's write half by analogy (PLAN-hub.md §9 shows the arithmetic);
+split off because H1a-0 with it would be 130–220k. Inputs: PLAN-hub.md §2 (`owners`,
+`workspace`, `stores`), §3, §8, §12; `docs/inputs/PLAN-todo-tool.md` §3 (`todo get ID`,
+a real store's `get`); PLAN-services.md is not an input, and PLAN-hub.md §3 carries
+the planner's answers it needs. Done when: `POST /read-request`
+answers a fixture declared-prefix id and a fixture `cli.json` store path with the
+store's `get`; a Read of an owned non-store path and of an unowned path are plain Read,
+never denied, the second with no server call; with the server killed a declared-prefix
+read is denied with the `hub status` line and an unowned Read passes; every answer is
+a ledger row; every other §8 "read route" clause passes in `tests/`. The owned-path
+down-server clause waits on the planner ("Open decisions" below).
 
 1. **H1a-1, the program with no routing yet** (PLAN-hub.md §9 row H1a-1; §2 for the
    registry, §3 step list for `hub up`, §7 for `status --json`, §8 rows "help ==
@@ -148,7 +162,10 @@ window only after `setup plans edit|add` and todo's import exist.
    **the coder's Edit rule:** a coder spawned under the lease with `Edit(<repo>/**)`
    edits inside its repo with Edit and with a Bash `echo >`, and both fail outside it;
    its green edit is committed by `write` with `Agent: <role>` and its red edit comes
-   back as `check-red` with nothing committed; a coder spawned without the lease has no
+   back as `check-red` with nothing committed; **the lease clause:** with the hook on
+   every call, the server allows the leased coder's Edit of a source file in its repo
+   and denies its Edit of the repo's `todo.json` with the verb, and without the lease
+   denies both; a coder spawned without the lease has no
    Edit rule; the third identical dispatcher re-route of an unowned kind appears in
    `hub routes --proposed`. **Probe first, local, H0:** the Edit-rule clause (a `-p`
    role with that rule under `dontAsk` cannot edit outside its repo, with the `claude
@@ -252,32 +269,29 @@ and any item above may become one too (Decision 9).
   run `drift` (no originals in a clone).
 - **PLAN-hub.md Decisions: none open after 2026-10-13.** 9 (the 1.7–2.5M re-cost,
   against the $156 balance), 14 (D0 on a fixture before anything touches the planner
-  window), 16 and 17 (writable repos derived from `owners`, no per-role `writes` list)
+  window), 16 and 17 (what a role may write derived from `owners`, the planner's and
+  dispatcher's the `workspace` row; no per-role `writes` list)
   answered; 12 and 15 dissolved (the hook routes every call, no tool list is the gate;
-  PLAN-services.md §3 step 3 "Widened"). H1a-0's read half came after the Decision 9
-  yes and is unknown in size (§9).
-- **H1a-0's read rule has nothing to read yet** (2026-10-13). PLAN-services.md §3 step
-  3: "a read of a file an owner declares is served as that file". No key in PLAN-hub.md
-  §2 declares an owned file path (`repos` rows hold check, cli, verbs, tags, ids), and
-  the first declared prefix, `ctx:`, lands in H1a-2. Until one is named, the read half
-  is built on fixture declarations only and its size is unknown. Planner's to name.
-- **"Denied" versus "plain Read" for unowned paths** (PLAN-services.md §3 step 3, two
-  bullets): "a call that names nothing any owner declares is denied with the verb to
-  use" and "the agent's Read on a path nothing owns stays plain Read". PLAN-hub.md §3
-  reads them as: a Read of an unowned path never reaches the server; other calls
-  naming nothing declared are denied. Unconfirmed that this is the planner's meaning.
-- **The coder's lease under a hook on every call** (PLAN-hub.md §4): the hook now sees
-  the leased coder's Edit, so the server must answer it with allow inside the repo, or
-  Decision 13's Edit rule never takes effect. Written into §4; H2's "lease" row should
-  carry a clause for it when H2 is next touched.
-- **How a role's writable repos derive from `owners` is unstated** (Decision 17,
-  2026-10-13). `owners` (PLAN-hub.md §2) maps a seam kind to an owner role
-  (`check-red: {repo}/coder`, `unowned: dispatcher`); no row names the planner, yet
-  H1a-0's planner must be allowed `setup plans edit|add` and todo's importer. Read off
-  §2's example as written, the derivation gives the planner no writable repo. H1a-0
-  needs the mapping (which rows, or which ownership relation, yields role -> repos) and
-  where the rendered result lives in `hub.json`, plus a both-ways gate on it, before
-  code. Planner's or Jacob's to state; only the text was updated, no code built.
+  PLAN-services.md §3 step 3 "Widened"). H1a-0b (the read route, 50–90k, cloud) came
+  after the Decision 9 yes; the Decision 9 row says so (total about 1.7–2.6M, cloud
+  share about 1.25–1.8M).
+- **A Read of an owned path with the server down** (PLAN-hub.md §3 "H1a-0b", 2026-10-13).
+  The planner's answer 2 has the server read `cli.json` to tell a store path from a
+  non-store one, and PLAN-services.md §3 step 3 says a down server must not strand a
+  session reading its own repo while a store read it cannot route is denied. Without
+  the server the hook cannot tell which a path is, so it must either deny every owned
+  Read (strands the session) or pass it (a store file read as plain Read while down).
+  Planner's to settle; only H1a-0b's down-server clause for that case waits on it.
+- **A repo's own role's writable repo is the hub owner's reading** (PLAN-hub.md §2
+  `roles`). The planner's answer 1 covers the planner and dispatcher (`workspace`); §2
+  reads a repo's own role (its `dir`, `{repo}/coder` in `owners`) as having that repo.
+  Needed from H1b, when a cold role first sends a `write-request`; to confirm with the
+  planner before H1b is dispatched.
+- **The `workspace` row has no source yet.** The manifest has no `owners` block
+  (`grep '"owners"' .claude/agents.manifest.json`: nothing, 2026-10-13), and
+  `.claude/hub-roles.json` does not exist (H1a-2's harness job renders it), so the row
+  reaches `hub.json` only once harness renders it into the role list: name it in the
+  H1a-2 harness job's brief. H1a-0 is built on fixtures and does not wait on it.
 - **The role list's shape is wider than REVIEW §5.8's wording.** 5.8 described
   `.claude/hub-roles.json` as each role's name, mode, `dir` and tools plus the routes;
   PLAN-hub.md §2 also puts `children`, `server` (port, keep-alive from
