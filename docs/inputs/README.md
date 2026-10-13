@@ -45,6 +45,11 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   `PLAN-usage-reporting.md`, `PLAN-check-progress.md`. `main` was merged into
   `plan/hub` first, so the branch has these copies (the paragraph after the next
   table describes the 2026-10-04 fix pass, before that merge).
+- **Refreshed 2026-10-12** for brief §4 question 12 (references by id, shown as a stub
+  and expanded on demand; PLAN-hub-review.md §5.12, re-copied as
+  `docs/REVIEW-2026-10-09.md`). Leak audit on the originals first (and on the review),
+  nothing found; then `./dev.sh refresh`. Two copies had drifted: the brief and
+  `claudeTest-CLAUDE.md`.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

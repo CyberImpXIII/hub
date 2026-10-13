@@ -186,6 +186,53 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
     how it relates to the context-hygiene launcher that restarts a whole session; and
     how that plan's rebuild guards hold here (no tool output in the system prompt, a
     rebuild never read as Jacob's prompt, nothing lost).
+12. **References by id, shown as a stub and expanded on demand** (Jacob, 2026-10-12:
+    "make it so that the hub can reference anything in the knowledge store by ID and
+    have it show up with the stub, and expandable to the full text, without the agent
+    that is sending that information having to output the entirety of that
+    information"). This plan is not a §2 input either, so the requirement is stated
+    here whole.
+
+    **The sender writes an id, never the record.** Records come from any store that
+    hands out ids:
+    - a kb section (its `url#anchor`);
+    - research (`rs-<n>`);
+    - todo items;
+    - context-hygiene's `ctx:` store;
+    - data-bridge records.
+
+    PLAN-services.md §3 ("Every record a service holds has an id and tags") already
+    gives each of these stores `get <id>` and a short readable line per record. Its
+    "Context carries ids" paragraph holds that a record enters context as its id and
+    that line, never as a copy.
+
+    **The hub does the rest:**
+    - it resolves the id's prefix through the prefix registry to the store's `get`;
+    - it renders a stub: the id, the store's own one-line summary, its source and date;
+    - it expands the stub to the full text only when asked. For Jacob in the view, that
+      is a click. For a model recipient, it is one `get` call, so the full text costs
+      tokens only for a recipient that reads it.
+
+    The stub's line comes from the store, never from the sender. A sender therefore
+    cannot misdescribe a record, and it spends nothing on it.
+
+    **Settle:**
+    - which stores are in the first phase;
+    - the reference syntax inside a message, and how the envelope carries it beside
+      the body;
+    - the stub's fields and its size cap;
+    - how expanding works for a model recipient (a tool, an MCP resource, or a CLI
+      call) and for the view;
+    - a record that changed since it was cited: does the stub show what the sender saw
+      (the `ctx:` snapshot) or the current text, and how is the difference shown;
+    - a dangling or unreachable id: shown as unresolved, never dropped. An unreachable
+      store is UNCHECKED, not a pass;
+    - its gates:
+      - a planted id renders a stub within the cap;
+      - expanding returns exactly the store's `get` output;
+      - an unknown prefix fails;
+      - an envelope whose body carries more than the cap of a record's text it could
+        have referenced is flagged.
 
 ## 5. Output contract
 
