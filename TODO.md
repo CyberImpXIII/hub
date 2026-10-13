@@ -11,14 +11,21 @@ leaves the system working. **Cloud is the default, not a commitment** (PLAN-hub.
 Decision 9, Jacob 2026-10-09): when the credits run low or an item stalls, the same
 item runs locally as a `deep-work` job, and the next pass of PLAN-hub.md says so in §9.
 
-**Before item 1, locally (not a cloud item): H1a-0, the write gate** (PLAN-hub.md §3
-"H1a-0"; §9 row H1a-0; §8 rows "write gate", "help == implemented", "kill the server"
-first part, "direction audit", "no names in the program"; Decision 17;
-PLAN-services.md §3 steps 3 and 7). Size 80–130k (3–5u), a local `deep-work` job, plus
-~1u of harness for the hook. Done when: `hub up|down|status` and the token check work;
-`POST /write-request` allows exactly a declared verb on a repo in the role's `writes`
-and denies the rest with the verb to use; the hook denies with the server killed; every
-§8 "write gate" clause passes in `tests/`. The hook is registered in the planner
+**Before item 1, locally (not a cloud item): H1a-0, the write gate and the read route**
+(PLAN-hub.md §3 "H1a-0"; §9 row H1a-0; §8 rows "write gate and read route", "help ==
+implemented", "kill the server" first part, "direction audit", "no names in the
+program"; Decision 17; PLAN-services.md §3 steps 3 (and its 2026-10-13 widening) and
+7). Size 80–130k (3–5u) for the skeleton and write half plus the read half, **unknown**
+(PLAN-hub.md §9: no declaration it rests on exists yet), a local `deep-work` job, plus
+~1u of harness for the hook. Not dispatchable as one job until the read half is costed;
+over 200k, the read half splits off as H1a-0b. Done when: `hub up|down|status` and the
+token check work; `POST /write-request` allows exactly a declared verb on a repo the
+role may write (derived from `owners` at render time, Decision 17; no per-role `writes`
+list) and denies the rest with the verb to use; `POST /read-request` answers a
+declared-prefix id with its store's `get`, allows a declared file and denies the rest
+with the verb to use; `hub hook gate` sees every tool call and a Read of an unowned
+path makes no server call; the hook denies writes and routable reads with the server
+killed; every §8 "write gate and read route" clause passes in `tests/`. The hook is registered in the planner
 window only after `setup plans edit|add` and todo's import exist.
 
 1. **H1a-1, the program with no routing yet** (PLAN-hub.md §9 row H1a-1; §2 for the
@@ -93,8 +100,9 @@ window only after `setup plans edit|add` and todo's import exist.
    row); `docs/inputs/PLAN-hard-gates.md` §2 (the `Agent:` trailer) and §3 (the CLI
    gates `write` runs); `docs/inputs/PLAN-group-servers.md` §1a (the conformance
    fixture). Done when: a `task` to a fixture repo set up from its path alone spawns
-   `claude -p --agent <role>` read-only (`--allowedTools` Read, Grep, Glob,
-   `Bash(hub send *)`, `Bash(hub get *)`; `--disallowedTools Edit,Write,NotebookEdit`;
+   `claude -p --agent <role>` read-only, its hook (PLAN-hub.md §4) the gate and its
+   flags a default only (`--allowedTools` Read, Grep, Glob, `Bash(hub send *)`;
+   `--disallowedTools Edit,Write,NotebookEdit`;
    `dontAsk`; `--permission-prompts none`) with the `origin_id` stub line in its
    prompt, reads the stream to its `result` line, records its `usage` in the ledger,
    and returns a `report`; the role's `write-request` runs the fixture CLI's declared
@@ -196,7 +204,8 @@ window only after `setup plans edit|add` and todo's import exist.
    `model`; a rebuild file with a recorded `tool_result` line is refused; every message
    of the pre-rebuild list is in the snapshot the ledger names; `hub session` from a
    role's Bash is refused and answered; no committed registry names a `driven` role
-   (Decision 14 is open).
+   (Decision 14, 2026-10-13: D0 runs on a fixture before anything touches the planner
+   window).
 
 After these, the local phases in PLAN-hub.md §9 (H0 and D0 the probes, S2, V0–V3 in
 PLAN-hub-view.md, H4, R2) are `deep-work` jobs and Jacob's own hours, not cloud items;
@@ -241,15 +250,34 @@ and any item above may become one too (Decision 9).
   The local `main` checkout's copies are older still (2026-10-09 refresh is on
   `plan/hub` only); they arrive with the merge. The 2026-10-13 cloud pass could not
   run `drift` (no originals in a clone).
-- **PLAN-hub.md Decisions 14–16 and the §9 re-cost await Jacob** (cloud pass,
-  2026-10-13). 14: which session is `driven` first (the planner window through a
-  hub-served view tab after V3, or none until a multi-message role exists), and M2
-  over M1/M3 for the rebuild; hinges on D0. 15: `Bash(hub get *)` on the read-only
-  tool list, one read verb beside `hub send`, widening Decision 12. 16: `ctx:` and
-  `todo:` as the first-phase stores. Decision 9: the total rose from 1.4–1.9M to
-  1.7–2.5M (H5 and the warm probe gone, R1, R2, D0, D1 added for questions 11–12,
-  H1a-0 added 2026-10-13 locally). 17 (local pass, 2026-10-13): H1a-0's shape, the
-  `writes` list and the fail-closed exception. The planner presents the five in order.
+- **PLAN-hub.md Decisions: none open after 2026-10-13.** 9 (the 1.7–2.5M re-cost,
+  against the $156 balance), 14 (D0 on a fixture before anything touches the planner
+  window), 16 and 17 (writable repos derived from `owners`, no per-role `writes` list)
+  answered; 12 and 15 dissolved (the hook routes every call, no tool list is the gate;
+  PLAN-services.md §3 step 3 "Widened"). H1a-0's read half came after the Decision 9
+  yes and is unknown in size (§9).
+- **H1a-0's read rule has nothing to read yet** (2026-10-13). PLAN-services.md §3 step
+  3: "a read of a file an owner declares is served as that file". No key in PLAN-hub.md
+  §2 declares an owned file path (`repos` rows hold check, cli, verbs, tags, ids), and
+  the first declared prefix, `ctx:`, lands in H1a-2. Until one is named, the read half
+  is built on fixture declarations only and its size is unknown. Planner's to name.
+- **"Denied" versus "plain Read" for unowned paths** (PLAN-services.md §3 step 3, two
+  bullets): "a call that names nothing any owner declares is denied with the verb to
+  use" and "the agent's Read on a path nothing owns stays plain Read". PLAN-hub.md §3
+  reads them as: a Read of an unowned path never reaches the server; other calls
+  naming nothing declared are denied. Unconfirmed that this is the planner's meaning.
+- **The coder's lease under a hook on every call** (PLAN-hub.md §4): the hook now sees
+  the leased coder's Edit, so the server must answer it with allow inside the repo, or
+  Decision 13's Edit rule never takes effect. Written into §4; H2's "lease" row should
+  carry a clause for it when H2 is next touched.
+- **How a role's writable repos derive from `owners` is unstated** (Decision 17,
+  2026-10-13). `owners` (PLAN-hub.md §2) maps a seam kind to an owner role
+  (`check-red: {repo}/coder`, `unowned: dispatcher`); no row names the planner, yet
+  H1a-0's planner must be allowed `setup plans edit|add` and todo's importer. Read off
+  §2's example as written, the derivation gives the planner no writable repo. H1a-0
+  needs the mapping (which rows, or which ownership relation, yields role -> repos) and
+  where the rendered result lives in `hub.json`, plus a both-ways gate on it, before
+  code. Planner's or Jacob's to state; only the text was updated, no code built.
 - **The role list's shape is wider than REVIEW §5.8's wording.** 5.8 described
   `.claude/hub-roles.json` as each role's name, mode, `dir` and tools plus the routes;
   PLAN-hub.md §2 also puts `children`, `server` (port, keep-alive from
@@ -367,7 +395,7 @@ re-checked 2026-10-13: the cloud pass sends nothing, so this list is the record)
   Decision 5, approved 2026-10-09; changes group-servers decision 4's data source, not
   its owner).
 - **harness**, to send: `gen` renders `.claude/hub-roles.json` (a generic role list:
-  roles with read-only tools, routes, children, `server` from `servers.<group>`,
+  roles with their default tools, routes, children, `server` from `servers.<group>`,
   `owners` defaults, its source hash) and **never `hub.json`** (PLAN-hub.md §2,
   Decision 2); `auto-relay.sh`, `question-gate.sh` and `record-session.sh` become
   one-line callers of `hub hook`; a `UserPromptSubmit` hook for the two windows,
