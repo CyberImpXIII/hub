@@ -168,6 +168,9 @@ exists.
   NotebookEdit, `Bash` appears only as `Bash(hub send *)` and, for a tester, the
   runner its repo's `services.json` declares; a role with any other entry fails `hub
   check`. `fallback: true` marks the node's dispatcher (routing-tree §3 rule 4).
+  `writes` (from H1a-0, §3) lists the `repos` whose declared verbs the role may ask
+  the server to allow or run. It is no write tool: the role stays read-only, and a
+  name in `writes` that is not a `repos` key fails `hub check`.
   `window` is this plan's one addition to routing-tree §5: a role Jacob talks to, which
   the server never spawns and reaches through the inbox socket that `/sessions`
   recorded.
@@ -281,6 +284,46 @@ model**, and only when a step says so. `hub status` counts model turns by the st
 caused them, and a cause the registry could have routed that recurs three times
 proposes a rule through `routes --proposed`.
 
+**H1a-0, before any routing: the write gate** (PLAN-services.md §3, "What this is
+waiting on" steps 3 and 7; Jacob 2026-10-13: "You should be writing through the server,
+which can be the programmatic gate that prevents you from doing what you are not
+supposed to. Commands that are unallowed will be sent to the server via hooks and
+denied."). It is routing-tree §13.2's `write-request` applied to the planner window
+first, so the planner is incapable of a direct write rather than told not to make one.
+It is the first thing the server does, and the smallest:
+
+- **the server half** (this repo): the skeleton of steps 1-2 above (`hub up|down|status`,
+  the token check, `.hub/server.json`, `/health`, `/status`) and one route, `POST
+  /write-request`, with `{role, tool, file?, cli?, verb?, args?}`. Its rule: **allow
+  only a declared verb on a repo that role may write**. The verb must be in that repo's
+  `repos.<repo>.verbs` (its `cli.json`, §2), and the repo must be in the role's
+  `writes` list, a key this phase adds to a role in §2 (`"planner": {"mode":
+  "window", "agent": "planner", "writes": ["setup", "todo"]}`). An Edit, Write or
+  NotebookEdit of any file is denied. So is a Bash write that names no declared verb.
+  Each deny carries the verb to use instead where one is declared for that file's
+  store, e.g. an Edit of a `PLAN-*.md` is answered with `setup plans edit <FILE> §<n>
+  --from <file>`. Every answer is a ledger row. H1a-0 reads only `roles.<r>.writes`
+  and `repos.<repo>.cli|verbs` from `hub.json`, validated by the part of the schema
+  those keys need; H1a-1 completes the schema around them;
+- **the hook half** (harness's, local, beside it): one PreToolUse hook in the planner
+  window, on Edit, Write, NotebookEdit and every Bash call `lib/write-targets.sh` sees
+  as a write. It is a one-line caller of `hub hook write-gate`, which POSTs the call
+  and returns the server's answer as the tool decision. **Nothing is decided in the
+  hook.** A Bash command the classifier does not see as a write passes with no server
+  call. That is the classifier's reach, and it is stated in the hook's header and
+  tested on its fixtures;
+- **when the server is down, the hook denies**, with one line naming `hub status`.
+  The purpose is incapability, so this path **fails closed for writes**. It is the one
+  exception to "every hook fails open" (CLAUDE.md; §8 "fails open, every hook" names
+  it), recorded in CLAUDE.md when it is built. A call the hook cannot parse on Edit,
+  Write or NotebookEdit is denied too;
+- **not in H1a-0**: the server running the verb itself. That is the `write` service,
+  built for cold roles in H1b. Until then an allowed verb runs in the planner's own
+  Bash call, which the gate has just allowed. The gate goes live in the planner window
+  only once the verbs it names exist: `setup plans edit|add`, and `todo`'s importer
+  fix with the top-level import (PLAN-services.md §3 steps 1-2). Before that, the
+  server half and its fixtures are built and green, and the hook stays unregistered.
+
 **How the planner's Dispatch section reaches it.** The planner's `Stop` hook is
 `hub hook planner-stop`. It reads `last_assistant_message` from the hook input, the
 documented source for a Stop hook's final text (auto-relay §3): "Hooks that need the
@@ -361,8 +404,9 @@ build order, "phase 1 builds `route` and `write` for cold roles", is this phase.
 dispatcher's Agent-tool path stays available as the fallback until H4. Both paths
 record a ledger row, so `agents.sh dispatches` keeps answering the planner.
 
-→ H1a-1 (`hub up`, status, the fallback test), H1a-2 (the relay through the server),
-H1b (the first spawn).
+→ H1a-0 (the server skeleton, `hub up`, status and the write gate), H1a-1 (the
+registry, routes and the fallback test), H1a-2 (the relay through the server), H1b
+(the first spawn).
 
 ## 4. Roles and modes
 
@@ -543,7 +587,7 @@ its server list from the manifest. Under this plan the list is `hub status --jso
 node's children are the child's business). Gate unchanged in spirit: the servers
 `chron.py` shows == the nodes `hub status --tree` reports, both directions (Decision 5).
 
-→ H1a-1 (`status --json`, `/health`), H3 (`--tree`), V2 (`hub cron`).
+→ H1a-0 (`status --json`, `/health`), H3 (`--tree`), V2 (`hub cron`).
 
 ## 8. Gates, in the same change as each part
 
@@ -552,15 +596,15 @@ the test, never claudeTest or any repo of ours.
 
 | gate | proves | phase |
 |---|---|---|
-| **help == implemented** | `hub --help` lists exactly the subcommands the dispatcher implements, both ways; every endpoint in `docs/API.md` is served and every served route is documented (the server exports its route table; the test diffs) | H1a-1 |
+| **help == implemented** | `hub --help` lists exactly the subcommands the dispatcher implements, both ways; every endpoint in `docs/API.md` is served and every served route is documented (the server exports its route table; the test diffs) | H1a-0 (its subcommands and routes), H1a-1 on |
 | **vocabulary** | every tag in `hub.json` resolves to a role, a child, or a reserved target (`@from`, `@owner`, `@dir`); every route's tag is declared; an addressed envelope (`to` set) routes without a tag row. **Run against the root's own `hub.json` on day one**, with no child registered, and green there (review finding 1) | H1a-1, H3 |
 | **determinism** | 100 fixture envelopes routed twice against the same registry give identical decisions; a ledger row replays to the same decision | H1a-2 |
-| **kill the server** | with the server killed mid-run: `hub hook planner-stop` relays direct and prints the notice; `dispatch-guard.sh` lets a roster spawn through; `hub hook session-start` writes the state file; the dispatcher's question gate still blocks once. The first half (`hub status --json` says down within one second; `hub up` after a kill restores state) lands in H1a-1, the hook half in H1a-2 | H1a-1, H1a-2 |
+| **kill the server** | with the server killed mid-run: `hub hook planner-stop` relays direct and prints the notice; `dispatch-guard.sh` lets a roster spawn through; `hub hook session-start` writes the state file; the dispatcher's question gate still blocks once. `hub status --json` saying down within one second lands in H1a-0 (the write gate reads it), `hub up` after a kill restoring state in H1a-1, the hook half in H1a-2 | H1a-0, H1a-1, H1a-2 |
 | **origin** | a forged `origin: jacob` is overwritten to `model`; a `jacob` envelope carries `origin_id` and its stub line, never the text, and `hub get` on that id returns the prompt the fixture hook stored; a body carrying the prompt's text past `stub_chars` is flagged (§12's paste gate); an irreversible tag from `origin: model` never spawns | H1a-2 |
 | **admission** | identical → dropped; invalid → dead-letter with notice; `budget_per_conversation` + 1 model-starting messages → held, while route, check and write results in between do not count (a fixture of ten free results and one more model message is not held); a Jacob prompt releases the held message and it is delivered once, never pasted; **the usage gate**: a fixture `usage` CLI exiting 0 lets a `task` spawn, one printing `warn` holds a job without a checkpoint and lets one with a checkpoint through with the note in its prompt, one printing `hold` queues the envelope with the hold time and produces exactly one line to the dispatcher window; a `services.usage` row whose executable is missing refuses the spawn with a reason | H1a-2 (gate), H1b (spawn) |
 | **conformance** | a fixture repo set up from its path alone (`setup`, then `hub up`) receives a `task`, spawns a cold role, and returns a `report`; **a commit made for that server-spawned role carries the trailer `Agent: <role>`**: the `write` service writes it when it commits the coder's green edit (§4), and a window's own commit gets it from `git-stamp.sh`, which reads `agent_type` from the hook input (PLAN-hard-gates.md §2; review finding 4); with `HUB_PARENT_URL` set, it registers and its tags route from the parent | H1b, H3 |
-| **direction audit** | nothing under `tools/hub/` reads `.claude/`, names a roster agent, or imports from `.claude/lib`; the view included (tools-folder §1) | H1a-1, every phase |
-| **no names in the program** | no repo name, path or command in `tools/hub/` source; they live in `hub.json` (group-servers §1a) | H1a-1 |
+| **direction audit** | nothing under `tools/hub/` reads `.claude/`, names a roster agent, or imports from `.claude/lib`; the view included (tools-folder §1) | H1a-0, every phase |
+| **no names in the program** | no repo name, path or command in `tools/hub/` source; they live in `hub.json` (group-servers §1a) | H1a-0, every phase |
 | **per-branch report** | when N spawns or N deliveries run together, the result names each one's outcome (`Promise.allSettled`), tested with a fixture where two of three fail on different steps | H1b |
 | **lease** | two `task` envelopes to one repo's cold role run one after the other, never together; the second's `report` says it queued; **the coder's Edit rule** (§4): a coder spawned under the lease edits a file inside its repo and a Bash `echo >` inside the repo succeeds, while an Edit and an `echo >` outside the repo both fail; its green edit is committed by `write` with `Agent: <role>` and its red edit comes back as `check-red` with nothing committed; a coder spawned without the lease has no Edit rule | H2 |
 | **loops** | a fixture ping-pong (A → B → A …) is held at `pingpong_hold`; a hop-limit message dead-letters; both notify | H2 |
@@ -571,7 +615,8 @@ the test, never claudeTest or any repo of ours.
 | **sync** | every declared source exists; every target holds its artifacts; an edit inside a block is caught; an undeclared override fails; a child cannot redefine a parent's tag; a root with no children says so | S1–S3 |
 | **registry** | schema valid; `agents.sh check` re-renders and diffs where a manifest exists; `setup` refuses to write a starter beside a manifest; the whole row runs against the root's own `hub.json` on day one | H1a-1 |
 | **view contract** | in PLAN-hub-view.md "Gates"; the one row this plan keeps: every endpoint the view consumes is in `docs/API.md` and served (the help-equals-implemented row, applied to the client's source by a static scan) | V1–V3, there |
-| **fails open, every hook** | each installed hook copy exits 0 on malformed input and on a dead server; tested, not promised | H1a-2 |
+| **fails open, every hook** | each installed hook copy exits 0 on malformed input and on a dead server; tested, not promised. **One exception, the write gate**, which fails closed for writes (next row) | H1a-2 |
+| **write gate** (§3 H1a-0; PLAN-services.md §3 step 3) | on a fixture node: a fixture planner's Edit of a `PLAN-*.md` is denied with the declared verb to use (`setup plans edit`); a Bash call naming a declared verb of a repo in the role's `writes` is allowed; the same verb from a role without that repo, an undeclared verb, and a Bash write naming no verb are each denied; **with the server killed, the hook denies** with the `hub status` line, and an unparseable Edit is denied; a Bash command the classifier does not see as a write makes no server call; every answer is one ledger row; a `writes` name that is not a `repos` key fails `hub check` | H1a-0 |
 | **services as data** (routing-tree §14.2, §14.6) | the program contains no tool's command and no repo's path (the no-names audit extended to service names); every `repos` row names its CLI; a fixture node with a different CLI gets every service working; `check` runs only the command the row names | H1a-1 (audit), H1b (`write`), G1 (`check`, `hook`) |
 | **read-only roles** (routing-tree §13.4) | a fixture role with tools lacking Edit and Write and a sandbox allowing only the scratchpad: a Bash `echo > repo/file` inside it fails, and the same write sent as a `write-request` succeeds through the CLI, both directions; a `plan`-mode role spawned from a `bypassPermissions` window still cannot write; a `write-request` whose verb is not on the tool's declared list is refused at the server and answered, never run; the one exception, the coder under the lease, is the "lease" row | H1b |
 | **failures are messages** (routing-tree §13.3, §14.7) | kill a role process mid-delivery: `harness`'s inbox gets a `delivery` failure with the message id and the dispatcher gets nothing; remove `harness`'s `owners` row in a fixture: the dispatcher gets it, logged `routed_by: dispatcher`, and nowhere else; the third identical re-route proposes the row; a relay sent while the receiving window's hook sleeps 11 s is stamped and in the ledger | H1a-2 (stamp, `delivery`), H2 (proposal) |
@@ -589,7 +634,8 @@ land (interim-rules §5 phase 4: "no interim rule outlives its replacement by mo
 one harness job"). Costs are in tokens with the 29k unit; the ranges are wide because
 the server is new code and the probes may fail once. **No phase is over 200k**, because
 a job can die at a usage limit and a smaller job loses less (PLAN-check-progress.md §7;
-review finding 5); H1a is therefore two phases, each leaving the system working.
+review finding 5); H1a is therefore three phases (H1a-0, the write gate, added
+2026-10-13), each leaving the system working.
 
 **Where each phase runs** (review finding 8; PLAN-cloud-offload.md §3 and §8). A phase
 is **cloud** when every input is in this public repo or a fixture, the output is a
@@ -606,7 +652,8 @@ says so in this table.
 | # | phase | where | contents | retires | cost |
 |---|---|---|---|---|---|
 | **H0** | probes | local | `hub send` from inside a cold `-p` role (Bash allowlisted); `dontAsk` honouring a roster definition's tools; `claude agents --json` listing an interactive `--agent planner` session with `sessionId`; **the coder's Edit rule** (§4: a `-p` role with `Edit(<repo>/**)` under `dontAsk` edits inside the repo and not outside it, with Edit and with Bash). The warm probe and the warm sandbox clause are gone with Decision 1. Each probe is a script in `tools/hub/probes/` with its pass condition in the file, run by hand, result and `claude --version` recorded in `TODO.md` | — | 40–90k (1–3u) |
-| **H1a-1** | the program, no routing yet | cloud (default) | `hub.json` schema and `hub.schema.json` (`limits` and `stores` included; `warm` not a mode); `hub init|check|up|down|status|routes`; `/health`, `/status`, `/routes`; `.hub/` state dir and `server.json`; the token check on every request; `docs/API.md` and the help-equals-implemented gate; the registry and vocabulary gates run against the root's own file; the direction and no-names audits; `./dev.sh check` runs them all. **Leaves the system working:** nothing calls the server yet; `hub status --json` is what `dispatch-guard.sh` will read | — | 110–170k (4–6u) |
+| **H1a-0** | the write gate (§3) | local (Decision 9: on the critical path to the planner's incapability, PLAN-services.md §3 step 7; its hook half is in `.claude/`) | the server skeleton: `hub up|down|status`, `/health`, `/status`, `.hub/` and `server.json`, the token check; `POST /write-request` and its rule (a declared verb on a repo in the role's `writes`, else deny with the verb to use); the `writes` key and the part of the schema it and `repos.<repo>.cli|verbs` need; `hub hook write-gate`; the ledger row per answer; `docs/API.md` and the help-equals-implemented gate for what it ships; the direction and no-names audits; §8 "write gate" with the server killed. **Harness job beside it, local** (~1u): the one-line PreToolUse caller in the planner window, registered only once `setup plans edit|add` and todo's import exist (PLAN-services.md §3 steps 1-2). **Leaves the system working:** with the hook unregistered nothing changes; registered, the planner's direct writes are denied and its verbs allowed | the planner's Edit and Write on plans and `TODO.md` (`dispatch-guard.sh` allows them today) | 80–130k (3–5u) + ~1u local |
+| **H1a-1** | the program, no routing yet | cloud (default) | `hub.json` schema and `hub.schema.json` completed around H1a-0's part (`limits` and `stores` included; `warm` not a mode); `hub init|check|routes`; `/routes`; held, dead-letter and ledger state restored by `hub up` after a kill; the registry and vocabulary gates run against the root's own file; `./dev.sh check` runs them all. **Leaves the system working:** nothing but the write gate calls the server yet; `hub status --json` is what `dispatch-guard.sh` will read | — | 80–130k (3–5u) |
 | **H1a-2** | the relay through the server | cloud (default) | the moved parser, gate, origin and ledger under `tools/hub/lib/` with their tests; `/route`, `/sessions`, `/ledger`, `/dead-letter`, `/held`; admission with the usage gate (§3) and the budget counting model-starting messages only; the `limits` export and its both-ways gate for the budget and `stub_chars`; `hub send|log|hook|origin|grammar|get`; `hub hook planner-stop`, `dispatcher-stop`, `session-start`, `user-prompt` (the `ctx:` id per typed prompt, §1) with the kill-the-server gates; `origin_id` and the `ctx:` stub as the first `stores` entry (§12); the determinism and origin gates. **Harness job beside it, local** (~1–2u): `gen` renders `.claude/hub-roles.json`; the three hook files become one-line callers and the user-prompt hook is installed for the two windows; `dispatch-guard.sh` reads `hub status --json`. **Setup job beside it, local** (~1u): the `hub` component reads the role list and writes `hub.json` from it (Decision 2) | `relay-origin`, `question-kinds` (both `manifest:nodes` → the retire check becomes `file:hub.json`, a one-word addition to interim-rules §3's vocabulary) | 140–200k (5–7u) |
 | **S1** | sync, files | cloud (default) | `hub sync --check|--apply`, file mode, no server; the hook copies and the plan copy as declarations at the root; `tools/checks` `hooks-installed` reads it | the two `check-hooks.sh` after the same-verdict test | 120–180k (4–6u) |
 | **H1b** | first spawn | cloud (default) | cold roles: spawn, stream, `result` → `report` with its `usage` in the ledger, the `origin_id` stub line in the prompt, `--json-schema` report shape, the lease's first half (one spawn per `dir` at a time), per-branch report; `hub send --tag task` from the dispatcher; the guard blocks a direct roster spawn while the server is up; the `Agent:` trailer on a commit made for a role in the conformance fixture | `stale-spawn` for server spawns (the hook stays for Agent-tool spawns until H4) | 150–200k (5–7u) |
@@ -622,19 +669,27 @@ says so in this table.
 | **D1** | driven sessions | cloud (default) | `mode: driven`; `hub session start|stop|rebuild|edit-block|history`, `/sessions/<id>/…`; the hub's message list in the ledger; the idle point from the stream; the rebuild by the mechanism D0 chose, from a `ctx:` id the context-hygiene CLI hands over; the three rebuild guards; the §8 "driven session" row on a fixture. No role is `driven` in a committed registry until Decision 14 names one | the launcher's relaunch for any window that becomes a hub-hosted tab (Decision 14) | 120–180k (4–6u) |
 
 Total for the hub proper, excluding measurement, the dispatcher's prose and the view
-(costed in PLAN-hub-view.md): roughly 1.6–2.4M tokens (56–83u), of which about
-1.2–1.7M is cloud by default. **Re-costed 2026-10-13:** Decision 1 removed H5
+(costed in PLAN-hub-view.md): roughly 1.7–2.5M tokens (58–87u), of which about
+1.2–1.7M is cloud by default. **Re-costed again 2026-10-13 for H1a-0:** the write gate
+adds about 80–120k (H1a-0 at 80–130k plus ~1u of harness, local; H1a-1 falls from
+110–170k to 80–130k because the skeleton moved into H1a-0), all of it local, so the
+cloud share is unchanged within its rounding. **Re-costed 2026-10-13:** Decision 1 removed H5
 (100–150k) and the warm half of H0 (about 20–30k); questions 11 and 12 added R1, R2,
 D0 and D1 (about 310–490k); the coder's Edit rule and the limits export ride inside H0,
 H1a-2, H2 and H3 at no change to their ranges. The rise over the 1.4–1.9M Jacob
 approved on 2026-10-09 is the two questions, which were asked after that yes; Decision
-9 asks for it again. Order of dispatch: H0 → H1a-1 → H1a-2 (+ harness, + setup) → S1 →
+9 asks for it again. Order of dispatch: H0 → H1a-0 (+ harness) → H1a-1 → H1a-2
+(+ harness, + setup) → S1 →
 H1b → R1 → H2 → G1 → H3 → S2 → V1–V3 → H4 → R2 → D0 → D1. G1 sits after H2 because a
 `check-red` message needs the loop controls and the write lease to exist before checks
 start sending roles work, and before H3 because the pilot is one repo at the top node.
 R1 sits after H1b because a stub's first reader is a cold role and its first id is the
 `origin_id` H1b delivers. D0 and D1 sit last because no committed role is `driven`
-until Decision 14, and every earlier phase works without them. The cloud phases are
+until Decision 14, and every earlier phase works without them. H1a-0 comes first,
+before any routing, because the write gate is what makes the planner incapable of a
+direct write rather than told not to (Jacob 2026-10-13, PLAN-services.md §3), and
+nothing in it waits on the registry's routes. It runs locally because it is on that
+critical path and its hook half is in `.claude/`. The cloud phases are
 `TODO.md`'s items, in that order, each written so a fresh cloud session starts from the
 one item.
 
@@ -914,11 +969,11 @@ The table in §8 is the gate list; it is repeated here only as the four rules th
 asks for by name, each pointing at its rows:
 
 1. **Every documented command exists and every command is documented**: §8 "help ==
-   implemented" (CLI and HTTP), landed in H1a-1 and run by `hub check` thereafter.
+   implemented" (CLI and HTTP), landed in H1a-0 and run by `hub check` from H1a-1.
 2. **Every declared tag has a route and every route a tag**: §8 "vocabulary", H1a-1
    (against the root's own file, day one) and H3.
-3. **A kill-the-server test**: §8 "kill the server" and "fails open, every hook",
-   H1a-1 and H1a-2.
+3. **A kill-the-server test**: §8 "kill the server", "write gate" (its fail-closed
+   half) and "fails open, every hook", H1a-0, H1a-1 and H1a-2.
 4. **A conformance fixture that is not claudeTest**: §8 "conformance", H1b and H3.
 
 Plus the direction audit (every phase), the per-branch report (H1b), the five rows for
@@ -937,7 +992,8 @@ the interim rules each phase retires. A cloud phase is one cloud session Jacob s
 this repo by PLAN-cloud-offload.md §8's procedure, from its `TODO.md` item, while the
 cloud-only credits last, and the same item run locally as a `deep-work` job when they
 do not (Decision 9); a local phase is one `deep-work` job. Outside both: the harness
-job beside H1a-2 (`gen` renders the role list, hooks become callers, the user-prompt
+job beside H1a-0 (the planner window's one-line write-gate caller, registered once
+`setup plans edit|add` and todo's import exist), the harness job beside H1a-2 (`gen` renders the role list, hooks become callers, the user-prompt
 hook is installed, the guard reads status), the setup job beside it (the `hub`
 component reads the role list), the cron-scheduler half of V2 (`chron.py list
 --json`), the dispatcher's prose in H4, S2's nine per-owner dispatches and R2's three.
@@ -1080,7 +1136,7 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
 | 6 | §9: the view (PLAN-hub-view.md) is built after H3, as review finding 7 places it, not between H1b and H2 as the first draft had it | whether seeing the agents and folders early outranks finishing the hub's routing while the cloud credits last | after H3. **Approved: Jacob 2026-10-09** |
 | 7 | §3: H1b (the server spawns cold roles for `task` from the dispatcher, and runs their writes through `write`) stays in phase 1 rather than moving to H2 | whether one phase may both relay and spawn; the fallback path stays either way | yes. **Approved: Jacob 2026-10-09** |
 | 8 | §4: role hooks install through `setup hooks` into settings proposals rather than agent frontmatter, because frontmatter hooks need an interactive trust grant that `-p` roles never give | whether Jacob prefers trusting each role folder once by hand | settings via `setup hooks`. **Approved: Jacob 2026-10-09** ("by setup") |
-| 9 | §9: the total, re-costed 2026-10-13 at 1.6–2.4M tokens over fourteen hub phases (the view costed separately), with about 1.2–1.7M on the cloud credits by default and any cloud phase free to run locally when the credits run low or it stalls | the cloud credit balance and the order in §9; the rise over the approved 1.4–1.9M is questions 11 and 12 (R1, R2, D0, D1), asked after that yes | yes, in the order given. **1.4–1.9M approved: Jacob 2026-10-09** ("though we can move stuff back to local if/when necessary"); the re-cost is open |
+| 9 | §9: the total, re-costed 2026-10-13 at 1.7–2.5M tokens over fifteen hub phases (the view costed separately), with about 1.2–1.7M on the cloud credits by default and any cloud phase free to run locally when the credits run low or it stalls | the cloud credit balance and the order in §9; the rise over the approved 1.4–1.9M is questions 11 and 12 (R1, R2, D0, D1) and H1a-0, the write gate (about 80–120k, local), each asked after that yes | yes, in the order given. **1.4–1.9M approved: Jacob 2026-10-09** ("though we can move stuff back to local if/when necessary"); the re-cost is open |
 | 10 | §2: the server's port lives in the committed registry (`server.port`, rendered into the role list from the manifest's `servers.<group>` entry), not in `local.env`; a clash on a machine is a `hub check` finding | routing-tree §14.6 as settled 2026-10-05 against portable-env §1's "machine-specific location" rule; the manifest already commits ports | registry, as §14.6 says. **Approved: Jacob 2026-10-09** |
 | 11 | §9: G1 (the `check` and `hook` services) runs after H2 and before H3, with its site-scrapers pilot as a local follow-up | whether a `check-red` message may flow before the loop controls and the lease exist | after H2. **Approved: Jacob 2026-10-09** |
 | 12 | §4: a role's read-only tool list is exactly Read, Grep, Glob and `Bash(hub send *)`, plus a test runner only where its repo's `services.json` declares one for a tester | routing-tree §13.2's list, which also names the runner; whether `Glob` is worth listing beside Grep | yes, with `Glob`. **Approved: Jacob 2026-10-09**; Decision 15 asks to add one read verb |
@@ -1088,3 +1144,4 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
 | 14 | §11: the hub runs `driven` sessions through stream-json, with M2 (resume from a hub-written transcript) as the rebuild, M1 (the recorded prompt under `--system-prompt-snapshot off`) for a block edit and M3 (a fresh process) as the floor; D0 and D1 land the mode on a fixture now, and the first real `driven` session is a window whose view tab becomes a hub-served page, after V3 | D0's result per mechanism; and whether Jacob wants a window's context rebuilt with no relaunch at the price of the interactive terminal in that tab (print mode is not interactive) | D0 and D1 now; the planner window first, after V3, only if D0 passes M2. Open |
 | 15 | §12: `Bash(hub get *)` joins the read-only tool list beside `Bash(hub send *)`, widening Decision 12 by one read verb that runs only a store's `get` | the alternative is each store's own CLI on the list, one entry per store, which D3's `hygiene get` wording implied; one verb keeps the list short and the stores' CLIs off every role | yes. Open |
 | 16 | §12: the first-phase stores are `ctx:` (H1a-2, for `origin_id`) and `todo:` (R1); kb section ids, research `rs-<n>` and data-bridge records join in R2 by their owners' `ids` declarations, each when its `get` exists | which stores answer `get <id>` today (todo does, PLAN-todo-tool.md §3; the others are PLAN-services.md §3's, not an input) | yes. Open |
+| 17 | §3 H1a-0: the write gate is a slice of its own before H1a-1, run locally; a role's writable repos are a `writes` list in `hub.json` (§2); its hook **fails closed for writes** when the server is down, the one exception to "every hook fails open" (§8); the hook stays unregistered until `setup plans edit|add` and todo's import exist | whether a planner with the server down may be unable to write at all (the answer is `hub up`, named in the deny line), and whether `writes` should instead be derived from `owners` | yes. The gate itself: **Jacob 2026-10-13** (PLAN-services.md §3); its shape here is open |

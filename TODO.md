@@ -11,11 +11,22 @@ leaves the system working. **Cloud is the default, not a commitment** (PLAN-hub.
 Decision 9, Jacob 2026-10-09): when the credits run low or an item stalls, the same
 item runs locally as a `deep-work` job, and the next pass of PLAN-hub.md says so in §9.
 
+**Before item 1, locally (not a cloud item): H1a-0, the write gate** (PLAN-hub.md §3
+"H1a-0"; §9 row H1a-0; §8 rows "write gate", "help == implemented", "kill the server"
+first part, "direction audit", "no names in the program"; Decision 17;
+PLAN-services.md §3 steps 3 and 7). Size 80–130k (3–5u), a local `deep-work` job, plus
+~1u of harness for the hook. Done when: `hub up|down|status` and the token check work;
+`POST /write-request` allows exactly a declared verb on a repo in the role's `writes`
+and denies the rest with the verb to use; the hook denies with the server killed; every
+§8 "write gate" clause passes in `tests/`. The hook is registered in the planner
+window only after `setup plans edit|add` and todo's import exist.
+
 1. **H1a-1, the program with no routing yet** (PLAN-hub.md §9 row H1a-1; §2 for the
    registry, §3 step list for `hub up`, §7 for `status --json`, §8 rows "help ==
    implemented", "vocabulary", "registry", "kill the server" first half, "direction
    audit", "no names in the program", "services as data" audit, "owners both ways"
-   schema). Size 110–170k (4–6u). Inputs: PLAN-hub.md §1–§3, §7, §8; PLAN-routing-tree.md
+   schema). Size 80–130k (3–5u): the server skeleton is H1a-0's, so this item extends
+   what H1a-0 left rather than starting it. Inputs: PLAN-hub.md §1–§3, §7, §8; PLAN-routing-tree.md
    §2, §7, §14.6–§14.8; `docs/inputs/PLAN-group-servers.md` §1a (the no-names audit);
    `docs/inputs/PLAN-portable-env.md` §3.1 (`local.env` through the loader). Done when:
    `hub init` (the `setup` component's alias, PLAN-hub.md Decision 2) writes a starter
@@ -236,8 +247,9 @@ and any item above may become one too (Decision 9).
   over M1/M3 for the rebuild; hinges on D0. 15: `Bash(hub get *)` on the read-only
   tool list, one read verb beside `hub send`, widening Decision 12. 16: `ctx:` and
   `todo:` as the first-phase stores. Decision 9: the total rose from 1.4–1.9M to
-  1.6–2.4M (H5 and the warm probe gone, R1, R2, D0, D1 added for questions 11–12);
-  the planner presents the four in order.
+  1.7–2.5M (H5 and the warm probe gone, R1, R2, D0, D1 added for questions 11–12,
+  H1a-0 added 2026-10-13 locally). 17 (local pass, 2026-10-13): H1a-0's shape, the
+  `writes` list and the fail-closed exception. The planner presents the five in order.
 - **The role list's shape is wider than REVIEW §5.8's wording.** 5.8 described
   `.claude/hub-roles.json` as each role's name, mode, `dir` and tools plus the routes;
   PLAN-hub.md §2 also puts `children`, `server` (port, keep-alive from
