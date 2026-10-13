@@ -1,0 +1,20 @@
+{
+ "_comment": "This repo's `./dev.sh check`, in parts, run by devtools/parts.py (its header is the format; a rendered copy of tools/checks/checkslib/parts.py). A part per tests/test_*.py, then each gate dev.sh documents, run as `./dev.sh <gate>`. A part that reads what no files list can name (another repo, the workspace, a file mode other than the executable bit) says `always` and is never skipped by --resume. A gate exiting 3 (UNCHECKED) is a failed part here: the runner has no unchecked outcome. tests/test_parts.py holds this file to the test modules and to dev.sh's gates.",
+ "defaults": {"files": ["dev.sh", "devtools", "tests"], "timeout_s": 300, "role": "code"},
+ "parts": [
+  {"name": "test.hubcheck", "run": "python3 -m unittest discover -s tests -p test_hubcheck.py", "timeout_s": 900},
+  {"name": "test.parts", "run": "python3 -m unittest discover -s tests -p test_parts.py", "files": ["check.parts.json", ".gitignore"], "timeout_s": 900,
+   "always": "compares devtools/parts.py with tools/checks' runner source and runs the shared checks CLI, outside this repo"},
+  {"name": "hooktests", "run": "./dev.sh hooktests", "files": [".claude"], "timeout_s": 2400,
+   "always": "two hook tests (test-prefer-recipes, test-troubleshooting) read site-scrapers beside this repo"},
+  {"name": "files", "run": "./dev.sh files", "files": ["."]},
+  {"name": "inputs", "run": "./dev.sh inputs", "files": ["."], "role": "docs"},
+  {"name": "sealed", "run": "./dev.sh sealed", "files": ["."], "role": "docs",
+   "always": "reads each copy's mode (0444), which no part hash counts beyond the executable bit"},
+  {"name": "leaks", "run": "./dev.sh leaks", "files": ["."], "role": "audit"},
+  {"name": "plans", "run": "./dev.sh plans", "files": ["."], "role": "docs",
+   "always": "runs tools/setup's plans parser, outside this repo"},
+  {"name": "checks", "run": "./dev.sh checks", "files": ["."], "role": "audit", "timeout_s": 1200,
+   "always": "`checks run .` reads tools/checks, tools/hooks, the workspace top and the user's settings"}
+ ]
+}

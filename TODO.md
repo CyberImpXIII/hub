@@ -9,23 +9,24 @@
 
 ## Open decisions
 
-- **`.claude/settings.json` lacks 12 hook registrations** (Jacob's step; setup
-  2026-10-05): the shared hooks are installed but not registered, so they do not fire
-  here, in a local session or a cloud one. setup wrote `.claude/settings.proposed.json`
-  (untracked); applying it is `cp .claude/settings.proposed.json .claude/settings.json`.
-  setup also installed `.githooks/{pre-commit,commit-msg,check-pass}`, but
-  `core.hooksPath` is unset and `githooks.checks` has no checks CLI, so those gates are
-  off (setup reports `needs-jacob`).
+- **The git-side gates are off** (setup 2026-10-05): `.githooks/{pre-commit,commit-msg,
+  check-pass}` are installed, but `core.hooksPath` is unset and `githooks.checks` has no
+  checks CLI (setup reports `needs-jacob`). The hook wiring itself is done: Jacob's
+  applied proposal, `cmp`-equal to `settings.proposed.json`, committed 10589a4
+  (2026-10-13, Q6b).
+- **TODO import (Q7's second half) not done**: `todo import TODO.md --dry-run` waits on
+  todo's importer fix (dispatcher, 2026-10-13). This file stays hand-kept until then.
 - **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
 
-- **Brief §4 question 11 (a session the hub runs) is unanswered** (added 2026-10-08,
-  Jacob's yes relayed by the planner): PLAN-hub.md on `origin/plan/hub` answers ten.
-  The next cloud pass adds its section and any Decisions rows. Question 11 points at
-  PLAN-context-hygiene.md §0 (and that plan at PLAN-services.md §3); neither is a §2
-  input or a copy here, so the brief states the requirement whole. Whether to add them
-  to §2 (and copy them) is the planner's call; the pointer gate skips uncopied plans.
+- **`plan/hub` carries the §5.11 pass and H1a-0** (2026-10-13): the cloud pass applied
+  D1-D4, 5.5, D9 and answered brief §4 questions 11-12 (§11, §12, Decisions 14-16);
+  the local pass (6d2b3f6) added slice H1a-0 "the write gate" before H1a-1
+  (PLAN-services.md §3 steps 3, 7), `roles.<r>.writes`, §8 "write gate", Decision 17,
+  and re-costed §9 to 1.7-2.5M (58-87u). Decisions 9 and 14-17 await Jacob, via the
+  planner. PLAN-context-hygiene.md and PLAN-services.md are still not §2 inputs or
+  copies here (the planner's call; the pointer gate skips uncopied plans).
 - **Seven inputs drifted, not refreshed** (2026-10-08, `./dev.sh drift`):
   claudeTest-CLAUDE.md, routing-tree, agent-groups, repo-setup, portable-env,
   usage-reporting, check-progress. Only the brief was re-copied for question 11.
@@ -46,18 +47,22 @@
   PLAN-hub.md's Decisions. On the merge, take `plan/hub`'s TODO.md as the base and drop
   its own-bug entry "`./dev.sh check` counts an UNCHECKED hook test as a FAIL": fixed
   on `main` 2026-10-08 (`cmd_hooktests` returns 3; `tests/test_hubcheck.py`
-  `TestHooktests`). The local `plan/hub` branch is stale (a803ccf); use `origin/plan/hub`.
+  `TestHooktests`). Not re-run since `main` gained Q7 (parts) and `plan/hub` 6d2b3f6:
+re-run that merge-tree before merging.
 
 ## Own limits, known
 
-- **`check --json` (2026-10-05, PLAN-agent-groups §4.4)**: `devtools/checkjson.py`, the
-  third copy of the same emitter (setup, hooks, hub), each with its own finding
-  readers. The shape is held by the shared validator; the readers are per repo. If a
-  fourth repo copies it, the row format and verdict belong in one place (tools/checks'
-  call). Drift is not in `--json` (a note, not a check): `./dev.sh drift --json`. Exit
-  codes other than 0/1/3 from a gate are `error`. `checks one check-json ../hub` took
-  140 s on 2026-10-05 (limit 280 s; the plain check alone took 70 s, the 44 unit tests
-  ~30 s of it, mostly the mutant and validator runs).
+- **The check runs in parts (Q7, 2026-10-13, PLAN-small-tasks §3/§7)**: `check.parts.json`
+  through `devtools/parts.py` 1.1.0 (setup's render, byte-equal to tools/checks'
+  source; `tests/test_parts.py` holds that, the parts == test modules + gates both
+  ways, and the wiring on a scratch copy, incl. the shared check-json and
+  check-partial). `devtools/checkjson.py` is gone: `--json` is the runner's, one check
+  per part, a part's FAIL lines as its failures (no file/line any more). Limits: the
+  runner has no `unchecked` outcome, so a gate exiting 3 (a lone clone or a worktree
+  without site-scrapers: hooktests, plans, checks) is a FAILED part, named by its last
+  line -- red, never ok (reported to checks, below). `--resume` skips little: five
+  gate parts read `.`, and six parts are `always` (they read other repos or file modes).
+  A full check under other agents' suites took 20 min on 2026-10-13 (hooktests most).
 - **Roles are the §4.1 starting set** (`gate_role` in dev.sh): inputs, plans -> docs;
   leaks, checks -> audit; the rest -> code. That each names a role in hub's group
   waits on the node registry (§4.4's second gate); hub has no group in the manifest yet.
@@ -85,11 +90,24 @@
 
 ## Unconfirmed suspicions
 
-- None open. (The fix pass did see the new inputs: it merged `origin/main` into
+- **Someone else ran this repo's new parts check at 00:24 on 2026-10-13** (pid 86882,
+  gone by 00:26): `.progress/check.json.logs/` held a `test.hubcheck` log (44 tests, OK)
+  and an empty `hooktests` log I did not start, and my `./dev.sh test test.parts` said
+  "a run is writing the progress file now (pid 86882)". Unknown who (an agent's
+  `dev.sh check` on hub, or a shared check). Probe: `agents.sh dispatches --open` /
+  the ledger for a hub run at that time. Harmless here; two runs share one progress file.
+- (The fix pass did see the new inputs: it merged `origin/main` into
   `plan/hub` first, 0e779c1, and PLAN-hub.md cites PLAN-usage-reporting.md §3 and
   PLAN-hard-gates.md §2; checked 2026-10-08.)
 
 ## Reported to other owners
+
+- **checks** (via the dispatcher, 2026-10-13): the shared runner `parts.py` 1.1.0 maps
+  any non-zero exit to `fail`; it has no `unchecked` outcome for a part that exits 3
+  (the convention hub, setup and hooks use for "a sibling tool is absent"). So a lone
+  clone's check goes red where it was unchecked, and `--json` says `fail` where the
+  schema has `unchecked`. Input: a part `{"run": "echo 'UNCHECKED: x'; exit 3"}`.
+  Expected: `unchecked` with its reason (never ok). Hub adopted it anyway.
 
 - **planner** (via the dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
   "its TODO.md:541 says 0444", but hub's TODO.md has no such line (94 lines); 541 is

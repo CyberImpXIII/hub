@@ -385,11 +385,9 @@ class TestHooktests(unittest.TestCase):
         self.assertIn("site-scrapers not found", out)
         self.assertNotIn("FAIL", out)
         self.assertNotIn("all cases passed", out)
-        sys.path.insert(0, str(self.DEV.parent / "devtools"))
-        import checkjson
-        row = checkjson.check("hooktests", "code", code, out)
-        self.assertEqual(row["status"], "unchecked")
-        self.assertIn("site-scrapers not found", row["reason"])
+        # the shared runner names a failed part by its last line when it printed no
+        # FAIL line: that line must say unchecked (tests/test_parts.py holds the rest)
+        self.assertRegex(out.strip().splitlines()[-1], r"^  note  hooktests: 1 of 2 .*1 unchecked$")
 
     def test_exit_3_without_saying_unchecked_is_a_failure(self):
         code, out = self.run_gate("pass", "silent3")

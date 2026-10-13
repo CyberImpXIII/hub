@@ -5,8 +5,19 @@
 # about those (devtools/hubcheck.py) plus the shared ones from the sibling tools.
 # A sibling tool that is not there (a lone clone, a cloud session) is UNCHECKED,
 # printed as such, never counted as ok. Each gate's REPORTED result is read, not
-# only its exit code. `./dev.sh check --json` prints only the one schema
-# (tools/checks' schema/check-json.schema.json), held by tests/test_checkjson.py.
+# only its exit code.
+#
+# `./dev.sh check` hands check.parts.json to the shared suite runner
+# devtools/parts.py (PLAN-small-tasks.md §3, §7: a rendered copy of
+# tools/checks/checkslib/parts.py, installed by `setup <repo> --only parts`).
+# Each part has its own timeout; each result is written to .progress/check.json
+# as it ends; `--resume` re-runs only the parts whose files changed since they
+# passed; `--json` prints the one schema (tools/checks' check-json.schema.json),
+# one check per part. CHECK_PARTS=<file> runs that file's parts instead
+# (tools/checks' check-partial hands it a suite of its own). The runner has no
+# `unchecked` outcome: a gate that exits 3 (UNCHECKED, a sibling tool absent) is
+# a failed part there, named with its last line -- red, never ok.
+# tests/test_parts.py holds check.parts.json to the test modules and the gates.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit 2
 
@@ -17,10 +28,18 @@ usage() {
   cat <<'EOF'
 ./dev.sh <command>
 
-  check      every gate below, in order; non-zero if any fails (--json: the one schema,
-             via devtools/checkjson.py: one check per gate, each finding a failure;
-             drift is a note, not a check, so it is not there: ./dev.sh drift --json)
-  test       the unit tests (tests/): every hubcheck gate shown red on a fixture
+  check      every part of check.parts.json (a part per test module, then hooktests,
+             files, inputs, sealed, leaks, plans, checks), each with its own timeout,
+             run by devtools/parts.py; ends "check: N of M passed; failed: ...", then
+             the drift note; non-zero if any fails. --resume: only the parts whose files
+             changed since they passed (and those that did not pass); --only <part>: just
+             that part; --json: the one schema, one check per part (drift is a note, not
+             a check, so it is not there: ./dev.sh drift --json); CHECK_PARTS=<file>:
+             that file's parts instead
+  test       the unit tests (tests/), all at once: every hubcheck gate shown red on a
+             fixture. `test <part>...`: just those parts of check.parts.json (check
+             --only), results in the progress file, so a later check --resume skips them
+             while their files are unchanged
   hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh); one ending
              `UNCHECKED: <why>` with exit 3 makes the gate unchecked, never ok
   files      the files this repo needs are present; dev.sh is executable
@@ -39,7 +58,11 @@ EOF
 # Each gate prints its own lines and returns 0 ok, 1 fail, 3 unchecked.
 
 cmd_test() {
-  local out code
+  local out code only=() p
+  if [ "$#" -gt 0 ]; then
+    for p in "$@"; do only+=(--only "$p"); done
+    cmd_check "${only[@]}"; return
+  fi
   out=$(python3 -m unittest discover -s tests 2>&1); code=$?
   if [ $code -eq 0 ] && printf '%s\n' "$out" | grep -q '^OK'; then
     echo "  ok    test: $(printf '%s\n' "$out" | grep -E '^Ran ' | head -1)"; return 0
@@ -96,62 +119,34 @@ cmd_checks() {
   python3 devtools/hubcheck.py checks "$CHECKS_BIN"
 }
 
-GATES="test hooktests files inputs sealed leaks plans checks"
-
-# The role each gate's failure belongs to, in --json (PLAN-agent-groups.md §4.1:
-# code, tests, audit, docs). A failing test is code's (as in tools/setup and
-# tools/hooks); the inputs and the plans' headings are documents; the leak audit
-# and tools/checks' findings are audit's.
-gate_role() {
-  case "$1" in
-    inputs|sealed|plans) echo docs ;;
-    leaks|checks) echo audit ;;
-    *) echo code ;;
-  esac
+# The parts, their files, timeouts and roles (PLAN-agent-groups.md §4.1: a test is
+# code's; the inputs, the seal and the plans' headings are docs'; the leak audit
+# and tools/checks' findings are audit's) are check.parts.json's, not this file's.
+# A text run of the repo's own whole suite ends with the drift note; --json, --only
+# and CHECK_PARTS runs do not (stdout is one document; a partial run is no verdict).
+cmd_check() {
+  local a code note=1
+  for a in "$@"; do case "$a" in --json|--only) note=0 ;; esac; done
+  [ -n "${CHECK_PARTS:-}" ] && note=0
+  python3 devtools/parts.py run "${CHECK_PARTS:-check.parts.json}" "$@"; code=$?
+  [ $note -eq 1 ] && drift_note
+  return $code
 }
 
-# --json: stdout is exactly one document in the one schema (devtools/checkjson.py),
-# each gate's output captured to a scratch file so its finding lines become the
-# failures. Every gate runs in a subshell, in both modes: it cannot touch this
-# loop's variables (setup's cmd_hooks once leaked one, emptying later gates' findings).
-cmd_check() {
-  local json=0 g code ok=() fail=() unchecked=() out drift_note capdir="" dest rows=()
-  [ "${1:-}" = "--json" ] && json=1
-  [ $json -eq 1 ] && capdir=$(mktemp -d 2>/dev/null)
-  for g in $GATES; do
-    if [ $json -eq 1 ]; then
-      dest=/dev/null; [ -n "$capdir" ] && dest="$capdir/$g"
-      ( "cmd_$g" ) >"$dest" 2>&1; code=$?
-      rows+=("$g:$(gate_role "$g"):$code:$dest")
-    else
-      out=$("cmd_$g" 2>&1); code=$?
-      printf '%s\n' "$out"
-    fi
-    case $code in
-      0) ok+=("$g") ;;
-      3) unchecked+=("$g") ;;
-      *) fail+=("$g") ;;
-    esac
-  done
-  if [ $json -eq 1 ]; then
-    python3 devtools/checkjson.py "${rows[@]}"; code=$?
-    [ -n "$capdir" ] && rm -rf "$capdir"
-    return $code
-  fi
+drift_note() {
+  local out code n
   out=$(cmd_drift 2>&1); code=$?
   case $code in
-    0) drift_note="in step" ;;
-    3) drift_note="unchecked" ;;
-    *) drift_note="$(printf '%s\n' "$out" | grep -c -E '^  (DIFF|GONE) ') differ" ;;
+    0) n="in step" ;;
+    3) n="unchecked" ;;
+    *) n="$(printf '%s\n' "$out" | grep -c -E '^  (DIFF|GONE) ') differ" ;;
   esac
-  echo "  note  drift: $drift_note (./dev.sh drift; refresh is a decision, not a gate)"
-  echo "check: ${#ok[@]} ok, ${#unchecked[@]} unchecked, ${#fail[@]} fail -> $([ ${#fail[@]} -eq 0 ] && echo green || echo "red (${fail[*]})")"
-  [ ${#fail[@]} -eq 0 ]
+  echo "  note  drift: $n (./dev.sh drift; refresh is a decision, not a gate)"
 }
 
 case "${1:-}" in
   check)     shift; cmd_check "$@" ;;
-  test)      cmd_test ;;
+  test)      shift; cmd_test "$@" ;;
   hooktests) cmd_hooktests ;;
   files)     cmd_files ;;
   inputs)    cmd_inputs ;;
