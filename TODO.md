@@ -20,7 +20,8 @@ for the hook. Done when: `hub up|down|status` and the token check work; `POST
 /write-request` allows exactly a declared verb on a store the role may write (derived
 from `owners` at render time, Decision 17: the planner's and dispatcher's from the
 `workspace` row) and denies the rest with the verb to use, found by resolving the path
-to its owner and reading that owner's `cli.json` `store` field; `hub hook gate` sees
+to its owner, reading a fixture `stores.json` for store-ness and the owner's
+`cli.json` for the verb; `hub hook gate` sees
 every tool call and passes every read with no server call; the hook denies writes with
 the server killed; `hub check` fails a `workspace` role that is not a `roles` key and a
 `workspace` path under a `repos` row; every §8 "write gate" clause passes in `tests/`.
@@ -32,15 +33,17 @@ todo's import exist, and a `cli.json` declares the top-level `PLAN-*.md` as a st
 route** (PLAN-hub.md §3 "H1a-0b"; §9 row H1a-0b; §8 row "read route"). Size 50–90k
 (2–3u), costed as H1a-0's write half by analogy (PLAN-hub.md §9 shows the arithmetic);
 split off because H1a-0 with it would be 130–220k. Inputs: PLAN-hub.md §2 (`owners`,
-`workspace`, `stores`), §3, §8, §12; `docs/inputs/PLAN-todo-tool.md` §3 (`todo get ID`,
+`workspace`, `stores`, `stores.json`), §3, §8, §12; `docs/inputs/PLAN-todo-tool.md` §3 (`todo get ID`,
 a real store's `get`); PLAN-services.md is not an input, and PLAN-hub.md §3 carries
 the planner's answers it needs. Done when: `POST /read-request`
-answers a fixture declared-prefix id and a fixture `cli.json` store path with the
+answers a fixture declared-prefix id and a path a fixture `stores.json` lists with the
 store's `get`; a Read of an owned non-store path and of an unowned path are plain Read,
-never denied, the second with no server call; with the server killed a declared-prefix
-read is denied with the `hub status` line and an unowned Read passes; every answer is
-a ledger row; every other §8 "read route" clause passes in `tests/`. The owned-path
-down-server clause waits on the planner ("Open decisions" below).
+never denied, with no server call; with the server killed a declared-prefix read and a
+Read of a listed store path are denied with the `hub status` line and a Read of an
+unlisted path is allowed; with `stores.json` removed every Read of a path is plain Read
+and `hub status` reports it missing; every answer is a ledger row; every other §8 "read
+route" clause passes in `tests/`. The real `stores.json` is setup's to render ("Open
+decisions" below); H1a-0b does not wait on it.
 
 1. **H1a-1, the program with no routing yet** (PLAN-hub.md §9 row H1a-1; §2 for the
    registry, §3 step list for `hub up`, §7 for `status --json`, §8 rows "help ==
@@ -275,18 +278,12 @@ and any item above may become one too (Decision 9).
   PLAN-services.md §3 step 3 "Widened"). H1a-0b (the read route, 50–90k, cloud) came
   after the Decision 9 yes; the Decision 9 row says so (total about 1.7–2.6M, cloud
   share about 1.25–1.8M).
-- **A Read of an owned path with the server down** (PLAN-hub.md §3 "H1a-0b", 2026-10-13).
-  The planner's answer 2 has the server read `cli.json` to tell a store path from a
-  non-store one, and PLAN-services.md §3 step 3 says a down server must not strand a
-  session reading its own repo while a store read it cannot route is denied. Without
-  the server the hook cannot tell which a path is, so it must either deny every owned
-  Read (strands the session) or pass it (a store file read as plain Read while down).
-  Planner's to settle; only H1a-0b's down-server clause for that case waits on it.
-- **A repo's own role's writable repo is the hub owner's reading** (PLAN-hub.md §2
-  `roles`). The planner's answer 1 covers the planner and dispatcher (`workspace`); §2
-  reads a repo's own role (its `dir`, `{repo}/coder` in `owners`) as having that repo.
-  Needed from H1b, when a cold role first sends a `write-request`; to confirm with the
-  planner before H1b is dispatched.
+- **`stores.json` is setup's to render, and is not built** (PLAN-hub.md §2 and the
+  Setup component table; PLAN-services.md §3 step 3, "Two more from the hub owner" 1).
+  The hub reads it, on fixtures until setup writes the real one (read-only, beside
+  `hub.json`, from every owner's `cli.json`, re-rendered whenever setup runs at any
+  repo, `drift` when it no longer matches). Reported to tools/setup through this
+  session's report (2026-10-13); the planner's step list holds `cli.json` for setup.
 - **The `workspace` row has no source yet.** The manifest has no `owners` block
   (`grep '"owners"' .claude/agents.manifest.json`: nothing, 2026-10-13), and
   `.claude/hub-roles.json` does not exist (H1a-2's harness job renders it), so the row

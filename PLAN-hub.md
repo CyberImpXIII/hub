@@ -177,8 +177,10 @@ exists.
   planner and the dispatcher have the `workspace` row and nothing else (the planner's
   answer, PLAN-services.md §3 step 3, "The hub owner's four questions" 1); no `repos`
   row names either. A repo's own role (the one whose `dir` is that repo, which `owners`
-  names through `{repo}/coder`) has that repo: the hub owner's reading, needed from
-  H1b, when a cold role first sends a `write-request` (TODO.md). It is no write tool:
+  names through `{repo}/coder`) has that repo: it writes the repo's stores through
+  their verbs and its non-store paths under H2's lease, and no other role writes there
+  (confirmed by the planner: PLAN-services.md §3 step 3, "Two more from the hub owner"
+  2, approved: Jacob 2026-10-13; first used in H1b). It is no write tool:
   the role stays read-only, and a derived name that is neither a `repos` key nor
   `workspace` fails `hub check`.
   `window` is this plan's one addition to routing-tree §5: a role Jacob talks to, which
@@ -208,7 +210,12 @@ exists.
   **Which paths are owned needs no new key** (answer 2): a `repos` row's path is the
   directory it owns and every path under it is that owner's, and `workspace` lists the
   top's files by glob. Which of an owner's paths are stores is not in `hub.json` at all:
-  it is the owner's `cli.json` `store` field, which the server reads (§3 H1a-0).
+  it is the owner's `cli.json` `store` field, and **`setup` renders the node's list of
+  them into `stores.json`**, read-only, beside `hub.json`, whenever it runs at any repo
+  (PLAN-services.md §3 step 3, "Two more from the hub owner" 1, approved: Jacob
+  2026-10-13). The hook and the server both read that file, so the hook never needs the
+  server to tell a store path from a non-store one (§3 H1a-0b). It is `setup`'s to
+  write (the table below), and not built yet (TODO.md).
 - **`tags`.** Tag → role, or tag → child name, or a reserved target: `@from` (back to
   the sender, for `report`), `@owner` (the node whose path the `ref` names, for
   `bug-report`; unresolvable → dead-letter with notice, routing-tree §9), `@dir` (the
@@ -250,6 +257,7 @@ exists.
 | the role list `.claude/hub-roles.json`, where a manifest exists (today: the top level) | `agents.sh gen` | generic data, no roster semantics: each role's name, `mode`, `dir` and default tool list (from agents that have a `dir` plus the two windows); the routes (`tags` from the manifest's routes and `questions.types`); `children` from agents whose `dir` is a git repo; `server` from the manifest's `servers.<group>` entry (port, keep-alive); `owners` from the manifest's defaults (§14.7's table, `unowned: dispatcher`, and the `workspace` row, which the manifest does not carry yet: TODO.md); its own source hash. One more rendered file beside `.claude/agents/*.md`; the same read-only, same staleness check. **It never writes `hub.json`** |
 | `hub.json`, at every node, with or without harness | `setup` (the `hub` component, Setup component below), **the only writer** | where a role list exists, `hub.json` from it, `rendered_from` stamped with the list's path and hash; where none exists, the starter: `dispatcher` (window, fallback) and `coder` (cold, `--agent` unset so the default agent runs, the default tools), empty tags, `services` with `route` and `write` on, `owners` with only `unowned: dispatcher`, `limits` at the defaults above, a free port, no children, `parent` from `setup`'s argument. `hub init` is this component by another name. Setup reads the role list the way it reads any declaration and still reads no roster, so its `no-roster` check holds. The owner of a starter node fills `tags`, `children` and `sync` by hand afterwards; those keys are the owner's and setup's idempotent check does not compare them |
 | `services.json`, `cli.json`, `registry.proposed.json`, in every repo | `setup` (the same component) | the repo's `services.json` skeleton (its name and its `check` command; `cli`, `verbs` and `ids` empty until the repo declares them), `cli.json`, and a `registry.proposed.json` row for its node. The repo's agent fills `verbs`, `tags` and `ids` by editing `services.json` in its own repo, through its own check and commit (§14.8: no agent adds a service by acting) |
+| `stores.json`, beside `hub.json`, read-only | `setup` (the same component), whenever it runs at any repo | the node's store paths, from every owner's `cli.json` `store` field (the `workspace` stores among them); the hook and the server read it to tell a store path from a non-store one (§3 H1a-0b). Not the `stores` key below, which maps an id prefix to the repo whose `get` answers it. Its gates: setup's idempotent check says `drift` when the file no longer matches the `cli.json` files (setup's to build and test, TODO.md), and a missing file is reported by `hub status` (§8 "read route") |
 | the `repos` and `stores` keys, at every node | the server, mechanically | the union of the children's and the node's own `services.json`, read at `hub up` and `hub reload`; `registry-matches` goes red when the committed `repos` differs from the declarations, and `setup <path> --node` run again rewrites them |
 
 **The gates that it matches the manifest and every repo's `services.json` where they
@@ -330,14 +338,15 @@ and 15 dissolved). It is the first thing the server does, and the smallest:
     verb to use instead where one is declared for that file's store, e.g. an Edit of a
     `PLAN-*.md` is answered with `setup plans edit <FILE> §<n> --from <file>`. To name
     it, the server resolves the path to its owner (a `repos` row's directory, or a
-    `workspace` glob, §2) and reads that owner's `cli.json` for which paths are stores;
+    `workspace` glob, §2), reads `stores.json` (§2) for whether the path is a store,
+    and takes the verb from that owner's `cli.json`;
   - `POST /read-request` is H1a-0b's (below): H1a-0 builds the write half and passes
     every read untouched, which costs nothing, since reads are never denied for being
     unowned.
 
   Every answer is a ledger row. H1a-0 reads only `owners` (the `workspace` row and the
-  derivation, §2), `repos.<repo>.cli|verbs` and the owners' `cli.json` `store` fields,
-  validated by the part of the schema those keys need; H1a-1 completes the schema
+  derivation, §2), `repos.<repo>.cli|verbs` and `stores.json`, validated by the part of
+  the schema those keys need (on fixtures until `setup` renders `stores.json`); H1a-1 completes the schema
   around them;
 - **the hook half** (harness's, local, beside it): one PreToolUse hook in the planner
   window, on **every tool call** (not only Edit, Write, NotebookEdit and the Bash calls
@@ -363,28 +372,29 @@ and 15 dissolved). It is the first thing the server does, and the smallest:
   fix with the top-level import (PLAN-services.md §3 steps 1-2). Before that, the
   server half and its fixtures are built and green, and the hook stays unregistered.
 
-**H1a-0b, the read route** (split off H1a-0 for size, §9; local, after it). `POST
+**H1a-0b, the read route** (split off H1a-0 for size, §9; cloud by default, after it). `POST
 /read-request`, with `{role, tool, path?, id?}`, and `hub hook gate`'s read
 classification. Its rule: **reads are never denied for being unowned; only writes are**
 (PLAN-services.md §3 step 3, "The hub owner's four questions" 3, which corrects the
 first "Widened" bullet). A read is one of three cases:
 
-- a **store**, an id with a prefix in `stores` (§12) or a path its owner's `cli.json`
-  names as a store: answered with that store's `get` (§12: `hub get <id>`). The hook
-  asks the server about a path under an owner, and the server reads `cli.json` (answer
-  2). In H1a-0b the declared prefixes are those `hub.json` holds, none until H1a-2's
-  `ctx:` (§12), so the store case is built and gated on fixture declarations, and the
-  `get` runs as the role's own call until `hub get` exists (H1a-2, R1);
-- an **owned non-store path**: plain Read;
+- a **store**, an id with a prefix in `stores` (§12) or a path `stores.json` lists
+  (§2): answered with that store's `get` (§12: `hub get <id>`). **Store-ness is on
+  disk** (PLAN-services.md §3 step 3, "Two more from the hub owner" 1): the hook reads
+  `stores.json` itself and the server reads the same file, so the hook never needs the
+  server to tell a store path from a non-store one. In H1a-0b the declared prefixes
+  are those `hub.json` holds, none until H1a-2's `ctx:` (§12), and `stores.json` is a
+  fixture until `setup` renders it, so the store case is built and gated on fixtures,
+  and the `get` runs as the role's own call until `hub get` exists (H1a-2, R1);
+- an **owned non-store path**: plain Read, with no server call;
 - an **unowned path**: plain Read, with no server call.
 
-With the server down, a read naming a declared-prefix id is denied with the `hub status`
-line, as a write is. **A Read of a path under an owner is open**: the hook cannot tell a
-store from a non-store path without the server, which is the one that reads `cli.json`,
-so it either denies (and a down server strands a session reading its own repo, which
-PLAN-services.md §3 step 3 says it must not) or passes (and a store file is read as
-plain Read while the server is down). The planner's to settle (TODO.md); H1a-0b's
-down-server clause for that case waits on it, and nothing else in H1a-0b does.
+With the server down, a store read (a declared-prefix id, or a path `stores.json`
+lists) is denied with the `hub status` line, as a write is, and any other Read is plain
+Read, so neither rule of PLAN-services.md §3 step 3 breaks: a down server strands no
+session reading its own repo, and no store is read past its `get`. **A missing
+`stores.json`** means every Read of a path is plain Read, and `hub status` reports the
+file missing, which `session-doctor.sh` (harness's) surfaces.
 
 **How the planner's Dispatch section reaches it.** The planner's `Stop` hook is
 `hub hook planner-stop`. It reads `last_assistant_message` from the hook input, the
@@ -701,7 +711,7 @@ the test, never claudeTest or any repo of ours.
 | **view contract** | in PLAN-hub-view.md "Gates"; the one row this plan keeps: every endpoint the view consumes is in `docs/API.md` and served (the help-equals-implemented row, applied to the client's source by a static scan) | V1–V3, there |
 | **fails open, every hook** | each installed hook copy exits 0 on malformed input and on a dead server; tested, not promised. **One exception, the write gate**, which fails closed for writes and for reads by a declared-prefix id (next two rows) | H1a-2 |
 | **write gate** (§3 H1a-0; PLAN-services.md §3 step 3, its widening and "The hub owner's four questions") | on a fixture node: a fixture planner's Edit of a `PLAN-*.md` is denied with the declared verb to use (`setup plans edit`); a Bash call naming a declared verb on a store in the planner's `workspace` row is allowed; the same verb from a role the row does not name, an undeclared verb, and a Bash write naming no verb are each denied; **the list is not the gate**: a fixture role whose default tool list allows Edit still has its Edit denied; every read passes with no server call; **with the server killed, the hook denies** a write with the `hub status` line, a read still passes, and an unparseable call is denied; every answer is one ledger row; a `workspace` role that is not a `roles` key, a `workspace` path under a `repos` row's directory, and a derived name that is neither a `repos` key nor `workspace` each fail `hub check` | H1a-0 |
-| **read route** (§3 H1a-0b; "The hub owner's four questions" 2 and 3) | on a fixture node: a read naming an id with a fixture-declared prefix is answered with that store's `get`; a Read of a path the owner's fixture `cli.json` names as a store is answered with its `get`; a Read of an owned non-store path and a Read of an unowned path are both plain Read, never denied, the second with no server call; with the server killed, a read by a declared-prefix id is denied with the `hub status` line and a Read of an unowned path passes; the owned-path case with the server killed is not gated until the planner settles it (§3 H1a-0b, TODO.md); every answer is one ledger row | H1a-0b |
+| **read route** (§3 H1a-0b; PLAN-services.md §3 step 3, "The hub owner's four questions" 2 and 3 and "Two more from the hub owner" 1) | on a fixture node with a fixture `stores.json`: a read naming an id with a fixture-declared prefix is answered with that store's `get`; a Read of a path `stores.json` lists is answered with its `get`; a Read of an owned non-store path and a Read of an unowned path are both plain Read, never denied, with no server call; **with the server killed**, a read by a declared-prefix id and a Read of a listed store path are each denied with the `hub status` line, and a Read of an unlisted path is allowed; **with `stores.json` removed**, every Read of a path is plain Read and `hub status` reports the file missing; every answer is one ledger row | H1a-0b |
 | **services as data** (routing-tree §14.2, §14.6) | the program contains no tool's command and no repo's path (the no-names audit extended to service names); every `repos` row names its CLI; a fixture node with a different CLI gets every service working; `check` runs only the command the row names | H1a-1 (audit), H1b (`write`), G1 (`check`, `hook`) |
 | **read-only roles** (routing-tree §13.4) | a fixture role carrying the hook (§4), its default list with and without Edit and Write (the hook, not the list, decides: an Edit is denied either way), and a sandbox allowing only the scratchpad: a Bash `echo > repo/file` inside it fails, and the same write sent as a `write-request` succeeds through the CLI, both directions; a `plan`-mode role spawned from a `bypassPermissions` window still cannot write; a `write-request` whose verb is not on the tool's declared list is refused at the server and answered, never run; the one exception, the coder under the lease, is the "lease" row | H1b |
 | **failures are messages** (routing-tree §13.3, §14.7) | kill a role process mid-delivery: `harness`'s inbox gets a `delivery` failure with the message id and the dispatcher gets nothing; remove `harness`'s `owners` row in a fixture: the dispatcher gets it, logged `routed_by: dispatcher`, and nowhere else; the third identical re-route proposes the row; a relay sent while the receiving window's hook sleeps 11 s is stamped and in the ledger | H1a-2 (stamp, `delivery`), H2 (proposal) |
@@ -738,8 +748,8 @@ says so in this table.
 | # | phase | where | contents | retires | cost |
 |---|---|---|---|---|---|
 | **H0** | probes | local | `hub send` from inside a cold `-p` role (Bash allowlisted); `dontAsk` honouring a roster definition's tools; `claude agents --json` listing an interactive `--agent planner` session with `sessionId`; **the coder's Edit rule** (§4: a `-p` role with `Edit(<repo>/**)` under `dontAsk` edits inside the repo and not outside it, with Edit and with Bash). The warm probe and the warm sandbox clause are gone with Decision 1. Each probe is a script in `tools/hub/probes/` with its pass condition in the file, run by hand, result and `claude --version` recorded in `TODO.md` | — | 40–90k (1–3u) |
-| **H1a-0** | the write gate (§3) | local (Decision 9: on the critical path to the planner's incapability, PLAN-services.md §3 step 7; its hook half is in `.claude/`) | the server skeleton: `hub up|down|status`, `/health`, `/status`, `.hub/` and `server.json`, the token check; `POST /write-request` and its rule (a declared verb on a store the role may write, derived from `owners` at render time, the planner's and dispatcher's from the `workspace` row, else deny with the verb to use); the path-to-owner resolution (a `repos` row's directory, a `workspace` glob) and the owner's `cli.json` `store` field it reads to name the verb; that derivation and the part of the schema it, `workspace` and `repos.<repo>.cli|verbs` need; `hub hook gate`, classifying every tool call against `hub.json` and passing every read; the ledger row per answer; `docs/API.md` and the help-equals-implemented gate for what it ships; the direction and no-names audits; §8 "write gate" with the server killed. **Harness job beside it, local** (~1u): the one-line PreToolUse caller in the planner window, on every tool call, registered only once `setup plans edit|add` and todo's import exist (PLAN-services.md §3 steps 1-2). **Leaves the system working:** with the hook unregistered nothing changes; registered, the planner's direct writes are denied and its verbs allowed, and its reads pass untouched | the planner's Edit and Write on plans and `TODO.md` (`dispatch-guard.sh` allows them today) | 80–130k (3–5u) + ~1u local |
-| **H1a-0b** | the read route (§3) | cloud (default: every input is in this repo or a fixture, and the classifier it extends is `hub hook gate`, not `.claude/`); after H1a-0, and not on the incapability path, so it may slip without holding H1a-1 | `POST /read-request` and its rule (a store, by declared-prefix id or by a path its owner's `cli.json` names, answered with its `get`; an owned non-store path and an unowned path plain Read, never denied), on fixture declarations; `hub hook gate`'s read classification (which calls name a store id or an owned path); the ledger row per answer; `docs/API.md` and help-equals-implemented for the route; §8 "read route" with the server killed, but for the owned-path case the planner has not settled (§3). No harness job: the caller H1a-0 registered already sees every call. **Leaves the system working:** store reads go to their owners and every other read passes as before | — | 50–90k (2–3u), an analogy (§9 below) |
+| **H1a-0** | the write gate (§3) | local (Decision 9: on the critical path to the planner's incapability, PLAN-services.md §3 step 7; its hook half is in `.claude/`) | the server skeleton: `hub up|down|status`, `/health`, `/status`, `.hub/` and `server.json`, the token check; `POST /write-request` and its rule (a declared verb on a store the role may write, derived from `owners` at render time, the planner's and dispatcher's from the `workspace` row, else deny with the verb to use); the path-to-owner resolution (a `repos` row's directory, a `workspace` glob), `stores.json` read for store-ness (a fixture until `setup` renders it) and the owner's `cli.json` read to name the verb; that derivation and the part of the schema it, `workspace` and `repos.<repo>.cli|verbs` need; `hub hook gate`, classifying every tool call against `hub.json` and passing every read; the ledger row per answer; `docs/API.md` and the help-equals-implemented gate for what it ships; the direction and no-names audits; §8 "write gate" with the server killed. **Harness job beside it, local** (~1u): the one-line PreToolUse caller in the planner window, on every tool call, registered only once `setup plans edit|add` and todo's import exist (PLAN-services.md §3 steps 1-2). **Leaves the system working:** with the hook unregistered nothing changes; registered, the planner's direct writes are denied and its verbs allowed, and its reads pass untouched | the planner's Edit and Write on plans and `TODO.md` (`dispatch-guard.sh` allows them today) | 80–130k (3–5u) + ~1u local |
+| **H1a-0b** | the read route (§3) | cloud (default: every input is in this repo or a fixture, and the classifier it extends is `hub hook gate`, not `.claude/`); after H1a-0, and not on the incapability path, so it may slip without holding H1a-1 | `POST /read-request` and its rule (a store, by declared-prefix id or by a path `stores.json` lists, answered with its `get`; an owned non-store path and an unowned path plain Read, never denied), on fixture declarations and a fixture `stores.json`; `hub hook gate`'s read classification (which calls name a store id or a listed store path, read from `stores.json` without the server); `hub status` reporting a missing `stores.json`; the ledger row per answer; `docs/API.md` and help-equals-implemented for the route; §8 "read route" with the server killed and with `stores.json` removed. No harness job: the caller H1a-0 registered already sees every call. **Leaves the system working:** store reads go to their owners and every other read passes as before | — | 50–90k (2–3u), an analogy (§9 below) |
 | **H1a-1** | the program, no routing yet | cloud (default) | `hub.json` schema and `hub.schema.json` completed around H1a-0's part (`limits` and `stores` included; `warm` not a mode); `hub init|check|routes`; `/routes`; held, dead-letter and ledger state restored by `hub up` after a kill; the registry and vocabulary gates run against the root's own file; `./dev.sh check` runs them all. **Leaves the system working:** nothing but the write gate and the read route calls the server yet; `hub status --json` is what `dispatch-guard.sh` will read | — | 80–130k (3–5u) |
 | **H1a-2** | the relay through the server | cloud (default) | the moved parser, gate, origin and ledger under `tools/hub/lib/` with their tests; `/route`, `/sessions`, `/ledger`, `/dead-letter`, `/held`; admission with the usage gate (§3) and the budget counting model-starting messages only; the `limits` export and its both-ways gate for the budget and `stub_chars`; `hub send|log|hook|origin|grammar|get`; `hub hook planner-stop`, `dispatcher-stop`, `session-start`, `user-prompt` (the `ctx:` id per typed prompt, §1) with the kill-the-server gates; `origin_id` and the `ctx:` stub as the first `stores` entry (§12); the determinism and origin gates. **Harness job beside it, local** (~1–2u): `gen` renders `.claude/hub-roles.json`; the three hook files become one-line callers and the user-prompt hook is installed for the two windows; `dispatch-guard.sh` reads `hub status --json`. **Setup job beside it, local** (~1u): the `hub` component reads the role list and writes `hub.json` from it (Decision 2) | `relay-origin`, `question-kinds` (both `manifest:nodes` → the retire check becomes `file:hub.json`, a one-word addition to interim-rules §3's vocabulary) | 140–200k (5–7u) |
 | **S1** | sync, files | cloud (default) | `hub sync --check|--apply`, file mode, no server; the hook copies and the plan copy as declarations at the root; `tools/checks` `hooks-installed` reads it | the two `check-hooks.sh` after the same-verdict test | 120–180k (4–6u) |
@@ -769,11 +779,14 @@ stores is the owner's `cli.json`), and only three read cases, two of them plain 
 That removes the declaration the size waited on, but it removes none of the read
 half's four parts (a route, a rule, the hook's classification of reads, the §8
 clauses), and it adds one case (a store named by path). The path-to-owner resolution
-and the `cli.json` read are counted in the write half, which needs them to name the
-verb to use. The table gives no finer basis than the write half's, so **the read half
-is costed as the write half, 50–90k (2–3u): an analogy, not a derivation**, with two
-unknowns inside it: how far the read classifier must reach to see a store id named
-through Bash, and the down-server case for an owned path (§3 H1a-0b, open). H1a-0
+and the `stores.json` and `cli.json` reads are counted in the write half, which needs
+them to name the verb to use. The table gives no finer basis than the write half's, so
+**the read half is costed as the write half, 50–90k (2–3u): an analogy, not a
+derivation**, with one unknown inside it: how far the read classifier must reach to
+see a store id named through Bash. The down-server case for an owned path, the second
+unknown at first, is settled by "Two more from the hub owner" 1 (store-ness read from
+`stores.json`, §3 H1a-0b); its missing-file clause and `hub status` line are small
+beside the route and are taken inside the range, not re-derived. H1a-0
 with it would be 80–130k + 50–90k = 130–220k, whose top passes the 200k ceiling, so
 **it splits: H1a-0 at 80–130k (3–5u) and H1a-0b at 50–90k (2–3u)**, as H2 would with
 H2b; the hub owner's call (PLAN-services.md §3 step 3 leaves it there). The harness job
@@ -1129,6 +1142,7 @@ owned by `tools/setup`:
 | `services.json`, `cli.json` (every repo, routing-tree §14.8) | the contract skeletons: `services.json` with the repo's name and its `check` command, `cli.json` as `{store, cli, verbs: []}`; the repo's agent fills `verbs`, `tags` and `ids` (the id prefixes its store hands out and the `get` verb that resolves them, §12) later in its own commits | present and valid (`services-valid`) → `unchanged`; a hand edit that breaks the shape → `drift` |
 | `registry.proposed.json` | a proposed `repos` row for the node this repo belongs to, as `settings.proposed.json` is today; the copy into the node's registry is the node owner's step (`setup <path> --node` run again) | row present → `unchanged` |
 | `hub.json` (a node only, `setup <path> --node`, repo-setup §7.5) | **the one writer at every node** (Decision 2). Where `.claude/hub-roles.json` exists (harness rendered it), `hub.json` from it: `roles`, `tags`, `children`, `server`, `owners`, `limits` as the list carries them, `rendered_from` with the list's path and hash. Where it does not, the starter (dispatcher window + coder cold, the default tools, `services` route and write on, `owners` with only `unowned`, `limits` at the defaults, a free port, empty tags, `parent` from the invoking node). `hub init` is this step by another name. Setup reads the list as a generic declaration, never the manifest | from a list: the file matches what the list renders → `unchanged`, else `drift` naming the keys; a starter: the keys setup wrote are unchanged → `unchanged`, a hand edit to one of them → `drift`; `tags`, `children` and `sync` are the owner's and not compared |
+| `stores.json` (the node, re-rendered whenever setup runs at any repo; PLAN-services.md §3 step 3, "Two more from the hub owner" 1) | the node's store paths from every owner's `cli.json` `store` field, the `workspace` stores among them, read-only (0444) beside `hub.json`; the hook and the server read it to tell a store path from a non-store one (§3 H1a-0b) | the file matches what the `cli.json` files render → `unchanged`, else `drift` naming the paths; missing → `missing` (and `hub status` reports it) |
 | `local.env` keys | `HUB_TOKEN` (generated), `HUB_PARENT_URL` (the invoking node's URL, or empty) through portable-env's loader; declared in `local.vars.json` | keys present → `unchanged`; never printed |
 | `.gitignore` | `.hub/`, `hub-view.json`, `.claude/local.env` | lines present → `unchanged` |
 | registration | `hub register` with the parent, when `HUB_PARENT_URL` is set and the parent is up; otherwise prints `register later: hub register` | registered → `unchanged` |
