@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (22 open, 3 closed in todo-history.json; seal 181f8ad068a0): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (23 open, 3 closed in todo-history.json; seal 5a9227931373): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -93,6 +93,13 @@
   `dev.sh check` on hub, or a shared check). Probe: `agents.sh dispatches --open` /
   the ledger for a hub run at that time. Harmless here; two runs share one progress file.
   · probe: `agents.sh dispatches --open` / the ledger for a hub run at that time.
+  · added: 2026-10-19
+
+- **hb-26 · commit.sh's check timed out at 1800s once under concurrent suites**
+  2026-10-19 13:3x (tl-379): .claude/bin/commit.sh's ./dev.sh check ran past COMMIT_CHECK_TIMEOUT (1800s default) with only test.hubcheck and test.parts finished; hooktests.log empty; site-scrapers, todo and setup suites were running at the same time. A plain ./dev.sh check minutes earlier passed 9/9 with hooktests 354s, and the retry with COMMIT_CHECK_TIMEOUT=3600 committed ebbc298 (the monitor saw hook tests advance every 20-45s). Not known whether one hook test hung or all were slow.
+  · probe: time ./dev.sh test hooktests inside commit.sh's env vs a plain shell, with another repo's check running
+  · work: test
+  · size: S
   · added: 2026-10-19
 
 ## Reported to other owners
