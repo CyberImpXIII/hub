@@ -298,6 +298,16 @@ class TestLeaks(Base):
         self.assertFinding(f, "notes.md:3: phone number")
         self.assertFalse(any(EMAIL in x or HOME in x or PHONE in x for x in f), f)
 
+    def test_a_file_that_cannot_be_read_is_a_finding_never_a_pass(self):
+        # tl-406: `./dev.sh leaks <a relative path from elsewhere>` resolved under the
+        # hub root, found no file, and printed ok. A binary file is still skipped.
+        missing = self.r / "no-such-plan.md"
+        f = hc.leaks_in([missing], self.r)
+        self.assertEqual(len(f), 1, f)
+        self.assertIn("not audited, cannot read it", f[0])
+        (self.r / "blob.bin").write_bytes(b"\xff\xfe\x00" + EMAIL.encode("utf-16"))
+        self.assertEqual(hc.leaks_in([self.r / "blob.bin"], self.r), [])
+
     def test_ignored_file_not_scanned(self):
         (self.r / ".gitignore").write_text("secret.md\n")
         (self.r / "secret.md").write_text(EMAIL + "\n")

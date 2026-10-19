@@ -272,11 +272,22 @@ def gate_files(root: Path):
 
 
 def leaks_in(paths, base: Path):
+    """Findings for each leak-shaped line in `paths`.
+
+    A binary file (not UTF-8) is skipped: there is no text to audit. A file that
+    cannot be read (missing, a folder, no permission) is a finding, never a pass:
+    until 2026-10-19 it was skipped, so `./dev.sh leaks <path>` on a path that
+    did not resolve printed ok having audited nothing (tl-406).
+    """
     f = []
     for p in paths:
         try:
             text = p.read_text()
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError:
+            continue
+        except OSError as e:
+            f.append(f"{p}: not audited, cannot read it ({type(e).__name__});"
+                     " ./dev.sh runs from the hub root, so a relative path resolves there")
             continue
         for n, line in enumerate(text.splitlines(), 1):
             for rx, kind in LEAK_KINDS:
