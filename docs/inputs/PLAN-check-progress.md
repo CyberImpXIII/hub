@@ -172,3 +172,113 @@ drift is a repo whose check command runs with no writer present. Wiring the writ
 each repo's check (§5, phases 2 and 3) stays with that repo's agent, because only it
 knows the repo's steps. Content-agnostic: the file format (§2) names steps and counts,
 never a repo or a command.
+
+## 9. Decisions answered (Jacob, 2026-10-05)
+
+1. **All repos: yes.**
+2. **A resumed pass counts as the pre-commit gate when its fingerprint matches: yes,
+   on one condition.** Jacob: "as long as that fact is passed into the commit message.
+   If there are issues that arise from a split test suite it can be determined there."
+   So the stamp that PLAN-hard-gates.md §7 phase 2 puts into the commit message
+   (`commit-msg`, the check stamp) carries `check: resumed from k/N` with the
+   fingerprint when the gating pass was resumed, and `check: full` otherwise. A commit
+   whose gating pass was resumed is then findable from the log alone. Gate, same
+   change: a fixture repo where one commit follows a resumed pass and one a full pass;
+   the test requires the two trailers, and `git log --grep 'check: resumed'` finds
+   exactly the first. Where the trailer is written is hard-gates' phase 2 (setup, the
+   `git-hooks` component); what it says is this plan's §7, so phase 1 here (harness,
+   `progress.sh`) ships the status-file field the stamp reads, `resumed_from`, and the
+   stamp reads it rather than recomputing.
+
+## 10. Parts run in parallel (Jacob, 2026-10-18)
+
+> "I still worry about the amount of time some of these test suites take. Is there a
+> python equivalent to promise.all()? Do all the tests, checks etc. NEED to be done
+> sequentially?"
+
+**They do not.** The shared runner (`tools/checks/checkslib/parts.py`, installed into
+each repo as `devtools/parts.py`) runs one part, waits for it, then starts the next.
+The last full runs took (each repo's `.progress/check.json`, `last_duration_s`, read
+2026-10-18):
+
+| repo | parts | seconds |
+|---|---|---|
+| tools/setup | 42 | 1248 |
+| tools/todo | 47 | 741 |
+| knowledge-base | 7 | 585 |
+| scriptingTools/data-bridge | 24 | 146 |
+| scripts | 24 | 40 |
+| tools/checks | 23 | 12 |
+
+Each part is already its own process with its own log, which is the shape the
+parallelism rule prefers ("across processes, never inside one").
+
+**Python's equivalents:**
+- `asyncio.gather(..., return_exceptions=True)` is `Promise.allSettled`;
+- `concurrent.futures.wait()` over a pool is the same, for threads or processes.
+
+The runner needs only a pool of threads, each starting one part's process and waiting
+on it. Every part is collected, whether it passed or failed, and none stops the
+others.
+
+**What must stay serial is named, not guessed.** A part gets an optional `uses` list in
+`check.parts.json`. Two parts that share a value in `uses` never run at the same time.
+The values:
+- `browser`: it drives Puppeteer. site-scrapers' rule 7 says contention there produces
+  failures that look like broken recipes;
+- `store:<name>`: it writes a live store;
+- `serial`: it runs alone.
+
+**The rules for the parallel runner:**
+- **Report order is the file's order,** not the order parts finish, so two runs read
+  alike.
+- **Timeouts stay per part.**
+- **`--resume` and the status file are unchanged:** each part's result is written when
+  it finishes.
+- **The pool size defaults to the CPU count.** `--jobs 1` gives today's behaviour, so a
+  suspected interaction can be re-run alone (the "repeat under parallel load is not
+  evidence" rule).
+
+**A shared temp path or port would show up as a flaky part.** So the first parallel
+run in each repo is compared with a `--jobs 1` run. A part that passes alone and fails
+in parallel is marked `serial` and recorded in that repo's TODO. It is never retried
+until it passes.
+
+**The limit:** a repo's check can be no faster than its longest part. knowledge-base's
+7 parts take 585 seconds, so its gain comes from splitting its longest test file, which
+is that owner's step once the timings show which file it is.
+
+**Approved: Jacob 2026-10-18,** with one condition: "if there are tests that NEED to
+be sequential, that is important, so I don't want to forbid it, rather, encourage
+parallelism when practical". So:
+- **Serial is a declared choice, never a failure.** `uses: ["serial"]` or a shared
+  `uses` value is always honoured, and no check counts serial parts against a repo.
+- **The encouragement is a number, not a rule.** The run's summary line prints the
+  wall time beside the sum of the part times, and the share of the time spent in
+  serial parts. That shows an owner where parallelism would pay, and decides nothing
+  for them.
+
+### Steps
+
+1. **`checks`:** the parallel pool in `parts.py`, `uses`, `--jobs`, and the summary
+   line above. Fixtures: two parts with the same `uses` never overlap (start and end
+   times in the status file); a failing part does not stop the others; the report
+   order is the file's order; `--jobs 1` matches today's output. Then setup
+   reinstalls the runner in each repo, through its `parts` component.
+   track: TODO.md "Check parts in parallel"
+2. **Each repo's owner:** marks its `browser`, `store:` and `serial` parts, runs the
+   comparison above, and records the timings before and after.
+   track: TODO.md "Check parts in parallel"
+3. **`harness`:** the same for its own runner. `agents.sh check` and `test-agents.sh`
+   run through `lib/suite-parts.sh`, not `parts.py`, and it runs parts "one at a
+   time (a heavy suite never shares the machine with itself)" by design, so step 1
+   reached nothing in `.claude/` (Jacob, 2026-10-19: "I know we worked on
+   parallelizing tests, checks, audits etc. Did this happen in the harness as
+   well?"). The step: a `--jobs` pool in `suite-parts.sh` honouring `uses` in the
+   parts file, report order the file's order, timeouts per part, the summary line
+   above; `agents.sh check`'s suites (every `hooks/test-*.sh` and `lib/test-*.sh`)
+   run through it as one parts file with `uses` declared; `test-agents.sh`'s parts
+   stay `serial` unless each fixture is shown to use its own temp root and
+   `.progress/` path, then the `--jobs 1` comparison above; timings before and after
+   in `.claude/TODO.md`. Fixtures as step 1's. Approved by §10's yes (2026-10-18).
+   track: TODO.md "Check parts in parallel"

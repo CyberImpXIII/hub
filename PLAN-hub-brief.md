@@ -38,8 +38,9 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 | `PLAN-cloud-offload.md` | §3 | what may run in the cloud; the hub's tests must be offline |
 | `PLAN-repo-setup.md` | §1, §2, §7.8 | the setup directive every plan obeys (§5 below cites it), what `setup` installs, and who owns the files it renders (fixed point 10) |
 | `PLAN-portable-env.md` | §1–§3 | no hardcoded paths, owner or accounts; `local.env` and `init.sh`, which the hub token and keep-alive use |
+| `PLAN-context-hygiene.md` | §0 | the launcher that restarts a whole session, its rebuild guards, its Later paragraph (a session a program runs) and the `ctx:` store: question 11, and the `ctx:` ids of question 12 (routing-tree §10.3 step 1, added 2026-10-19) |
 
-The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15, and again the same day for §16-§23, questions 15-16 and fixed point 11 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
+The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15, and again the same day for §16-§23, questions 15-16 and fixed point 11; every copy was refreshed 2026-10-19 (later) and `PLAN-context-hygiene.md` became an input (routing-tree §10.3 step 1; `PLAN-services.md` joins it once the leak audit passes on its original) (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
 live at the top of the claudeTest folder, which is not a git repo.
 
 ## 3. Fixed points, not open for re-decision
@@ -188,8 +189,8 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 10. **What it does not do**, explicitly: no model in routing, no agent teams as the
     backbone (routing-tree §5 says why), no editing of code by the dispatcher.
 11. **A session the hub runs.** PLAN-context-hygiene.md §0 ("Later", made a hub
-    requirement by Jacob 2026-10-08; that plan is not a §2 input, so the requirement is
-    stated here whole) wants a session a program drives, through `-p --input-format
+    requirement by Jacob 2026-10-08; that plan is a §2 input since 2026-10-19, and the
+    requirement stays stated here whole) wants a session a program drives, through `-p --input-format
     stream-json --output-format stream-json` or the Agent SDK
     (<https://code.claude.com/docs/en/cli-reference#cli-flags>). The program holds the
     message list, so it clears and rebuilds the context on its own, with no keystroke
@@ -206,8 +207,7 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
     "make it so that the hub can reference anything in the knowledge store by ID and
     have it show up with the stub, and expandable to the full text, without the agent
     that is sending that information having to output the entirety of that
-    information"). This plan is not a §2 input either, so the requirement is stated
-    here whole.
+    information"). No plan records it, so the requirement is stated here whole.
 
     **The sender writes an id, never the record.** Records come from any store that
     hands out ids:

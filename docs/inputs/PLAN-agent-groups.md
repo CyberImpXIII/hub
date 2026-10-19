@@ -209,6 +209,19 @@ cold start", which overstated it):
   to. A failing test belongs to tests or code; a stale README table to docs.
 - **One formatter, `.claude/lib/report.jq`,** renders a view per consumer. It's one
   reader, like `tokens.jq`.
+- **The schema's one source is `tools/checks/schema/check-json.schema.json`** (checks,
+  2026-10-05, e9e001d), and this section's prose defers to it. Confirmed by the planner
+  2026-10-05: top level `ok` and `checks[]`; each check has `name`, `status` (`ok`,
+  `fail`, `unchecked`, `error`), `counts.failed` and `failures[]` with `message`, `file`,
+  `line`, `role`; link rules include exit 0 only when `ok`, and `counts.failed` equal to
+  the length of `failures`. The second gate here, each `role` naming a role that exists,
+  waits on the node registry (PLAN-routing-tree.md §14.8 `services.json`), since checks
+  reads no roster. `check-json` runs in audit runs only (`checks all --roles audit`,
+  `checks one check-json <repo>`), never inside a pre-commit run, because it runs the
+  repo's whole suite: sequential, as Jacob asked. Its per-repo limit (280 s, todo's suite
+  took 240 s) should be raised, wall clock is not a cost. Status 2026-10-05: conforms
+  tools/checks; shape FAIL tools/hooks, tools/hub, tools/todo (they print
+  `{"ok","gates"}`); setup's stub unverified; nine repos UNCHECKED (no `--json`).
 
   | consumer | sees |
   |---|---|

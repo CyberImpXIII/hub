@@ -183,7 +183,9 @@ every one of these holds, and §3 is this predicate applied to today's roster:
 - the output is a document or a commit on a branch, nothing that has to land in local
   state by hand;
 - it drives no browser against a job site, no Gmail, no crontab;
-- the credit balance has not been reported out by Jacob.
+- the credit balance has not been reported out by Jacob (balances he has reported:
+  $100 on 2026-10-02, "gone up" on 2026-10-04, $156 on 2026-10-13, "until we run
+  out"; the hub's 1.7-2.5M re-cost is approved against the last one).
 
 **The harness item**, interim until the hub routes: `agents.sh offload <PLAN-x.md>`
 reads the plan's `Owner` and inputs, applies the predicate, and prints `cloud-eligible:

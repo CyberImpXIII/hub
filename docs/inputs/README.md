@@ -62,6 +62,15 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   §20-§23 and its 12:44 edit (§10.1, §16 step 4, §17.1). Done with `./dev.sh refresh
   PLAN-routing-tree.md PLAN-hub-brief.md`; the other copies keep their sums and their
   drift (TODO.md hb-5).
+- **Refreshed in full 2026-10-19 (later)** for tl-406 (relay lines 118, 27 and 53,
+  Jacob; routing-tree §10.1 D1 and §10.3 step 1): every copy replaced by its original
+  with `./dev.sh refresh` (leak audit first), and `PLAN-context-hygiene.md` became a
+  brief §2 input and a copy here (§0: the launcher, its rebuild guards, the `ctx:`
+  store, and the session a program runs). The brief's §2 table gained its row and
+  question 11 no longer says it is not an input; edited at the top-level original.
+  Routing-tree §20 is still marked pending dt-5 row 5 in the brief. **`PLAN-services.md`
+  is not copied yet:** the leak audit refused its original (one home-folder path, its
+  line 74), so it waits for its owner, the planner, to fix that line (TODO.md).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's
@@ -100,6 +109,7 @@ that rewrites a copy, leaves it 0644: run `./dev.sh seal` then.
 | `PLAN-cloud-offload.md` | `PLAN-cloud-offload.md` | brief §2; review §3 finding 8 (§3, §8) |
 | `PLAN-repo-setup.md` | `PLAN-repo-setup.md` | brief §2 |
 | `PLAN-portable-env.md` | `PLAN-portable-env.md` | brief §2 |
+| `PLAN-context-hygiene.md` | `PLAN-context-hygiene.md` | brief §2 (since 2026-10-19) |
 | `PLAN-usage-reporting.md` | `PLAN-usage-reporting.md` | review §3 finding 3 (§3: the usage gate admission asks) |
 | `PLAN-hard-gates.md` | `PLAN-hard-gates.md` | review §3 finding 4 (§2: the `Agent:` commit stamp) |
 | `PLAN-check-progress.md` | `PLAN-check-progress.md` | review §3 finding 5 (§7: why H1a splits) |
@@ -121,5 +131,6 @@ item:
 before they were added. Read them there with `git fetch origin main` and then
 `git show origin/main:docs/inputs/<file>`, or have `main` merged into `plan/hub`
 first. Never copied, on purpose: anything from `.claude/` (PLAN-cloud-offload.md §8's
-predicate), and the plans `PLAN-hub.md` names as open pointers (`PLAN-context-hygiene.md`,
-`PLAN-knowledge-base.md`, `PLAN-applications.md`), which the fix pass does not need.
+predicate), and the plans `PLAN-hub.md` names as open pointers (`PLAN-knowledge-base.md`,
+`PLAN-applications.md`), which the fix pass does not need. `PLAN-context-hygiene.md`
+was one of those until 2026-10-19, when it became a brief §2 input.

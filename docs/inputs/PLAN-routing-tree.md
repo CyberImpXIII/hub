@@ -94,21 +94,19 @@ to `from`, recorded in the ledger (PLAN-auto-relay §7, generalised to every nod
 
 ## 5. How a message reaches an agent
 
-The server owns the agent processes. Two modes, chosen per role in the manifest:
+The server owns the agent processes. One kind of role (§20): each request starts the
+owner in its folder, and how long the process lives is not a design axis (§24).
 
-- **Cold (default):** each message starts `claude -p --agent <role>` in the node's repo,
+- **Each request starts the role:** `claude -p --agent <role>` in the node's repo,
   in `--permission-mode dontAsk` with the role's allowed tools
-  (<https://code.claude.com/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode>).
-  Stateless and simple. It pays the starting context each time (about 29k for a roster
-  agent, measured 2026-10-02).
-- **Warm:** the server keeps a role alive as
-  `claude -p --input-format stream-json --output-format stream-json` and writes each
-  message to its stdin. The docs describe a "message submitted to a running
+  (<https://code.claude.com/docs/en/permission-modes#allow-only-pre-approved-tools-with-dontask-mode>),
+  run with `--input-format stream-json --output-format stream-json`.
+- **A running role takes a message on its stdin.** The server writes a further
+  message to the stdin of a role still working on its request, which is how Jacob talks
+  to a role while it runs (§20). The docs describe a "message submitted to a running
   `--input-format stream-json` ... session" and say "the session stays usable"
-  (<https://code.claude.com/docs/en/errors#input-contained-only-whitespace>). It's
-  cheaper while the context is small. The server restarts the role at a context
-  threshold.
-  - *Probe first:* a warm role keeps context across two messages, and its result
+  (<https://code.claude.com/docs/en/errors#input-contained-only-whitespace>).
+  - *Probe first:* a running role takes a second message on stdin, and its result
     arrives on stdout as a parseable `result`.
 - **Agents send messages with `hub send --to … --tag … --ref … "<line>"`,** one
   allowlisted Bash command. It works in any session, it's testable, and it's the same
@@ -195,14 +193,16 @@ nothing about becomes a node with a dispatcher and a coder role.
 0. **Finish the harness job in flight** (PLAN-auto-relay: quote fix, relay, ledger).
    Its parser, ledger, origin stamping and dedupe move into the server unchanged.
    **Probes, cited:**
-   - a warm stream-json role across two messages;
+   - a running stream-json role taking a second message on stdin (§5);
    - `dontAsk` with a roster definition honouring its tools;
    - `hub send` from inside a `claude -p` role.
+   track: needs-yes PLAN-routing-tree.md §20
 1. **One node, the top:**
-   - the server with `/route`, cold roles only, using today's folder agents as
-     addresses (`claudeTest/site-scrapers` = the `site-scrapers` agent);
+   - the server with `/route`, each request starting its owner in its folder (§20),
+     using today's folder agents as addresses (`claudeTest/site-scrapers` = the `site-scrapers` agent);
    - the planner's Dispatch section goes to the server instead of the dispatcher;
    - the dispatcher becomes the fallback.
+   track: needs-yes PLAN-routing-tree.md §20
 2. **Agent to agent:** tags, loop control, the write lease, and `bug-report` routing.
    - **Evidence for this phase (2026-10-03, Jacob's observation in the dispatcher
      window):** the `applications` agent's report said site-scrapers' commit fd81cf2
@@ -226,8 +226,10 @@ nothing about becomes a node with a dispatcher and a coder role.
    - add the `operator` role;
    - rewrite "How work is split here" in CLAUDE.md (the dispatcher's edit, after Jacob
      approves the text).
-5. **Warm roles** where `tokens --agents` shows they're cheaper. The other repos join
-   through setup.
+
+After phase 4, the other repos join through setup (§8). The phase that once followed,
+choosing between role lifetimes by `tokens --agents`, is gone: there is one kind of
+role (§20, §24).
 
 ### 10.1 The five decisions of the cloud plan (Jacob, 2026-10-19)
 
@@ -239,15 +241,93 @@ D1-D5 (tl-323..327, dt-3 rows 2-6). His answers:
 | D1 refresh the stale inputs | **refresh** | hub refreshes the seven stale copies and `SHA256SUMS` before the cloud session |
 | D2 the cloud session's model | **Fable 5.1 at max** | Jacob starts the session on Fable; the brief's §9 token costs are restated at Fable's price (the manifest's prices table) |
 | D3 the hub drives sessions | **drive** ("yes yes yes yes") | brief item 11 is a requirement; the probe decides stream-json or the SDK; §20 orders the roles |
-| D4 questions wait; the todo store is the one list | asked again with the elaboration (reply of 2026-10-19) | recommend `todo-source`: the wizard reads `waiting-jacob` items and nothing else; only an item that blocks running work reaches a window |
-| D5 keep-alive | asked again ("every 5 minutes feels extreme") | options now `launchd` (restart on exit, nothing runs while healthy), `cron-15`, `cron-5`; recommend `launchd` with chron.py as the portable fallback at 15 min (group-servers decision 4 named chron.py; the cadence changes, not the tool) |
+| D4 questions wait; the todo store is the one list | **todo-source** ("the hub is merely the UI that facilitates easy access to these services, which are capable of existing independently") | the wizard and the hub read `waiting-jacob` items and nothing else; only an item that blocks running work reaches a window; the hub holds no question of its own (§21's second fixed point) |
+| D5 keep-alive | asked twice ("every 5 minutes feels extreme"; "elaborate") | the three ways in §10.2; with D4's principle an outage costs only the view, so the recommendation is `session-start` first and `launchd` when the restart count says so |
+
+### 10.2 Keep-alive, elaborated (D5)
+
+The hub is a node server. When its process exits, routing and the page stop until
+something starts it again, and nothing else stops: the services and their stores exist
+without it (D4's principle), so an outage costs the view, never a record. Three ways to
+keep the view up:
+
+| option | what runs | what it costs | where it falls short |
+|---|---|---|---|
+| `session-start` | `init.sh` runs `hub up --tree` at every session start (§7, already in the design); the status line shows `hub: down` at the next prompt; `hub up` is one command | nothing: no job, no timer | a crash between sessions is unseen until a window opens, which is also the first moment it matters |
+| `launchd` | `hub keepalive --launchd` writes a LaunchAgent plist with `KeepAlive` and loads it; macOS restarts the process the moment it exits; `--remove` undoes it | nothing while healthy; no polling | this Mac only, while Jacob is logged in |
+| `cron-15` | a chron.py line, `*/15`, running `hub up` (a no-op when healthy) | one process every 15 minutes, zero tokens; up to 15 minutes down | portable, and the tool we built; the only one that runs while nothing is wrong |
+
+Recommendation: `session-start` now, which is built once §7 lands; `hub up` counts its
+own restarts in the ledger, and `launchd` follows when that count shows the view was
+missed between sessions. This reverses group-servers decision 4 (a chron.py keep-alive,
+Jacob's yes of 2026-10-03), which predates the UI-over-services principle.
+
+### 10.3 The cloud plan: where it stands, and the five questions that unblock it (2026-10-19)
+
+> "Please give me 5 questions to answer that will assist in unblocking the cloud hub
+> work."
+
+**Where it stands** (read 2026-10-19, 19:10, from `tools/hub`'s git and TODO.md):
+- `plan/hub` (local and origin, head 63cf780, 2026-10-13) carries PLAN-hub.md and
+  PLAN-hub-view.md: the cloud session's pass (origin branch
+  `claude/determined-edison-tx5h9v`, ddfc670, 2026-10-04, merged into `plan/hub`) plus
+  the local pass 6d2b3f6 (H1a-0, the write gate). `main` (762a4fc, 2026-10-19) has
+  only the brief and its inputs. Nothing of the hub is built.
+- PLAN-hub.md's Decisions carry Jacob's yes in their own rows: 9 (2026-10-09; the
+  re-cost 2026-10-13), 14, 16 and 17 (2026-10-13); 15 dissolved with 12. The hub's
+  hb-4 ("Decisions 9 and 14-17 await Jacob") is overtaken by those rows. One delta
+  came after the last yes: H1a-0b, the read route split off H1a-0, lifts the total to
+  about 1.7-2.6M tokens and the cloud share to about 1.25-1.8M.
+- The merge of `plan/hub` into `main` (hb-9) conflicts in TODO.md only, and the hub
+  wrote that it waits on Jacob. Requests to other owners wait on the same yes (hb-19).
+- Eight inputs have drifted (hb-5); D1 (refresh, approved) is Dispatch 118.
+  PLAN-services.md and PLAN-context-hygiene.md are not inputs yet (hb-4): they become
+  inputs with that refresh, since §24 step 2 rewrites the second and the first holds
+  the architecture rules the hub serves.
+- The brief marks §17 and §20 pending (its line 30); PLAN-hub.md §4 "Roles and modes"
+  and §7 "Keep-alive and control" are the sections they and D5 change.
+- H1a-0 (the write gate, local, about 80-120k tokens, approved by Decision 17 on
+  2026-10-13) has no dispatch in the ledger; tl-234 is its hook half, open.
+
+**The five questions** (rows of `todo decisions`; each names what its answer frees):
+
+| | question | frees |
+|---|---|---|
+| 1 | §20 one kind of role (tl-384) | the brief's §20 mark; PLAN-hub.md §4; the full inputs refresh hb-21 waits for |
+| 2 | §17 fan-out by declaration (tl-364) | the brief's §17 mark; the hub's run and read sharing; §17.2 |
+| 3 | D5 keep-alive, §10.2 (tl-327) | PLAN-hub.md §7 |
+| 4 | Decision 9's delta: H1a-0b on the credits, the total at 1.7-2.6M | H1a-0b's cloud run; the §9 order as costed |
+| 5 | merge `plan/hub` into `main` now (hb-9) | the merge; hb-19's requests; H1a-0's dispatch to `hub` on `main` |
+
+**What is not a question.** The next cloud pass's scope is the planner's call: one
+pass, plan then build. It applies the answers above and §22-§24 to PLAN-hub.md (§4,
+§7, the re-cost), then runs H1a-0b and D0 on the credits as §9 orders, and stops when
+the credits run short (Decision 9's rule). Jacob starts it (D2: Fable 5.1 at max)
+after hub's refresh (118) lands, which is the one step that waits on nothing but the
+dispatcher. H1a-0 runs locally, by `hub`, after the merge. hb-8 is settled by §24's
+inventory: the brief's original stays at the top level, hub edits it (121) and
+refreshes its copy.
+
+**Jacob's steps** in `tools/hub`, outside the questions: hb-2 (the git-side gates:
+`core.hooksPath` unset; `setup tools/hub --dry-run` prints the exact lines) and hb-7
+(its `.claude/settings.json`, modified on 2026-10-15 and uncommitted, his to commit).
+
+### Steps
+
+1. **`hub`:** with 118: PLAN-services.md and PLAN-context-hygiene.md added to the
+   brief's §2 inputs and `docs/inputs/` (hb-4), `SHA256SUMS` updated.
+   track: TODO.md "Hub inputs: services and context-hygiene"
+2. **`hub`:** after question 5's yes: re-run the merge-tree, merge `plan/hub` into
+   `main`, `plan/hub`'s TODO entries through `todo add`, hb-4 closed by the rows'
+   dates; then H1a-0 (Decision 17). track: needs-yes PLAN-routing-tree.md §10.3
 
 ## 11. Decisions (all answered "yes" by Jacob, 2026-10-03)
 
 1. **One server program per node, doing both checks (group-servers) and routing.**
    Not two servers. *Recommended: yes.*
-2. **Cold roles first; warm roles only where the token numbers show a saving.**
-   *Recommended: yes.*
+2. **One kind of role.** Superseded: by PLAN-hub-review.md §5 D1 on 2026-10-09 (no
+   role is kept between tasks) and by §20 (each request starts the owner in its folder;
+   how long it lives is not a design axis, §24).
 3. **The dispatcher gets routing tools only, and running existing tools moves to an
    `operator` role.** *Recommended: yes.* The alternative is to let it keep read-only
    tool runs (scrape, count).
@@ -313,7 +393,7 @@ and every new copy needs one more.
     `override`. It reads the hash in each marker.
   - Drift sends a `sync`-tagged message to the child node's owner, who runs
     `hub sync --apply <id>` in its own repo, with its own check and commit. Applying is
-    mechanical, so a cold role does it cheaply.
+    mechanical, so the child's own role does it from the message alone.
   - A child's edit inside a block is reported upward as a proposal, never pushed
     sideways.
 - **The old checks are retired, never dropped.** A bespoke check goes only once
@@ -372,7 +452,7 @@ server.** Three mechanisms, each cited:
 | mechanism | what it holds | what it misses |
 |---|---|---|
 | `tools` / `disallowedTools` in the agent definition (how `Explore` is built: no Edit, Write, NotebookEdit) | the file tools | Bash writes; `write-targets.sh` says of itself "bash_write_targets IS HEURISTIC" |
-| `permissionMode: plan`, "Plan mode (read-only exploration)" (<https://code.claude.com/docs/en/sub-agents#permission-modes> "Plan mode (read-only exploration)") | everything, as a permission | ignored when the spawning window is in `bypassPermissions`, `acceptEdits` or auto mode; honoured under `default`, `dontAsk`, `plan`, and in a cold `claude -p` role (§5), which has no parent window |
+| `permissionMode: plan`, "Plan mode (read-only exploration)" (<https://code.claude.com/docs/en/sub-agents#permission-modes> "Plan mode (read-only exploration)") | everything, as a permission | ignored when the spawning window is in `bypassPermissions`, `acceptEdits` or auto mode; honoured under `default`, `dontAsk`, `plan`, and in a `claude -p` role started by the server (§5), which has no parent window |
 | the OS sandbox: `sandbox.allowWrite` paths, "enforced at the OS level, so all commands running inside the sandbox, including their child processes, respect them" (<https://code.claude.com/docs/en/sandboxing#configure-sandboxing> "These paths are enforced at the OS level") | every process the role starts | it cannot tell a write made through the gated CLI from one made by hand, because both run inside the role's sandbox |
 
 The last row is the point. A hard read-only role cannot run the gated CLI itself, so
@@ -384,8 +464,9 @@ in) applied to the roles themselves, and it is why read-only roles make delegati
 the server *easier*, as Jacob suspected: a role that can only read and send has no
 seam to guard. Roles keep `dontAsk`, their `tools` list (Read, Grep, Glob, `hub send`,
 and a test runner where the role is a tester), and a sandbox whose writable set is the
-scratchpad only. Cold roles get this at phase 1; warm roles need the sandbox probe
-first (does a long-lived `claude -p` keep the sandbox across messages).
+scratchpad only. Roles get this at phase 1; the sandbox probe comes first for a role
+that takes a further message while it runs (§5): does a running `claude -p` keep the
+sandbox across messages.
 
 **13.3 A failed send is a message, not a log line.** §6 already says undeliverable
 means dead-letter plus `doctor` plus a notice to the sender. Jacob's rule sharpens it:
@@ -542,7 +623,7 @@ it, ever.
 
 | service | request | what the server does | answer |
 |---|---|---|---|
-| `route` | an envelope (§2), from `hub send` or a role's final result | validates; **stamps `origin`** by reading the sender's transcript turn as `relay-gate.sh` does today; applies §3; writes the ledger row; delivers: a cold role is spawned `claude -p --agent <role>`, the dispatcher gets its inbox socket, a child node gets its server | the message id, and later the `report` that comes back the same way |
+| `route` | an envelope (§2), from `hub send` or a role's final result | validates; **stamps `origin`** by reading the sender's transcript turn as `relay-gate.sh` does today; applies §3; writes the ledger row; delivers: a role is started `claude -p --agent <role>` in its folder (§5), the dispatcher gets its inbox socket, a child node gets its server | the message id, and later the `report` that comes back the same way |
 | `check` | `{repo, scope}` where scope is `touched`, `all` or `audit`; from a PostToolUse hook, the cron audit, or a `check-request` message | runs that repo's `dev.sh check --json` (and `checks run . --json`) in a subprocess; keeps the full output in the ledger | green: a `report` to `from`. Red: one `check-failed` per finding, `ref` = check name and file:line, routed to the owner (§14.7) |
 | `hook` | a hook's JSON input, from an HTTP hook on a role, for hooks whose decision needs state: the host failure history `troubleshooting.sh` prints, `quote-words.sh`'s words, `agent-watch.sh`'s staleness, `record-session.sh`'s sockets | answers from the ledger | `additionalContext`, or a non-blocking decision |
 | `write` | `{tool, verb, args}` from a read-only role (§13.2) | looks the tool up in the registry: its CLI path and its declared verbs; refuses a verb not declared; runs the CLI | the CLI's own stdout and exit as a `report`; the server adds nothing |
@@ -564,7 +645,7 @@ PLAN-group-servers.md's per-group server **is** this process's `check` and `hook
 services (its `/touched`, `/stop`, `/audit` endpoints become `check` requests), not a
 second program; PLAN-auto-relay.md's `relay-gate.sh` stamping and `peer-cap.sh`'s budget
 become the `route` service's stamping and loop control; the `write` service is new, from
-§13. Build order: §10 phase 1 builds `route` and `write` for cold roles; `check` and
+§13. Build order: §10 phase 1 builds `route` and `write` for the roles it starts; `check` and
 `hook` arrive as services of the same process in PLAN-group-servers.md phase 1, piloted
 on site-scrapers.
 
@@ -957,6 +1038,71 @@ writes." The per-repo part is not prose: it is the `store-concurrency` gate.
 8. **`dispatcher`:** the directive paragraph into CLAUDE.md "Parallelism".
    track: needs-yes PLAN-routing-tree.md §17
 
+### 17.2 Service-level dispatchers: what blocks them (Jacob, 2026-10-19)
+
+> "I would also like to try to implement the parallelism via service level
+> dispatchers. What is blocking us from doing that?"
+
+**Three things, in the order of who holds them.**
+
+1. **One line in `.claude/settings.json`** (Jacob's file, line 348:
+   `"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1"`, mirrored by `.claude/wiring.json`
+   line 13). Claude Code's default lets a subagent spawn subagents of its own, up to
+   three layers below the main conversation; at the limit it withholds the `Agent`
+   tool (https://code.claude.com/docs/en/sub-agents#let-subagents-spawn-their-own-subagents,
+   kb copy fetched 2026-10-09). The line sets one layer, so no roster agent can spawn,
+   and a service-level dispatcher that is an agent is impossible by that setting alone.
+   That is why §17.1 made the sub-dispatch a table. Setting `2` is Jacob's step, and
+   the hooks in item 3 must be ready first.
+2. **§17 is unanswered** (dt row "§17 fan-out", tl-364). Until its modes and classes
+   exist, `dispatch-guard.sh` refuses the second dispatch into a folder whatever it
+   does, so a service-level dispatcher could start nothing in parallel inside its own
+   folder either. §17 steps 1, 5 and 7 come before either path below.
+3. **The harness assumes one layer.** `dispatch-guard.sh` reads every spawn as the
+   dispatcher's ("Subagents pass"); `quote-words.sh`, `agent-watch.sh`,
+   `record-session.sh` and the `dispatches` ledger know one parent. At depth 2 a nested
+   spawn would most likely pass the guard unseen, the state CLAUDE.md calls the worst
+   (unverified: `test-dispatch-guard.sh` has no depth-2 case; probe: depth 2 in a
+   scratch copy of the settings, one nested spawn, the ledger read).
+
+**Two paths, and the one this plan took.**
+
+| | the table (§17.1, as written) | nested agents |
+|---|---|---|
+| what fans out | the dispatcher's own message with N `Agent` calls, which run at once; later the hub (D3), cron, a promise combinator | a `<service>-dispatcher` roster agent per service that spawns its own runs |
+| what it needs | §17; no settings change | §17, depth 2 (Jacob), the guard and four hooks at depth 2 (harness), one agent definition per service (manifest) |
+| cost per fan-out | the dispatcher's turn | one more start context per service (about 30k tokens; `omitClaudeMd` and `maxTurns` cut it, §21 row 5), and the reports stack: N runs report to it, it reports to the dispatcher |
+| what Jacob sees | N lines in `dispatches` | a tree; `dispatches` must learn depth |
+| judgment inside the fan-out | none: the split is the brief's (one `run` per question, per recipe set, per plan) | the sub-dispatcher splits the task itself |
+
+The table gives the parallelism Jacob described ("spinning up as many site scraping
+agents as necessary"): N scraper processes under one `run`, N research `run`
+dispatches from one dispatcher message, writers one per folder. Nested agents add a
+second layer of judgment and cost, and earn it only where the split needs a model: a
+research question that becomes sub-questions only after reading, an audit whose row
+set is unknown until a first pass. Neither case is in the ledger today.
+
+**Recommendation:** the table now (answer §17 "declare"), and nested agents as a §17
+follow-on when a `run` dispatch is seen splitting its own work in a report, which
+`dispatches` shows as one dispatch doing N jobs in sequence.
+
+**Gates (nested path only):** at depth 2 a nested spawn is refused unless its parent's
+dispatch is `run` or `read` (test); a nested writer into a folder is refused like any
+second writer (test); `dispatches` shows the parent of each nested spawn (test);
+`quote-words.sh` gives a nested spawn its parent's words (test); `tokens --agents`
+sums a nested spawn under its parent (test).
+
+### Steps
+
+1. **`harness`:** nothing until the decision; then depth `2` in `wiring.json` (the
+   settings line stays Jacob's), the guard's nested rule, the four hooks and
+   `dispatches` at depth 2, the tests above; after §17 steps 1, 5 and 7.
+   track: needs-yes PLAN-routing-tree.md §17.2
+2. **`harness`:** the manifest's `<service>-dispatcher` definitions for the services
+   whose verbs are `run` (`site-scrapers`, `research`, `audit`), with `omitClaudeMd`,
+   `maxTurns` and a `model_reason` if not Opus; after 1.
+   track: needs-yes PLAN-routing-tree.md §17.2
+
 ## 18. The audit agent (Jacob, 2026-10-19)
 
 > "I also think we need to have programatic audits as well as an auditing agent, that
@@ -1063,7 +1209,7 @@ rotated reply's row stays (test); `wiring.json` names the hook for both windows 
 2. **`hub`:** the inbox view in `PLAN-hub.md`, from this section, added to the brief's
    inputs. track: TODO.md "Replies are records"
 
-## 20. Warm roles: the agent that owns the knowledge, visible and addressable (Jacob, 2026-10-19)
+## 20. Service roles: the agent that owns the knowledge, visible and addressable (Jacob, 2026-10-19)
 
 > "I wonder if de-abstracting sub agents might be better, as this would allow us to
 > more easily view what's going on/interact directly if I want to talk to an agent."
@@ -1076,74 +1222,65 @@ rotated reply's row stays (test); `wiring.json` names the hook for both windows 
 
 **Right, and it is one thing, not two.** A role the hub drives (brief item 11, D3:
 "drive") is a de-abstracted agent: a `claude` process of its own, started in its
-folder, that stays up between requests. Because it stays up, it holds its service's
-knowledge once (its CLAUDE.md, `cli.json`, the CLI's help, the store's shape) and
-answers each request from that, so nobody relearns it: the planner that ran `todo
-decisions -h` on 2026-10-19 to record three answers would instead send "dt-3: 2)
-refresh 3) fable 4) drive" to the `todo` role. Because it is a process, Jacob can see
-it (its window or transcript) and talk to it (`SendMessage` by name, or type in its
-window). Today's subagent has neither property: it starts cold (`tokens --agents`:
-every roster agent starts near 30k tokens, half of it CLAUDE.md), does one job, and
-reports ten lines into the dispatcher's context.
+folder for each request (PLAN-hub-review.md §5 D1, 2026-10-09: no role is kept
+between tasks; §24: how long it lives is not a design axis). Its knowledge is on disk
+and loads at start: its CLAUDE.md, `cli.json`, the CLI's help, the store's shape, and
+the records of earlier replies (§19). Nobody relearns it because the request goes to
+the owner: the planner that ran `todo decisions -h` on 2026-10-19 to record three
+answers would instead send "dt-3: 2) refresh 3) fable 4) drive" to the `todo` role.
+Because it is a process, Jacob can see it while it runs (its line on the hub page, a
+tab with its transcript) and talk to it (a message while it runs, by the stream-json
+input §5 names; the two pair windows stay what they are). Today's subagent has neither
+property: it runs inside the dispatcher's process, unseen, and reports ten lines into
+the dispatcher's context.
 
 **The rule.** A request carries facts, never procedure: what to record, what to
 answer, what to check. The role that owns the service runs its CLI. This is "one way
 in" (PLAN-services.md §3) applied to agents as it is to code: the store's CLI is its
 only writer, and the service's role is the only thing that runs that CLI on another
 role's behalf. The planner's own CLI use (the top-level todo store) ends when the
-`todo` role is warm; until then it stays, and the planner reads no `-h`: the commands
+hub routes to the `todo` owner (§10 phase 1); until then it stays, and the planner
+reads no `-h`: the commands
 it needs, verified, are in `PLANNER-HANDOFF.md`.
 
-**Warm or cold is decided by the knowledge, not the task.** Warm when the knowledge
-is stable and reused: a service's CLI and store (`todo`, `research`, the `checks`
-ledger, `usage`), a folder's code for its owner. Cold and siloed when the knowledge
-is the job's input: an audit of one plan, a migration check of one store (§21.1). A
-warm role whose knowledge changed is wrong, so it restarts when its folder's HEAD
-moves or its context passes `roles.context_budget` (brief item 11's rebuild).
-
-**Space against time is measured, not argued.** A warm role keeps context between
-requests; a cold dispatch pays the start again. Which is cheaper per request is a
-number per role: `tokens --agents --roles` reports tokens per request warm against
-cold, and lines printed for Jacob per request, from the ledgers. A role stays warm
-only while its number says so; the order below is a hypothesis the numbers confirm.
-
-**What it costs.** Nothing while idle. Per request, the message and the turn; the
-start context is paid once per restart instead of once per dispatch.
+**One kind of role.** Which agent a request goes to is decided by the knowledge: the
+service's owner for its CLI and store (`todo`, `research`, the `checks` ledger,
+`usage`), the folder's owner for its code, `audit` with a brief cut to one plan or one
+store (§21.1). How long the process lives is not a design axis (§24): each request
+starts the owner in its folder, and neither a kept nor a fresh process is called
+cheaper (Jacob's determination of 2026-10-19, not measured again here).
+`tokens --agents --roles` reports tokens, and lines printed for Jacob, per request by
+role, from the ledgers; that number serves §21's objective, not a choice between
+lifetimes.
 
 **What moves.** The folder lock stays where it is until the hub's write lease (§6)
-exists, so the first warm roles are the ones that write only records (`mode: run`,
-§17): `todo`, `research`, the `checks` ledger. Folder writers follow the lease. A
-role window started inside its folder runs that folder's hooks and sees no roster
+exists, so the first roles routed this way are the ones that write only records
+(`mode: run`, §17): `todo`, `research`, the `checks` ledger. Folder writers follow the
+lease. A role started inside its folder runs that folder's hooks and sees no roster
 definitions, so it cannot spawn roster agents: the silo is a fact of where it starts.
 `peer-cap.sh`'s two-message rule is for the two windows; a role gets a daily request
 budget (`roles.daily_budget`) instead, and its requests are ledger rows like any
 dispatch.
 
 **Visible on demand, not always.** §21's objective asks for less on screen, so a
-role's window is a tab Jacob opens, and the hub's page shows one line per role: name,
-state, the request it is on, its last reply's key.
+role's transcript is a tab Jacob opens, while it runs or after, and the hub's page
+shows one line per role: name, state, the request it is on, its last reply's key.
 
-**Gates:** a request to a warm role appears in the ledger with mode and class; the
-role's reply is a record (§19) and reaches the sender; a role whose HEAD moved is
-restarted before its next request (test: commit in the folder, send, the role's start
-time is later); a role never spawns a roster agent (test: it has none to spawn);
-`tokens --agents --roles` reports per-request tokens warm against cold.
+**Gates:** a request appears in the ledger with mode and class before its role starts;
+the role's reply is a record (§19) and reaches the sender; a role never spawns a roster
+agent (test: it has none to spawn); `tokens --agents --roles` reports tokens and lines
+per request by role; no field, flag, column or sentence names a role's lifetime (the
+`banned-terms` gate, §24).
 
 ### Steps
 
-1. **`research`:** the probe of brief item 11, with the measurement: one `todo answer`
-   request through a warm `todo` session (`claude -p` stream-json, or a pair window)
-   against one cold dispatch, tokens for each.
+1. **`hub`:** PLAN-hub.md: one kind of role, started per request in its folder (D1),
+   visible while it runs (its page line, a transcript tab) and reachable while it runs
+   (the stream-json input §5 names); the order of services: record services (`todo`,
+   `research`, `checks`), then `audit`, then folder writers after the lease (§6).
    track: needs-yes PLAN-routing-tree.md §20
-2. **`harness`:** `agents.sh pair --role <agent>` opens a roster agent as a session in
-   its folder (iTerm2, as `pair` does), recorded by `record-session.sh`, with the daily
-   budget in `peer-cap.sh`, the HEAD-moved restart, the ledger rows, and `tokens
-   --agents --roles`; `agents.sh roles` lists the open ones.
-   track: needs-yes PLAN-routing-tree.md §20
-3. **`dispatcher`:** sends a `run` request to an open role (`agents.sh roles`) and
-   spawns only when none is open. track: needs-yes PLAN-routing-tree.md §20
-4. **`hub`:** PLAN-hub.md orders the roles: record services, then `audit`, then folder
-   writers after the lease; the role line on its page.
+2. **`harness`:** `tokens --agents --roles`: tokens, and lines printed for Jacob, per
+   request by role, from `dispatches` and the reply ledger (§19).
    track: needs-yes PLAN-routing-tree.md §20
 
 ## 21. The objective, and what it changes (Jacob, 2026-10-19)
@@ -1159,6 +1296,10 @@ on, and did he read a line he did not need?* Two numbers, both from stores: repl
 not marked read after N days (§19) and decisions open past their table (`todo
 decisions`), against lines printed for him per day (the reply ledger's `bytes`, the
 hooks' notices).
+
+**A second fixed point** (D4, 2026-10-19): the hub is a UI over services that exist
+without it. It holds no store and no question of its own; every view reads a service's
+CLI, and the hub's absence loses a view, never a record.
 
 **What already serves it:** §19 (every reply a record, with read marks); §13 and
 PLAN-question-routing.md (questions typed and routed, decisions as one table); brief
@@ -1176,7 +1317,7 @@ summary (N results, one table).
 | 5 | **The objective review of every plan,** by siloed `audit` dispatches (§21.1): one plan each, filing proposals as records; the planner reads the render, never the plans again | `audit`, after §18 steps 1-2 | each dispatch's start context under `audit.start_budget` (12k), by `tokens --agents` |
 | 6 | **The dispatcher's reply after a fan-out is one table** (§17.1): k of N, failures named, each with its report key | §17 step 7 | a fixture of three reports renders three rows |
 
-### 21.1 Silos: cold, scoped audits beside the warm roles
+### 21.1 Silos: audits with small briefs
 
 > "We may need audit subagents for tasks like this in the future. Migrating data, but
 > also making changes that subscribe appropriately to our design and architecture
@@ -1366,3 +1507,212 @@ set, and a seam goes live only with that number in this section.
    live. track: needs-yes PLAN-routing-tree.md §23
 5. **`todo`:** seam 1 behind `stale-plans --decide`, off by default until step 4's
    number. track: needs-yes PLAN-routing-tree.md §23
+
+## 24. The temperature axis leaves every project (Jacob, 2026-10-19)
+
+> "We have determined that cold and hot doesn't matter, please figure out what we need
+> to do to scrub it from all projects, including the hub and context cleaner." "There
+> is no benefit to cold vs warm so we need to scrub this from documents."
+
+**Two meanings, one axis, both go.** The words carried two ideas here. The first is
+prompt-cache warmth: a request's context as "warm" or "cold" against the cache, the
+status-line segment, the cold-cache prompt guard, the cache TTL in `transcripts last`,
+cache multipliers in cost models. Jacob has answered it four times (memory: never raise
+it again); it leaves. The second is role temperature: a "cold role" started per message
+against a "warm role" kept alive, with probes and token comparisons to choose between
+them (§5, §10 phases 1 and 5, §13, the hub brief, PLAN-agent-groups.md §7, and §20 as
+first written). That leaves too: one kind of role (§20). It had left once before:
+Jacob dropped kept-alive roles on 2026-10-09 (PLAN-hub-review.md §5 D1; `warm-roles`
+retired in checks' `gates.json` that day) and the cold-cache guard on 2026-10-13. The
+gate entry retired, the plan text did not, so on 2026-10-19 the planner re-derived the
+axis from §5. That is the case for the gate below.
+
+**The replacement.** A role is the roster agent for a service or folder, started by
+the hub in its folder for each request (§20). How long it lives is not a design axis,
+and neither lifetime is called cheaper: a kept session re-sends its history each turn,
+a fresh one pays its start, and Jacob has determined that nothing is gained between
+them; it is not measured again. Costs are tokens at list price (the manifest's prices
+table), never cache multipliers; the API's own `cache_*_input_tokens` counts stay
+wherever tokens are summed, because they are tokens. A sentence that distinguishes
+roles by lifetime, or gates a design on a token comparison between lifetimes, is
+deleted, or rewritten to name the owner the request goes to. A quotation of Jacob is
+never edited. A record (a research document, a review) is not rewritten: it says what
+was true when it was written; the decision below says whether it gets a retirement
+line.
+
+**Inventory** (grep of `warm|cold|prompt_cache|cache ttl|cache-warm` on 2026-10-19,
+hits per file; the kb's docs mirror, `docs/inputs/` copies, `todo-history.json` and
+archives excluded):
+
+| owner | where | hits | action |
+|---|---|---|---|
+| `deep-work`, for the planner (step 1) | PLAN-routing-tree.md §5, §10, §11 item 2, §13 (§20, §21.1, §10.1 and §24 as they stand on 2026-10-19 are kept) | 28 | §5's two modes become one, stream-json kept as how a running role takes a message; phase 5 deleted, phase 1 and principle 2 restated to the §20 rule; §11 item 2 (Jacob's yes of 2026-10-03) rewritten as "one kind of role", marked superseded by D1 on 2026-10-09 and by §20, its old words left to the store's history |
+| | PLAN-agent-groups.md §2, §7 | 11 | the cost model at list price; §7 to the §20 rule |
+| | PLAN-context-hygiene.md §4-§6 (§0 is Jacob's words: untouched) | 11 | the status-line segment, the guard and `measure`'s cache fields leave the plan; §6 decision 3 closed as withdrawn |
+| | PLAN-cloud-offload.md:20, PLAN-interim-rules.md:26, PLAN-tools-folder.md, PRACTICES-rows.md | 1-2 each | the sentence each |
+| | top-level CLAUDE.md: the transcripts and context-hygiene rows | 2 | the two descriptions (top-level prose, which the dispatcher hands on) |
+| | PLAN-hub-review.md; RESEARCH-compliance.md, RESEARCH-workspace-audit.md, RESEARCH-registry-drafts.md, RESEARCH-gateway-docs.md | 21; 1-4 each | records: the decision below |
+| planner | the top store (`todo.json`, rendered `TODO.md`); PLANNER-HANDOFF.md; the memory files | 8; 1; 2 | done 2026-10-19: tl-365 closed rejected, the records in tl-137, tl-165, tl-169 left as evidence; the handoff's one sentence; both memories |
+| `context-hygiene` | `hygienelib/guard.py` and `tests/test_guard.py`; `hygienelib/statusline.py` and its test; `measure.py`; `hygiene.json`; `hooks/statusline.sh`; `CLAUDE.md`; its store and `TODO.md` (ch-70, the §6 decision 3 items) | 52 | the guard component deleted, the segment and the fields removed with their tests, the plan row in `README`; ch-70 closed rejected |
+| nobody (a jacob-step in the top store) | `scriptingTools/context-hygiene/research/` (six `.jq` files: `carry`, `compactsim`, `compose`, `missscan`, `profile`, `subagent`, dated 2026-10-01, before the tool moved to `tools/`) | 1 | deleted by Jacob, or adopted by `context-hygiene` on his word |
+| `transcripts` | `lib/context.jq`, `lib/agent-tokens.jq`, `lib/last.jq`, their tests, `CLAUDE.md` | 15 | TTL, expiry and warmth fields removed; `last` keeps the context size; the API's `cache_*_input_tokens` counts stay |
+| `harness` | `.claude/lib/agent-tokens.jq` (a copy of transcripts'), `test-agents/19-tokens.sh`, the manifest's context-hygiene description (it renders `agents/context-hygiene.md`) | 8 | after transcripts; `gen` |
+| `checks` | `gates.json` | 2 | the entries, then the gate below |
+| `site-scrapers`; `job-import-scripts` | `test/steps.test.js`, `README.md`, `lib/failureTypes.js`; `import_hiringcafe_jobs.py` | 1 each | other senses of the words, most likely; the owner confirms in one line, no change expected |
+| `hub` | the top-level PLAN-hub-brief.md (the original: its `docs/inputs/README.md` says the brief is edited there; hub's copy was identical at 13:23 on 2026-10-19) lines 30, 89-90, 109, 173; then `docs/inputs/` | 5 | with Dispatch 121's edits: the replacement, and line 30's dt-5 rows to the current `todo decisions` table; then `./dev.sh refresh` after step 1 |
+
+**The gate, so it does not come back:** `checks` gains `banned-terms`, a list in
+`vocab.json` of patterns with a reason and a date, the first entry this axis
+(`prompt_cache`, `cache ttl`, `cache-warm`, `cold-cache`, `cold start`, `warm role`,
+`cold role`, `hot cache`), an allowlist for records, stores and mirrors (`RESEARCH-*.md`,
+`*-review.md`, `todo.json` and its rendered `TODO.md`, `todo-history.json`,
+`*-records.json`, `research.json`, the kb mirror, archives), a passing and a failing
+fixture; `checks all` fails on a hit, and `agents.sh check` runs the same check over the
+top-level `*.md` (harness, step 4), since the top level is no repo. The allowlist also
+names this section (the ban's own definition, by file and heading) and every quotation
+line (`> `), because Jacob's words are never edited. A hit in another sense of a word
+gets a dated allow entry naming the file, not a wider pattern. A rule restated four
+times is a hook, not a rule.
+
+### Steps
+
+1. **`deep-work`:** the top-level documents in the inventory, live documents only (the
+   records wait for the decision), with the replacement above; PLAN-routing-tree.md's
+   §20, §21.1, §10.1 and §24 as they stand on 2026-10-19 are kept; one report naming
+   each file and what changed, and no other edit.
+   track: TODO.md "Scrub the temperature axis"
+2. **`context-hygiene`:** its row. track: TODO.md "Scrub the temperature axis"
+3. **`transcripts`:** its row. track: TODO.md "Scrub the temperature axis"
+4. **`harness`:** its row, after step 3. track: TODO.md "Scrub the temperature axis"
+5. **`checks`:** its row and the `banned-terms` gate with its fixtures.
+   track: TODO.md "Scrub the temperature axis"
+6. **`hub`:** the brief's five hits at the top-level original, with 121; `./dev.sh
+   refresh` after step 1. track: TODO.md "Scrub the temperature axis"
+7. **`site-scrapers`:** its three hits, one line in its report.
+   track: TODO.md "Scrub the temperature axis"
+8. **`job-import-scripts`:** its one hit, one line in its report.
+   track: TODO.md "Scrub the temperature axis"
+
+## 25. The release job: dispatch when usage allows (Jacob, 2026-10-19)
+
+> "Please write a chron-job script that can determine if there are todo items that
+> [are] not blocked and don't require my intervention, if and when the usage limit will
+> reset. If there will be available usage it will run the pair with the prompt asking
+> to release held unblocked prompts."
+
+**What exists.** `todo ready` lists a repo's dispatchable items (open, not blocked,
+not waiting on Jacob). `usage gate <tokens>` says whether a job fits before the reset
+and exits 1 with "hold until <time>" when it does not; `usage status` at 19:05 on
+2026-10-19 printed the 5h window at 11% resetting 19:30 and the 7d window at 36%
+resetting Thursday 13:00, and its store gate asks Jacob for `usage init`. `agents.sh
+pair` opens the two windows and `agents.sh run <role>` is one window's launcher.
+chron.py installs cron lines, `./dev.sh try` first. §18 step 4 is the same shape for
+the nightly audit, under `usage gate`. The dispatcher holds auto-relays past
+`pair.relay_budget` until Jacob's next prompt (`peer-cap.sh`) and holds the dispatch
+lines it has not spawned yet.
+
+**The job: `agents.sh release [--dry-run]`** (harness), one run per cron tick:
+1. **Ready?** `todo ready --json` in every repo that `services.json` lists (todo: the
+   `--json` form and a workspace form, if missing; a report from here). N items. N = 0
+   prints "nothing ready" and exits 0 with no process started.
+2. **Room?** `usage gate` for `min(N, fanout.max_run)` dispatches at the median from
+   `tokens --agents`. A hold prints the time and exits 0; the next tick asks again.
+3. **Release.** If the pair is open (`record-session.sh`'s socket answers), the prompt
+   goes to the dispatcher's inbox by the auto-relay path, stamped `origin: cron`. If
+   not, the pair is started with the prompt as its first message. The prompt is fixed
+   text in the manifest: "release: dispatch every `todo ready` item in order, within
+   `usage gate`, and report what you started"; never Jacob's words.
+4. **One row per tick** in `~/.claude/usage/releases.jsonl`: time, N, the gate's
+   answer, the action; `agents.sh releases` prints them.
+
+**Where cron meets the screen.** Opening iTerm2 is an Apple event. From cron, macOS
+asks nobody for the Automation permission, so `osascript` may be refused with no dialog
+(unverified; probe: a cron line running `agents.sh pair --dry-run`, then one real line
+at a chosen minute, watched once). If it is refused, the release runs the dispatcher
+without a window (`claude -p --agent dispatcher`, the hub's own path, §5) and prints
+the transcript's path in its row, which Jacob opens as a tab. The windows stay the
+first try, as asked.
+
+**A cron prompt is never Jacob's.** `quote-words.sh` gives a spawn from a release the
+relay note, not "Jacob's words"; `peer-cap.sh` counts it as a peer message; it carries
+no approval and needs none: `todo ready` lists only items already approved and
+unblocked.
+
+**Cadence.** Hourly. The 5h window resets at a time `usage status` prints, so an
+hourly tick releases within the hour of a reset and costs no tokens while it holds; a
+five-minute line was called extreme (§10.2). A one-shot line at the reset minute is
+chron.py's to add if an hour proves slow.
+
+**Gates:** `--dry-run` prints the three answers and starts nothing (test); N = 0
+starts nothing (test); a hold starts nothing (test); the release row is written on
+every exit (test); the prompt in a release spawn is the manifest's text (test);
+`quote-words.sh` shows a relay note for it (test); the cron line is installed through
+chron.py only, under `usage gate`, as §18 step 4.
+
+### Steps
+
+1. **`harness`:** `agents.sh release` and `releases`, the manifest's prompt text, the
+   Apple-event probe with its result written into this section, the fallback without a
+   window, the tests above. track: TODO.md "The release job"
+2. **`todo`:** `ready --json` and the workspace form, if missing; reported from here.
+   track: TODO.md "The release job"
+3. **`cron-scheduler`:** the hourly line after `./dev.sh try`, after step 1.
+   track: TODO.md "The release job"
+
+## 26. The queue: everything ready runs, in this order (Jacob, 2026-10-19)
+
+> "Also are there no pending todos that have been dispatched other than harness and
+> todo" ... "Please queue them so they can run continuously and prioritize harness
+> parallelism in checks when it finishes as the 1-3 hour testing situation seems
+> untenable."
+
+**The state he asked about** (`agents.sh dispatches --open`, 2026-10-19 evening): two
+dispatches open, `harness` on tl-318 (waiting on its own check) and `todo` on tl-383
+(the SQLite store move); every other dispatch of the day ended; 41 items dispatchable
+(`todo -C . ready`) and 11 more held back only for lacking a size. Nothing else was
+running because a dispatch starts only from a line, and the lines had run out.
+
+**The rules of the queue** (this section; §25 is the job that will do this without a
+hand):
+- **Order is priority.** The Dispatch lines of 2026-10-19 (122 onward) are the queue in
+  order; the list below is the same order by item. A line with an "after" waits for
+  it; everything else starts when a slot frees.
+- **Four open dispatches at a time, one per folder.** Four is the number §17 names as
+  `fanout.max_run`, used here as the queue's limit and not as §17's gate, which stays
+  needs-yes (tl-364). Two heavy checks never run at once (the parallelism rule: a
+  repeat under load is no evidence; hx-104 saw a 26-hour `agents.sh check` at load
+  25-30).
+- **Harness first.** When tl-318 ends, the harness's next item is
+  PLAN-check-progress.md §10 step 3, the `--jobs` pool for its own runner: the 1-3
+  hour serial `test-agents.sh` is what Jacob called untenable. Then §25 step 1, the
+  release job, which replaces this hand-queue.
+- **The store is the source.** The list below is `ready` as of 2026-10-19; when it is
+  exhausted, `todo -C . ready` is the queue, and §25's job reads it the same way.
+- **Lines past the relay budget** (`pair.relay_budget`, 10) are held and delivered
+  after Jacob's next prompt in the dispatcher window; one word there releases them.
+
+**The list, by owner, in order** (ids from the top-level store's `ready` and from the
+owners' stores through it):
+
+| order | owner | items |
+|---|---|---|
+| 1 | harness | PLAN-check-progress.md §10 step 3 (tl-287's harness half); §25 step 1; TODO.md "The audit agent" (tl-350); §21 step 2; §22 steps 1-2; §24 step 4 |
+| 2 | todo | §25 step 2; tl-378 (re-pins, left open by the 13:05 dispatch); §22 step 4; td-59, td-60, td-61, td-62, td-64, td-67; td-63 and td-73 sized first; all after tl-383 ends |
+| 3 | cron-scheduler | §25 step 3, after §25 step 1 |
+| 4 | each owner with a parts file | PLAN-check-progress.md §10 step 2 (mark `uses`, the `--jobs 1` comparison, timings) |
+| 5 | context-hygiene | tl-373 (re-pin ch-65, left open by the 12:58 dispatch); §21 step 3; §24 step 2; ch-5, ch-49, ch-50, ch-58, ch-59, ch-60, ch-67, ch-69, ch-70, ch-73 |
+| 6 | audit (after tl-350) | §21 step 1 |
+| 7 | hub | §21 step 4; §24 step 6 (with line 121); §10.3 step 1 (with line 118); TODO.md "Roster settings page" (tl-310); hb-21, hb-22, hb-25 sized first |
+| 8 | wizard | §22 step 3 |
+| 9 | research | §23 steps 1-2; PLAN-text-channel.md §6 step 1; PLAN-sitegen.md §8 step 1; PLAN-bookstore-venues.md §7 steps 1-2; TODO.md "Ownership gates audit" (tl-303); TODO.md "Scraping frameworks assessed" (tl-352) |
+| 10 | deep-work | §24 step 1; PLAN-services.md §3 step 7.3 (the Practices backfill, su-91) |
+| 11 | transcripts, checks, site-scrapers, job-import-scripts | §24 steps 3, 5, 7, 8 |
+| 12 | setup | tl-401 (the resolver reads `.rules` only); the required-heading flip after the backfill; su-74, su-75, su-99; su-86, su-93, su-94, su-95 sized first |
+| 13 | email-tools | PLAN-gmail-tools.md §6 step 1 |
+| 14 | the plan items of the top-level store | TODO.md "Static and dynamic stores" (tl-263), "Job sourcing as pipes" (tl-270), "Fit and the tool registry" (tl-280), "Assurance ledger" (tl-281), "Outside tools assessed" (tl-282), "Every tool call routed" (tl-286), "Watched employer pages" (tl-289), "Fable where allowed" (tl-349), "Replies are records" (tl-351): each to the owners its brief names |
+| 15 | data-bridge | tl-315 (PLAN-job-sourcing.md §3 step 7.2) |
+| 16 | knowledge-base | kb-55, kb-56 sized, then run |
+| 17 | income | inc-68 |
+
+**Not in the queue:** anything under needs-yes (`todo decisions`), the cloud pass
+(§10.3), and Jacob's own steps.
