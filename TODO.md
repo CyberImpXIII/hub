@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (22 open, 5 closed in todo-history.json; seal f6bb97894832): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (25 open, 5 closed in todo-history.json; seal 9cc14d3f4446): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -73,6 +73,19 @@
   2026-10-19 (tl-432) re-run: `git merge-tree --write-tree --name-only main plan/hub` (main bda5836, plan/hub 63cf780) -> 10 CONFLICTs: TODO.md, CLAUDE.md (1 hunk), PLAN-hub-brief.md (2), devtools/hubcheck.py (1), docs/inputs/{PLAN-check-progress,PLAN-repo-setup,PLAN-todo-tool(3),README,claudeTest-CLAUDE(2)}.md, docs/inputs/SHA256SUMS (2). Already 5 at 762a4fc (the head routing-tree §10.3 read), 2 at 790d4bd/392de0a, 0 at 10589a4; tl-406 42b8eb7 (full inputs refresh) took it to 9, 614b52b (leaks fix, same fix as plan/hub 995bc61) to 10. Jacob`s yes was "as long as the conflict has been noted correctly": it was not, so no merge and no H1a-0. Every non-TODO hunk reads as take-main: main holds the newer inputs refresh and SHA256SUMS, the same leaks fix, brief questions 13-16 (plan/hub side empty), CLAUDE.md newer rows. Needs Jacob: merge with take-main on those nine files, yes or no.
   · status: waiting-jacob
   · waits on: approval
+  · added: 2026-10-19
+
+- **hb-28 · Roster settings page: may the hub run harness's settings write verb (Decision 18), and is it one all-or-nothing verb (19)**
+  2026-10-19 (tl-310): PLAN-hub.md §15 on plan/hub (not on main, hence the routing-tree pointer), Decision 18. harness .claude/cli.json lists set under not_verbs ('a server caller would carry no agent identity ... whether the hub may run it is an open decision'); harness TODO.md names the planner for it. Decision 19 rides with it: the four steps (set, gen, check, .claude/ commit) as one all-or-nothing harness verb; RS costs 60-110k + 1-2u harness on top of Decision 9.
+  · status: waiting-jacob
+  · parent: tl-310
+  · waits on: approval
+  · pointer: PLAN-routing-tree.md §15
+  · hinges on: probe P-RS1: whether a sandboxed role can read HUB_TOKEN (Read, Bash cat, store read); if it can, the server cannot tell Jacob's click from a role's POST. Recommended shape: yes once P-RS1 passes; until then a read-only page offering each row's agents.sh set line for Jacob to run with !
+  · recommend: yes
+  · work: decision
+  · size: S
+  · done when: Jacob's answer to PLAN-hub.md Decisions 18 and 19 is recorded in the table (via the planner)
   · added: 2026-10-19
 
 ## Unconfirmed suspicions
@@ -205,4 +218,21 @@
   · work: docs
   · size: S
   · done when: the planner replaced the path; ./dev.sh leaks ../../PLAN-services.md ok; brief §2 row (top-level original) and README row added; ./dev.sh refresh PLAN-services.md PLAN-hub-brief.md; ./dev.sh inputs and drift ok
+  · added: 2026-10-19
+
+- **hb-29 · Phase RS: build the roster settings panel (PLAN-hub.md §15) once V1, H1b, P-RS1 and Decision 18 allow**
+  2026-10-19 (tl-310): the hub server is not built (stage: planning) and the view (V1) comes after H3 (Decision 6), so no page can be built today. PLAN-hub.md §15 on plan/hub settles brief question 15: a view panel over a repo's declared settings.list/settings.set verbs; read half with V1 (needs harness list --json only), write half after H1b, probe P-RS1 and Decision 18; §8 row 'roster settings' holds routing-tree §15's four gates.
+  · parent: tl-310
+  · blocked by: hb-28
+  · work: code
+  · size: M
+  · done when: phase RS built: the panel lists every row harness's list --json prints and changes them only through the declared settings verb, with the §8 'roster settings' gates green
+  · added: 2026-10-19
+
+- **hb-30 · Reported to harness: list --json, a models list, tokens --json and an all-or-nothing settings verb, for the settings page (PLAN-hub.md §15)**
+  2026-10-19 (tl-310), from reading .claude/agents.sh cmd_list/cmd_set and .claude/cli.json: list prints text only, without per-key source (own|coders), model_reason, maxTurns, a coders row, or a models list (manifest-schema.jq accepts a pattern; routing-tree §15 assumes 'the manifest's list of known models', which does not exist); tokens --agents has no --json in its usage text; set stops after gen and prints 'next: check, then commit', so a check refusal leaves the manifest changed. To harness (its store, .claude/todo.json, is not in todo's scan, so claudeTest is named), through the dispatcher in tl-310's report.
+  · parent: tl-310
+  · work: code
+  · size: M
+  · done when: harness has list --json in PLAN-hub.md §15's shape (coders row, from per key, settable, models), tokens --agents --json, and one all-or-nothing settings verb (set, gen, check, .claude/ commit; rollback on a check refusal) with tests; or harness answered no with a reason
   · added: 2026-10-19
