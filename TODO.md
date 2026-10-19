@@ -1,33 +1,49 @@
+<!-- rendered by todo from todo.json (22 open, 2 closed in todo-history.json; seal d13ce8ade1af): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
 
-- **The leak audit's terms are three shapes** (email, home-folder path, phone); the
+- **hb-1 · The leak audit's terms are three shapes**
+  (email, home-folder path, phone); the
   credential half is tools/checks `no-secrets`. Names of people and of private repos
   are not caught: `claudeTest-CLAUDE.md` names private repos, as it did in the first
   copy. Unconfirmed whether that matters for a public repo; Jacob's call if it does.
+  · added: 2026-10-19
+
+- **hb-22 · test_parts goes red on tools/checks' uncommitted runner edits**
+  2026-10-19 13:00, tl-356: commit.sh's check failed test.parts (test_the_runner_copy_agrees_with_its_source) while tools/checks had checkslib/parts.py modified and uncommitted (mtime 12:59; adds --jobs, 1.3.0 -> next). Nothing in hub changed. hooks-installed treats an uncommitted source as UNCHECKED; this test compares with the working tree, so another owner's mid-edit blocks every hub commit.
+  · work: test
+  · done when: the test compares with tools/checks' committed runner (git show HEAD:checkslib/parts.py) or is UNCHECKED while the source is uncommitted; a fixture shows each
+  · added: 2026-10-19
 
 ## Open decisions
 
-- **The git-side gates are off** (setup 2026-10-05): `.githooks/{pre-commit,commit-msg,
+- **hb-2 · The git-side gates are off**
+  (setup 2026-10-05): `.githooks/{pre-commit,commit-msg,
   check-pass}` are installed, but `core.hooksPath` is unset and `githooks.checks` has no
   checks CLI (setup reports `needs-jacob`). The hook wiring itself is done: Jacob's
   applied proposal, `cmp`-equal to `settings.proposed.json`, committed 10589a4
   (2026-10-13, Q6b).
-- **TODO import (Q7's second half) not done**: `todo import TODO.md --dry-run` waits on
-  todo's importer fix (dispatcher, 2026-10-13). This file stays hand-kept until then.
-- **When to refresh `docs/inputs/` again.** `./dev.sh check` prints drift as a note,
+  · added: 2026-10-19
+
+- **hb-3 · When to refresh `docs/inputs/` again.**
+  `./dev.sh check` prints drift as a note,
   never a fail: the copies are snapshots, and a top-level plan edit must not block a
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
+  · added: 2026-10-19
 
-- **`plan/hub` carries the §5.11 pass and H1a-0** (2026-10-13): the cloud pass applied
+- **hb-4 · `plan/hub` carries the §5.11 pass and H1a-0**
+  (2026-10-13): the cloud pass applied
   D1-D4, 5.5, D9 and answered brief §4 questions 11-12 (§11, §12, Decisions 14-16);
   the local pass (6d2b3f6) added slice H1a-0 "the write gate" before H1a-1
   (PLAN-services.md §3 steps 3, 7), `roles.<r>.writes`, §8 "write gate", Decision 17,
   and re-costed §9 to 1.7-2.5M (58-87u). Decisions 9 and 14-17 await Jacob, via the
   planner. PLAN-context-hygiene.md and PLAN-services.md are still not §2 inputs or
   copies here (the planner's call; the pointer gate skips uncopied plans).
-- **Seven inputs drifted, not refreshed** (2026-10-08, `./dev.sh drift`):
+  · added: 2026-10-19
+
+- **hb-5 · Seven inputs drifted, not refreshed**
+  (2026-10-08, `./dev.sh drift`):
   claudeTest-CLAUDE.md, routing-tree, agent-groups, repo-setup, portable-env,
   usage-reporting, check-progress. Only the brief was re-copied for question 11.
   Eight on 2026-10-09: PLAN-todo-tool.md has drifted too.
@@ -36,36 +52,67 @@
   the new `./dev.sh refresh COPY...`; `./dev.sh drift` then listed eight still drifted
   (claudeTest-CLAUDE.md, agent-groups, todo-tool, cloud-offload, repo-setup,
   portable-env, usage-reporting, check-progress).
-- **Routing-tree §15 is an input; nothing in the brief's §4 asks the plan to settle
-  it** (tl-316, 2026-10-19). The §2 row names the page, so `PLAN-hub.md`'s next pass
-  reads it, but no §4 question or fixed point makes it plan the page's slice and its
-  four gates. Adding one is an edit at the top-level brief (the planner's); the
-  planner's call.
-- **`.claude/settings.json` is modified and uncommitted, not by an agent here**
+  · added: 2026-10-19
+
+- **hb-6 · Brief §4: the settings and inbox views, requested of the planner**
+  (tl-356,
+  2026-10-19, routing-tree §19 step 2). The input copy holds routing-tree §15-§19
+  (`./dev.sh refresh PLAN-routing-tree.md`), but the brief's §4 asks the plan to settle
+  neither the roster settings page (§15) nor the inbox view of replies (§19), and its
+  §2 row stops at §15. Both are edits at the top-level `PLAN-hub-brief.md`, which the
+  planner owns, so tl-356's report requested them (two §4 questions, 15 and 16, and
+  the §2 row). Next, once made: `./dev.sh refresh PLAN-hub-brief.md`, a README bullet,
+  and `./dev.sh check` (the brief's numbering and pointer gates read the new items).
+  2026-10-19: the dispatcher sent the §2/§4 edit request to the planner (relay of tl-356's report).
+  · added: 2026-10-19
+
+- **hb-7 · `.claude/settings.json` is modified and uncommitted, not by an agent here**
   (mtime 2026-10-15 20:45; +3 hook registrations: git-funnel, store-guard x2). It is
   most likely Jacob applying setup's proposal for the 790d4bd render (Own limits,
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
+  · added: 2026-10-19
 
-- **Where the brief is edited.** routing-tree §13.5 says hub owns the brief, but
+- **hb-8 · Where the brief is edited.**
+  routing-tree §13.5 says hub owns the brief, but
   `docs/inputs/README.md` makes the top-level `PLAN-hub-brief.md` its original, and
   `./dev.sh refresh` copies the original over `PLAN-hub-brief.md` here. So fixed point
   9 (2026-10-04) was written at the top-level original and refreshed in; an edit made
   only to this repo's copy would be undone by the next refresh. Hinges on whether the
   copy direction should flip for the brief (this repo the original); the planner's
   and Jacob's call, since the top level is the planner's.
+  · added: 2026-10-19
 
-- **Merging `plan/hub` into `main` conflicts in `TODO.md`, and only there** (confirmed
+- **hb-9 · Merging `plan/hub` into `main` conflicts in `TODO.md`, and only there**
+  (confirmed
   2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one
   CONFLICT, TODO.md; heads aa949b2 / e80d6b7). When to merge waits on Jacob's yes on
   PLAN-hub.md's Decisions. On the merge, take `plan/hub`'s TODO.md as the base and drop
   its own-bug entry "`./dev.sh check` counts an UNCHECKED hook test as a FAIL": fixed
   on `main` 2026-10-08 (`cmd_hooktests` returns 3; `tests/test_hubcheck.py`
   `TestHooktests`). Not re-run since `main` gained Q7 (parts) and `plan/hub` 6d2b3f6:
-re-run that merge-tree before merging.
+  re-run that merge-tree before merging. Since tl-356 (2026-10-19) `main`'s TODO.md is
+  rendered from `todo.json`: bring `plan/hub`'s entries in with `todo add`, never by
+  merging the text.
+  · added: 2026-10-19
 
-## Own limits, known
+## Unconfirmed suspicions
 
-- **The check runs in parts (Q7, 2026-10-13, PLAN-small-tasks §3/§7)**: `check.parts.json`
+- **hb-16 · Someone else ran this repo's new parts check at 00:24 on 2026-10-13**
+  (pid 86882,
+  gone by 00:26): `.progress/check.json.logs/` held a `test.hubcheck` log (44 tests, OK)
+  and an empty `hooktests` log I did not start, and my `./dev.sh test test.parts` said
+  "a run is writing the progress file now (pid 86882)". Unknown who (an agent's
+  `dev.sh check` on hub, or a shared check). Probe: `agents.sh dispatches --open` /
+  the ledger for a hub run at that time. Harmless here; two runs share one progress file.
+  · probe: `agents.sh dispatches --open` / the ledger for a hub run at that time.
+  · added: 2026-10-19
+
+## Reported to other owners
+
+## Notes
+
+- **hb-10 · The check runs in parts (Q7, 2026-10-13, PLAN-small-tasks §3/§7)**
+  : `check.parts.json`
   through `devtools/parts.py` 1.2.0 (setup's render b33b571, byte-equal to tools/checks'
   source; `tests/test_parts.py` holds that, the parts == test modules + gates both
   ways, and the wiring on a scratch copy, incl. the shared check-json and
@@ -78,79 +125,85 @@ re-run that merge-tree before merging.
   summary line says so. `--resume` skips little: five gate parts read `.`, and six are
   `always` (they read other repos or file modes). A full check under other agents'
   suites took 15-20 min on 2026-10-13 (hooktests 904 s).
-- **`checks` is red on the hooks rollout of 2026-10-13 03:40** (tools/hooks 9e9a2e3):
-  `.claude/bin/commit.sh`, `hooks/git-funnel.sh` and its test missing; `prefer-recipes.sh`,
-  its test and `lib/write-targets.sh` drift by logic; `setup tools/hub --only hooks`
-  says "--rebuild overwrites it" and settings.json lacks 3 registrations (Jacob's
-  apply). Not re-rendered here: Q6b's render (172a994) matched the source at its time,
-  and the new hooks need Jacob's settings proposal. Next: `setup tools/hub --only hooks
-  --rebuild`, then Jacob applies the proposal.
-- **Roles are the §4.1 starting set** (`gate_role` in dev.sh): inputs, plans -> docs;
+  · added: 2026-10-19
+
+- **hb-11 · Shared hook copies drift whenever tools/hooks moves on**
+  : setup leaves a logic
+  drift for the owner, so `checks` (`hooks-installed`) goes red here until someone runs
+  `setup tools/hub --only hooks --rebuild`. Last seen 2026-10-19 (tl-356):
+  `lib/ledger.sh`, `hooks/store-guard.sh` and its test, behind tools/hooks fc28e54 and
+  bdd932f (2026-10-13); rebuilt, and `./dev.sh test checks` went from FAIL to ok. No
+  gate warns before a commit hits it.
+  · added: 2026-10-19
+
+- **hb-12 · Roles are the §4.1 starting set**
+  (`gate_role` in dev.sh): inputs, plans -> docs;
   leaks, checks -> audit; the rest -> code. That each names a role in hub's group
   waits on the node registry (§4.4's second gate); hub has no group in the manifest yet.
+  · added: 2026-10-19
 
-- **The numbering gate reads column-0 items only** (`hubcheck.py brief_numbering`,
+- **hb-13 · The numbering gate reads column-0 items only**
+  (`hubcheck.py brief_numbering`,
   2026-10-05): each must be previous + 1 or 1 (a new list). Not seen: a duplicate in a
   nested (indented) list, or a second list that restarts at 1 where a continuation was
   meant. The ok line prints the item count (20 on 2026-10-05).
+  · added: 2026-10-19
 
-- **The brief-pointer gate checks that a target exists, not what it says**
+- **hb-14 · The brief-pointer gate checks that a target exists, not what it says**
   (`hubcheck.py brief_pointers`, 2026-10-04): `§N` in the §2 table and `<plan> §N`
   in the text must be a `## N.` heading in the copy. Not checked: that fixed point 9
   says what routing-tree §13 decided (meaning, by reading only), `§N.M` subsections,
   bare `§N` without a plan name, and a pointer split across a line break. The ok line
   prints how many it checked (49 on 2026-10-04), so a regex that stops matching shows
   as a drop, not a pass.
+  · added: 2026-10-19
 
-- **`sealed` is red on a fresh clone** (2026-10-09, PLAN-architecture-review.md §4 U1):
+- **hb-15 · `sealed` is red on a fresh clone**
+  (2026-10-09, PLAN-architecture-review.md §4 U1):
   git keeps no mode bits, so a clone (the cloud pass) and any checkout or merge that
   rewrites a copy leave it 0644, and `./dev.sh check` fails until `./dev.sh seal`. Each
   FAIL line names that command. The mode is a marker only (W6: Edit/Write replace a
   0444 file and keep 0444); the guard is `inputs` against SHA256SUMS
   (`TestSealed.test_the_mode_is_not_the_guard_inputs_is` holds that). Not sealed:
   README.md and SHA256SUMS (refresh rewrites SHA256SUMS in place).
+  · added: 2026-10-19
 
-## Unconfirmed suspicions
-
-- **Someone else ran this repo's new parts check at 00:24 on 2026-10-13** (pid 86882,
-  gone by 00:26): `.progress/check.json.logs/` held a `test.hubcheck` log (44 tests, OK)
-  and an empty `hooktests` log I did not start, and my `./dev.sh test test.parts` said
-  "a run is writing the progress file now (pid 86882)". Unknown who (an agent's
-  `dev.sh check` on hub, or a shared check). Probe: `agents.sh dispatches --open` /
-  the ledger for a hub run at that time. Harmless here; two runs share one progress file.
-- (The fix pass did see the new inputs: it merged `origin/main` into
-  `plan/hub` first, 0e779c1, and PLAN-hub.md cites PLAN-usage-reporting.md §3 and
-  PLAN-hard-gates.md §2; checked 2026-10-08.)
-
-## Reported to other owners
-
-- **planner** (via the dispatcher, 2026-10-19, tl-316): routing-tree §15 has a
+- **hb-17 · Reported to planner: routing-tree §15 has a split sentence**
+  (via the dispatcher,
+  2026-10-19, tl-316; still there on the 2026-10-19 re-copy for tl-356): routing-tree §15 has a
   sentence split by an insertion: the bullet "Jacob's first use of it sets
   `planner.effort` ..." ends "It takes effect at the planner window's next start. A
   change `check`" and the next line, at column 0, reads "refuses shows its message and
   changes nothing:", so the refusal list now reads as part of the step-0 bullets. The
   copy here (sha256 86a06dd2...) carries it as written; re-copy after the fix with
   `./dev.sh refresh PLAN-routing-tree.md`.
+  · added: 2026-10-19
 
-- **planner** (via the dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
+- **hb-18 · Reported to planner: review U1 cites a TODO.md line hub does not have**
+  (via the
+  dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
   "its TODO.md:541 says 0444", but hub's TODO.md has no such line (94 lines); 541 is
   claudeTest's top-level TODO.md, Decision 39 (open), which proposes that the TOP-level
   `PLAN-hub-brief.md` become a 0444 copy of hub's brief, gated by hub's check. The
   docs/inputs copies are now 0444 anyway (`sealed`). Decision 39's own gate (top copy
   differs or is writable) is not built: it waits on that decision.
-- **hooks** (via the dispatcher, 2026-10-09): `./dev.sh check` is red on `checks`
-  only: `hooks copies printed no report (exit 2): FAIL lib/extra-stores.sh: no test`
-  and "the source is not well-formed" [hooks-installed]. Cause: tools/hooks' UNTRACKED
-  `source/lib/extra-stores.sh` (with `store-guard.sh` and its test modified; HEAD
-  a953a98), i.e. their work in progress. Nothing changed here for it.
+  · added: 2026-10-19
 
-- **hooks** (via the dispatcher, 2026-10-08): `./dev.sh check` is red on `checks`
-  (`hooks-installed`: `prefer-recipes.sh` and `test-prefer-recipes.sh` drift) against
-  tools/hooks' UNCOMMITTED `source/hooks/` edits (their tree: those two files and
-  TODO.md modified, HEAD 43d2a1e). Not re-copied here: the source is mid-task.
-  Re-copy once they commit. Unconfirmed: whether tools/checks should compare against
-  the committed source rather than the working tree.
-- The planner's §4a report was overtaken by the fix pass (above); the
-  dispatcher's top-level `CLAUDE.md` row now says hub's check is a real gate since
-  47eea1a (read 2026-10-08). The hub's requests to other owners are drafted in
-  `origin/plan/hub:TODO.md`, to send after Jacob's yes on PLAN-hub.md's Decisions.
+- **hb-19 · Requests to other owners wait in `origin/plan/hub:TODO.md`**
+  , drafted there, to
+  send after Jacob's yes on PLAN-hub.md's Decisions. (The planner's §4a report was
+  overtaken by the fix pass; hub's check is a real gate since 47eea1a.)
+  · added: 2026-10-19
+
+- **hb-21 · Routing-tree copy is the 12:28 snapshot; the original moved on at 12:44**
+  tl-356 copied PLAN-routing-tree.md at 2026-10-19 12:28 (§15-§19, sha in SHA256SUMS). At 12:44 the planner's edit added §10.1 (Jacob's D1-D5 for the cloud plan), §16 step 4 answered (research answers) and §17.1 (fan-out), and names a §20 not yet written; ./dev.sh drift lists the copy as DIFF. Not re-copied mid-edit. §10.1 D1 says hub refreshes the stale copies and SHA256SUMS before the cloud session.
+  · work: docs
+  · done when: after the planner's §20 lands: ./dev.sh refresh (all, per D1), README bullet, ./dev.sh drift shows no DIFF
+  · added: 2026-10-19
+
+- **hb-24 · PLAN-architecture.md §9 step 10.3: your services.json registry draft is in RESEARCH-registry-drafts.md, section `tools/hub`; write it in, then checks one registered**
+  Draft by deep-work 2026-10-19 (tl-322), read-only: description, stores and shapes for tools/hub, written from its CLAUDE.md and cli.json; validated as written there: checks one registered and checks one services-valid both ok on a git-archive copy of the repo with the draft as services.json, other fields unchanged. stores [] (no cli.json); no shapes; the description says planning stage, so it changes when the hub is built. Reword the description freely; stores must stay equal to cli.json's store (registered holds them equal both ways).
+  filed 2026-10-19 in tools/hub/TODO.md as a bullet marked todo:tl-341: hub has no store (their_id stays null)
+  · parent: tl-341
+  · done when: services.json in tools/hub carries description, stores and (where any) shapes, and 'checks one registered tools/hub' from tools/checks is ok
+  · added: 2026-10-19

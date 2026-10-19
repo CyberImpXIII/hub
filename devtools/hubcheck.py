@@ -42,8 +42,11 @@ README = INPUTS / "README.md"
 SUMS = INPUTS / "SHA256SUMS"
 BRIEF = Path("PLAN-hub-brief.md")
 NOT_COPIES = {"README.md", "SHA256SUMS"}
-REQUIRED = ["CLAUDE.md", "PLAN-hub-brief.md", "TODO.md", "dev.sh", ".gitignore",
-            str(README), str(SUMS)]
+# todo.json and todo-history.json are the todo store (prefix hb, 2026-10-19). The
+# shared todo-valid check gates a store only when todo.json exists and passes a repo
+# without one, so a deleted store would go quiet there: required here instead.
+REQUIRED = ["CLAUDE.md", "PLAN-hub-brief.md", "TODO.md", "todo.json", "todo-history.json",
+            "dev.sh", ".gitignore", str(README), str(SUMS)]
 
 # Public-safety terms. The repo is public; these are the shapes that identify a
 # person or a machine. Allowed addresses are generic, not anyone's own.

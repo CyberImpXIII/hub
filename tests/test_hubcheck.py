@@ -51,7 +51,7 @@ class Fixture:
             (self.top / name).write_text(text)
         r = self.root
         (r / "docs/inputs").mkdir(parents=True)
-        for name in ("CLAUDE.md", "TODO.md", ".gitignore"):
+        for name in ("CLAUDE.md", "TODO.md", "todo.json", "todo-history.json", ".gitignore"):
             (r / name).write_text("# x\n")
         (r / "dev.sh").write_text("#!/bin/sh\n")
         (r / "dev.sh").chmod(0o755)
@@ -275,6 +275,15 @@ class TestFiles(Base):
         f = hc.gate_files(self.r)
         self.assertFinding(f, "TODO.md: missing")
         self.assertFinding(f, "dev.sh: not executable")
+
+    def test_the_todo_store_is_required(self):
+        """todo-valid passes a repo with no todo.json, so its loss is caught here."""
+        self.assertEqual(hc.gate_files(self.r), [])
+        (self.r / "todo.json").unlink()
+        (self.r / "todo-history.json").unlink()
+        f = hc.gate_files(self.r)
+        self.assertFinding(f, "todo.json: missing")
+        self.assertFinding(f, "todo-history.json: missing")
 
 
 class TestLeaks(Base):
