@@ -32,6 +32,19 @@
   usage-reporting, check-progress. Only the brief was re-copied for question 11.
   Eight on 2026-10-09: PLAN-todo-tool.md has drifted too.
   Refresh (leak audit first) before the next cloud pass.
+  2026-10-19 (tl-316): routing-tree and the brief re-copied for routing-tree §15 with
+  the new `./dev.sh refresh COPY...`; `./dev.sh drift` then listed eight still drifted
+  (claudeTest-CLAUDE.md, agent-groups, todo-tool, cloud-offload, repo-setup,
+  portable-env, usage-reporting, check-progress).
+- **Routing-tree §15 is an input; nothing in the brief's §4 asks the plan to settle
+  it** (tl-316, 2026-10-19). The §2 row names the page, so `PLAN-hub.md`'s next pass
+  reads it, but no §4 question or fixed point makes it plan the page's slice and its
+  four gates. Adding one is an edit at the top-level brief (the planner's); the
+  planner's call.
+- **`.claude/settings.json` is modified and uncommitted, not by an agent here**
+  (mtime 2026-10-15 20:45; +3 hook registrations: git-funnel, store-guard x2). It is
+  most likely Jacob applying setup's proposal for the 790d4bd render (Own limits,
+  "checks is red"). Left unstaged by tl-316; Jacob's to commit.
 
 - **Where the brief is edited.** routing-tree §13.5 says hub owns the brief, but
   `docs/inputs/README.md` makes the top-level `PLAN-hub-brief.md` its original, and
@@ -110,6 +123,14 @@ re-run that merge-tree before merging.
   PLAN-hard-gates.md §2; checked 2026-10-08.)
 
 ## Reported to other owners
+
+- **planner** (via the dispatcher, 2026-10-19, tl-316): routing-tree §15 has a
+  sentence split by an insertion: the bullet "Jacob's first use of it sets
+  `planner.effort` ..." ends "It takes effect at the planner window's next start. A
+  change `check`" and the next line, at column 0, reads "refuses shows its message and
+  changes nothing:", so the refusal list now reads as part of the step-0 bullets. The
+  copy here (sha256 86a06dd2...) carries it as written; re-copy after the fix with
+  `./dev.sh refresh PLAN-routing-tree.md`.
 
 - **planner** (via the dispatcher, 2026-10-09): PLAN-architecture-review.md §4 U1 cites
   "its TODO.md:541 says 0444", but hub's TODO.md has no such line (94 lines); 541 is

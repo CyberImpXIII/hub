@@ -518,7 +518,7 @@ Jacob: "I want to be sure I understand EXACTLY what you mean, so please elaborat
 
 *The process.* `hub up` starts **one** server process for this node (the claudeTest top;
 later one more for site-scrapers when it becomes a child node, §10 phase 3). It listens
-on a localhost port or a Unix socket named in `.claude/local.env`. It is configured by
+on the localhost port its registry names (`server.port`; corrected 2026-10-05 at the re-read in PLAN-hub-review.md §5, this sentence said "a localhost port or a Unix socket named in `.claude/local.env`", which holds only the token and the parent URL). It is configured by
 one data file and nothing else: the node's **registry** (roles with their `claude -p`
 arguments, tags, children, the four services with the CLI each one runs, the owner
 table of §14.7, and the server's own port and keep-alive, which harness's `gen` renders into the registry from the manifest's `servers.<group>` entry: the hub never opens the manifest, PLAN-hub-brief.md §3 fixed point 2). It contains no tool's
@@ -648,3 +648,71 @@ advance, and no agent guesses either.
 (fixture). Removing `cli.json` from a repo that has a store fails `accessor`. Each is a
 tools/checks item, installed by a setup component, so the set of components and the set
 of contract checks are compared both ways by `help-matches`'s sibling for setup.
+
+## 15. The roster settings page (Jacob, 2026-10-19)
+
+> "I would also like to be sure there is a settings page for changing what each agent
+> is set at in the hub app (e.g. opus 5.5. max effort."
+
+Nothing planned had one. Neither the hub brief nor this plan lists a page for the
+roster's knobs.
+
+**The page shows one row per roster agent, plus the dispatcher and the planner.**
+Each row shows the agent's:
+- model and effort, read from `.claude/agents.manifest.json`, and whether each one
+  comes from the agent's own override or from `coders`;
+- `model_reason`, when the model is not Opus;
+- maxTurns.
+
+The `coders` defaults (today `claude-opus-5-5`, effort `high`) are their own row, so
+one change covers every agent that inherits them.
+
+**It writes through one path, and that path already exists.** A change on the page
+asks the hub's server to run:
+1. `agents.sh set <agent> <key> <value>`, the manifest's one writer;
+2. `gen`;
+3. `check`;
+4. a commit inside `.claude/`.
+
+So the page holds no copy of the roster and no second writer (§14).
+
+**`set` does not reach the two windows yet.** On 2026-10-19, Jacob's
+`agents.sh set planner effort '"max"'` failed: "no agent 'planner' in the roster".
+- The planner's and dispatcher's knobs live in the manifest's top-level `planner` and
+  `dispatcher` blocks, not in `.agents`, and nothing writes them but a hand edit.
+- **Step 0, harness:** `set` accepts `planner` and `dispatcher`, writing those blocks
+  under the same checks, with a test for each, before the page is built.
+- Jacob's first use of it sets `planner.effort` to `max` (approved: Jacob 2026-10-19).
+  It takes effect at the planner window's next start. A change `check`
+refuses shows its message and changes nothing:
+- a non-Opus model without a `model_reason`;
+- an effort outside the allowed values.
+
+**Effort is pinned per agent on purpose.** The manifest's comment says so: it keeps a
+dispatcher at `/effort max` from silently running every agent at max. The page shows
+the pinned value next to the session's own, so the two are never mistaken for each
+other.
+
+**Who may change it:** Jacob, from the page. A role that reaches the server gets the
+page read-only (§13).
+
+**The model allowlist** is read from the manifest's list of known models, never typed
+into the page.
+
+**The page shows each change's cost.** After a change, it shows
+`agents.sh tokens --agents --since <the change's date>` for that agent: CLAUDE.md
+keeps a change only if the numbers say it helped.
+
+**Settings stay out:** `.claude/settings.json` (the dispatcher's own model and the
+hooks) is Jacob's file. The page shows it and never writes it.
+
+**Gates, in the change that builds it:**
+- the page's rows equal `agents.sh list`, both ways;
+- a change made on the page and the same `agents.sh set` from a shell leave identical
+  manifests (fixture);
+- a refused change leaves the manifest's hash unchanged (fixture);
+- the server refuses a write from a read-only role (fixture).
+
+**Owner:** hub, from this section. It is added to the hub brief's inputs.
+
+track: TODO.md "Roster settings page"

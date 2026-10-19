@@ -37,6 +37,14 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   top-level original, copied over by hand, and only its `SHA256SUMS` line rewritten.
   Not a refresh: seven other copies had drifted and were left as they were, since
   refreshing them is a decision (TODO.md).
+- **`PLAN-routing-tree.md` and the brief re-copied 2026-10-19** for routing-tree §15,
+  the roster settings page (Jacob, 2026-10-19; owner hub), so `PLAN-hub.md` plans it.
+  The brief's §2 row now says §11-§15 are decided and names the page; it was edited at
+  the top-level original, and the re-copy also brings in the brief's §4 questions
+  12-14 (added at the original 2026-10-12). Done with `./dev.sh refresh
+  PLAN-routing-tree.md PLAN-hub-brief.md`, which copies only the named ones (leak
+  audit first) and leaves every other `SHA256SUMS` line as it was. Not a full
+  refresh: eight other copies had drifted and stay as they were (TODO.md).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

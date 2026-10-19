@@ -27,7 +27,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 |---|---|---|
 | this file | all | the task, the fixed points, the output contract |
 | `CLAUDE.md` (top level) | "How work is split here", "Gate the seams", "Make the wrong thing impossible", "Constraints that don't bend" | the house rules every plan here obeys |
-| `PLAN-routing-tree.md` | all; §11, §12, §13 and §14 are decided | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10) |
+| `PLAN-routing-tree.md` | all; §11, §12, §13, §14 and §15 are decided | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub) |
 | `PLAN-tools-folder.md` | §1, §3 (hub row), §4, §7, §8 | the criterion, the order, what harness irreducibly is (§7), the `applies_to` declaration shared by hooks and checks |
 | `PLAN-auto-relay.md` | §3–§4, §7, §9 | what the first node's inbox already does; the hub must keep every behaviour there |
 | `PLAN-question-routing.md` | §2, §4, §9 | the question kinds and the two arbiters; the hub routes these |
@@ -39,7 +39,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 | `PLAN-repo-setup.md` | §1, §2, §7.8 | the setup directive every plan obeys (§5 below cites it), what `setup` installs, and who owns the files it renders (fixed point 10) |
 | `PLAN-portable-env.md` | §1–§3 | no hardcoded paths, owner or accounts; `local.env` and `init.sh`, which the hub token and keep-alive use |
 
-The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
+The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
 live at the top of the claudeTest folder, which is not a git repo.
 
 ## 3. Fixed points, not open for re-decision
@@ -186,6 +186,104 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
     how it relates to the context-hygiene launcher that restarts a whole session; and
     how that plan's rebuild guards hold here (no tool output in the system prompt, a
     rebuild never read as Jacob's prompt, nothing lost).
+12. **References by id, shown as a stub and expanded on demand** (Jacob, 2026-10-12:
+    "make it so that the hub can reference anything in the knowledge store by ID and
+    have it show up with the stub, and expandable to the full text, without the agent
+    that is sending that information having to output the entirety of that
+    information"). This plan is not a §2 input either, so the requirement is stated
+    here whole.
+
+    **The sender writes an id, never the record.** Records come from any store that
+    hands out ids:
+    - a kb section (its `url#anchor`);
+    - research (`rs-<n>`);
+    - todo items;
+    - context-hygiene's `ctx:` store;
+    - data-bridge records.
+
+    PLAN-services.md §3 ("Every record a service holds has an id and tags") already
+    gives each of these stores `get <id>` and a short readable line per record. Its
+    "Context carries ids" paragraph holds that a record enters context as its id and
+    that line, never as a copy.
+
+    **The hub does the rest:**
+    - it resolves the id's prefix through the prefix registry to the store's `get`;
+    - it renders a stub: the id, the store's own one-line summary, its source and date;
+    - it expands the stub to the full text only when asked. For Jacob in the view, that
+      is a click. For a model recipient, it is one `get` call, so the full text costs
+      tokens only for a recipient that reads it.
+
+    The stub's line comes from the store, never from the sender. A sender therefore
+    cannot misdescribe a record, and it spends nothing on it.
+
+    **Settle:**
+    - which stores are in the first phase;
+    - the reference syntax inside a message, and how the envelope carries it beside
+      the body;
+    - the stub's fields and its size cap;
+    - how expanding works for a model recipient (a tool, an MCP resource, or a CLI
+      call) and for the view;
+    - a record that changed since it was cited: does the stub show what the sender saw
+      (the `ctx:` snapshot) or the current text, and how is the difference shown;
+    - a dangling or unreachable id: shown as unresolved, never dropped. An unreachable
+      store is UNCHECKED, not a pass;
+    - its gates:
+      - a planted id renders a stub within the cap;
+      - expanding returns exactly the store's `get` output;
+      - an unknown prefix fails;
+      - an envelope whose body carries more than the cap of a record's text it could
+        have referenced is flagged.
+
+13. **Questions to Jacob go through the wizard, not the chat** (Jacob, 2026-10-12: "the
+    hub should be able to put questions in front of me through the wizard tool on
+    occasion, but again, I think this should be offloaded rather than necessarily a
+    direct interaction every time"). *Added after the cloud pass of 2026-10-12 started
+    from 82aab8c. That pass does not see it, so the merge carries it as an open
+    question for the hub's owner.*
+
+    **What exists.** `tools/wizard` asks Jacob a definition's questions at a terminal,
+    one at a time or all at once, and stores his answers for any tool to read back
+    (`wizard answers <definition> --json`). `wizard due` lists what is waiting. A
+    definition's source is either fixed questions or a todo store's items.
+    PLAN-architecture.md §7 already sends the architecture questions this way.
+
+    **The hub's part:**
+    - a message that needs Jacob's answer and is not urgent becomes a wizard question,
+      never a prompt in a window;
+    - the answer comes back to the asker as a reference by id (question 12), not a
+      copy.
+
+    **Settle:**
+    - how the hub tells "needs Jacob now" from "can wait for the wizard". The default
+      is that everything waits, except an item that blocks work already running;
+    - how a question reaches a definition: a todo item with a `waiting-jacob` status
+      (the wizard's existing `todo` source), or a new hub source;
+    - how the hub learns an answer landed, and how it routes it back to the asker;
+    - batching and cadence: how many due questions before Jacob is told, and how
+      (a status-line count, `wizard due`, never a push per question);
+    - its gates:
+      - a planted non-urgent question lands in a definition and never in a window;
+      - a planted answer reaches its asker;
+      - the credential guard stays on for every hub-made definition.
+
+14. **Every project's assurance, as a view** (Jacob, 2026-10-12, quoted in
+    PLAN-architecture.md §6a). *Added after the cloud pass started, like question 13.*
+    For any project or service the hub shows five lists:
+    - its gates, tests and audits;
+    - its practice cells;
+    - its design decisions with their gates or `prose: <why>`.
+
+    Each line is a question-12 stub that expands, and it links to exactly what it is
+    about. **The hub renders stored records and generates nothing.** The records are
+    written procedurally by `checks ledger` (PLAN-architecture.md §6a), and each
+    justification carries its author and an evidence pointer.
+
+    **Settle:**
+    - how the view finds a project's records (through the prefix registry, as in
+      question 12);
+    - how `stale`, `not run`, `unjustified` and `unknown` are shown, so a gap is never
+      hidden;
+    - its gates: the view's text equals the records' text, and a planted gap shows.
 
 ## 5. Output contract
 
@@ -193,7 +291,7 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 
 - a `> **Status:**` header with the date, "plan, written in the cloud from
   PLAN-hub-brief.md", the owners, and a "Builds on" list;
-- numbered `## N.` sections, §4's eleven questions answered in order, then `## Gates`,
+- numbered `## N.` sections, every §4 question answered in order, then `## Gates`,
   `## Phases`, `## Setup component` (what `setup` installs for a hub node; required by
   PLAN-repo-setup.md §1), `## Risks`;
 - every claim about Claude Code's behaviour (permission modes, stream-json, hooks,
@@ -206,7 +304,7 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 - token costs per phase as ranges, with the measured starting context of a roster
   agent (about 29k, 2026-10-02) as the unit.
 
-**Done when:** the file exists on a branch named `plan/hub`, answers all eleven questions,
+**Done when:** the file exists on a branch named `plan/hub`, answers every §4 question,
 has the four closing sections, and every platform claim has a URL. Nothing else in the
 repo is changed.
 
