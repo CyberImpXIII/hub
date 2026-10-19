@@ -229,6 +229,19 @@ nothing about becomes a node with a dispatcher and a coder role.
 5. **Warm roles** where `tokens --agents` shows they're cheaper. The other repos join
    through setup.
 
+### 10.1 The five decisions of the cloud plan (Jacob, 2026-10-19)
+
+The hub brief's open items (`tools/hub/PLAN-hub-brief.md` §4) were put to Jacob as
+D1-D5 (tl-323..327, dt-3 rows 2-6). His answers:
+
+| decision | Jacob, 2026-10-19 | what follows |
+|---|---|---|
+| D1 refresh the stale inputs | **refresh** | hub refreshes the seven stale copies and `SHA256SUMS` before the cloud session |
+| D2 the cloud session's model | **Fable 5.1 at max** | Jacob starts the session on Fable; the brief's §9 token costs are restated at Fable's price (the manifest's prices table) |
+| D3 the hub drives sessions | **drive** ("yes yes yes yes") | brief item 11 is a requirement; the probe decides stream-json or the SDK; §20 orders the roles |
+| D4 questions wait; the todo store is the one list | asked again with the elaboration (reply of 2026-10-19) | recommend `todo-source`: the wizard reads `waiting-jacob` items and nothing else; only an item that blocks running work reaches a window |
+| D5 keep-alive | asked again ("every 5 minutes feels extreme") | options now `launchd` (restart on exit, nothing runs while healthy), `cron-15`, `cron-5`; recommend `launchd` with chron.py as the portable fallback at 15 min (group-servers decision 4 named chron.py; the cadence changes, not the tool) |
+
 ## 11. Decisions (all answered "yes" by Jacob, 2026-10-03)
 
 1. **One server program per node, doing both checks (group-servers) and routing.**
@@ -798,12 +811,13 @@ a hand edit of `models.json` to a stale `ok` is caught by the TTL, not trusted.
 3. **`harness`:** `prefer` in the manifest, `check`, `gen`, `run`, `doctor`; the
    planner and `research` set to prefer Fable at max, `audit` when §18 lands; after
    step 2. track: TODO.md "Fable where allowed"
-4. **Who answers research questions on Fable.** R3 (PLAN-services.md §3) puts the
-   desk work in `deep-work`; `research` records and checks. If the deepest answers are
-   the aim, the model that answers must be the one preferred here. Options: (a)
-   `research` answers as well as records, and R3 is amended; (b) a new `researcher`
-   agent; (c) `deep-work` keeps answering, on Opus. track: needs-yes
-   PLAN-routing-tree.md §16
+4. **`research`:** answers as well as records, on the model preferred here, and R3
+   (PLAN-services.md §3) is amended to say so: `deep-work` answers only a question no
+   research dispatch holds. Jacob chose (a) of: (a) `research` answers too; (b) a new
+   `researcher` agent; (c) `deep-work` keeps answering on Opus (approved: Jacob
+   2026-10-19, "research-answers"). Step 3's harness brief carries it: `research`
+   gets `prefer` like the planner, and its definition says it answers.
+   track: TODO.md "Fable where allowed"
 
 ## 17. Read and run dispatches share a folder (Jacob, 2026-10-19)
 
@@ -862,6 +876,60 @@ second of two `uses: browser` is held (test); a `read` dispatch that wrote a fil
 flagged (fixture); malformed `mode` passes as `write` (test, fails open to the strict
 case).
 
+### 17.1 Fan-out: who starts parallel work, and what keeps it apart (Jacob, 2026-10-19)
+
+> "I DO want to be sure that agents and services are not competing with each other,
+> and that this is gated/impossible to do by mistake. [...] if there was a
+> sub-dispatch for every service that was capable of routing things necessary for the
+> code agent to the code agent, spinning up as many site scraping agents as necessary
+> to do all tasks that do not block each other in parallel. This should be possible
+> for research, planner, and MOST of the services/agents we've created."
+
+**A sub-dispatcher cannot be an agent.** `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`
+(`.claude/settings.json`): a spawned agent cannot spawn. What can start parallel
+work is the dispatcher (one message, several `Agent` calls, which Claude Code runs at
+once: it is already every folder's sub-dispatcher), a program (the hub, D3; cron; a
+CLI that starts processes), and a tool that fans out inside itself (a promise
+combinator, as site-scrapers' `lib/fillForm.js` does; its sweeps do not yet). So the sub-dispatch per
+service is **a table, not an agent**: every verb in a repo's `services.json` declares
+its `mode` (§17) and its `uses`, and the brief's `mode:` and `uses:` lines are read
+from the verb the brief names, never typed. A line that disagrees with the table is
+refused. The dispatcher decides nothing here; the hub inherits the same table.
+
+**The unit is the cheapest one that does the work:** a process before a dispatch, a
+`run` before a `write`.
+- **Scraping:** N recipe runs are N processes under one dispatch, or under none (a
+  cron line through chron.py). An Opus agent enters only when a recipe is broken,
+  which is a `write`. "As many scraping agents as necessary" is "as many scraper
+  processes as the browser class allows", which costs no tokens.
+- **Research and audits:** judgement per item, so N `run` dispatches, each one
+  question or one audit's row set, each writing records through the CLI.
+- **The planner:** parallel plans are cloud sessions, one per plan
+  (PLAN-cloud-offload.md §8), and `Explore` for reads; a planner window stays one.
+- **Code:** one writer per folder. A large write is split into checkpoints (`todo
+  split`) and run in order; writes in different folders already run at once.
+- **Services' CLIs:** parallel by their store's proof, below.
+
+**The competition classes, each with its gate.** Forgetting one can only make work
+slower, never collide: an undeclared verb is `write` and `serial`; an unknown `uses`
+value fails `check`.
+
+| class | what collides | the gate |
+|---|---|---|
+| folder | two writers of one repo | dispatch-guard today; the hub's write lease (§6) |
+| browser | two sweeps | `uses: browser` held by the guard on the model path, **and** a lock inside site-scrapers for its sweep verbs (`verify`, `health`), like `dev.sh check`'s `.check.lock`: a second sweep is refused whoever started it (cron, a shell, an agent). Single-recipe runs are not sweeps. Unverified: `verify` and `health` take no lock today (a grep of `dev.sh`, `verify.js`, `lib/*.js` found only the check lock); probe: start two `./dev.sh verify`, the second must refuse |
+| store | two writers of one store | a proof per store: its CLI is safe under N writers at once. todo: `Store.lock()`, an flock on the repo folder (`todolib/store.py`); site-scrapers: WAL and a busy timeout; `research.json`: none found, unverified, probe two `research answer` at once; PLAN-services.md §4 step 10 moves every dynamic store to SQLite, which settles it. A store without the proof is `uses: store:<name>` and runs alone. `checks` gate `store-concurrency`: every store a `cli.json` names has a passing concurrency test named in `services.json`, or is declared `serial` |
+| git index | two commits in one repo | `run` dispatches commit only their records' paths, through one helper that retries on `index.lock` (`lib/commit-records.sh`); a `write` commits as today |
+| tokens | N dispatches draining the 5h window | the gate on the sum: `usage gate $((N * median))` before a fan-out, median from `agents.sh tokens --agents`; `fanout.max_run` in the manifest (default 4) caps N |
+| the dispatcher's context | N reports | ten lines each, as today, and one batch summary in `allSettled` form: k of N, the failures named |
+
+**The directive,** one paragraph for CLAUDE.md "Parallelism" (the dispatcher writes
+it on approval): "Parallel work is declared, never improvised. A dispatch runs beside
+another only in a mode and class its verb table allows; a store is written in
+parallel only with its concurrency proof; the browser is one sweep at a time, in the
+tool; fan out by the cheapest unit, processes before dispatches and runs before
+writes." The per-repo part is not prose: it is the `store-concurrency` gate.
+
 ### Steps
 
 1. **`harness`:** the guard's modes and the `uses: browser` class, the ledger fields,
@@ -873,7 +941,20 @@ case).
 3. **`site-scrapers`:** its sweep verbs named in `services.json`, so a brief that
    omits `uses: browser` for one is caught; reported to it from here.
    track: needs-yes PLAN-routing-tree.md §17
-4. **`hub`:** carries the modes into its `route` (§6 invariants).
+4. **`hub`:** carries the modes and the classes into its `route` (§6 invariants: the
+   write lease becomes a lease per class value, unbounded for `run` and `read`).
+   track: needs-yes PLAN-routing-tree.md §17
+5. **`checks`:** per-verb `mode` and `uses` in the `services.json` schema, the
+   `store-concurrency` gate, fixtures for an undeclared verb (strict default) and an
+   unknown `uses` value (fails). track: needs-yes PLAN-routing-tree.md §17
+6. **`site-scrapers`:** the sweep lock in the tool, after the probe above; two
+   single-recipe runs at once stay allowed, with the test.
+   track: needs-yes PLAN-routing-tree.md §17
+7. **`harness`:** `mode:` and `uses:` derived from the verb table at spawn (a
+   disagreeing line refused), `fanout.max_run`, the gate on the sum, the batch
+   summary, `lib/commit-records.sh`; after 5.
+   track: needs-yes PLAN-routing-tree.md §17
+8. **`dispatcher`:** the directive paragraph into CLAUDE.md "Parallelism".
    track: needs-yes PLAN-routing-tree.md §17
 
 ## 18. The audit agent (Jacob, 2026-10-19)
@@ -909,8 +990,9 @@ because no audit agent existed.
 **The programmatic audits on a schedule.** A job through `chron.py`
 (scriptingTools/chronjobScheduler), nightly, runs the programmatic set above with
 `--json` into the ledger; the hub's assurance view shows the latest; `doctor` prints
-"last audit <n> days ago" past two days. A scheduled job is Jacob's yes: track:
-needs-yes PLAN-routing-tree.md §18.
+"last audit <n> days ago" past two days. A scheduled job is Jacob's yes, given on
+2026-10-19 ("a cron job on my machine! This is good! We are using the tools we have
+built to build out more tools and features!").
 
 **Gates, in the same change:** a Write by `audit` is refused (test against the
 rendered definition); a finding without `path:line` is refused by `checks ledger`
@@ -927,8 +1009,9 @@ model is its `prefer` or its fallback (§16's check).
    track: TODO.md "The audit agent"
 3. **`audit`:** PLAN-architecture.md §10's two audits, its first runs, in that order,
    under the `usage gate` rule there. track: TODO.md "The audit agent"
-4. **`cron-scheduler`:** the nightly job, through `./dev.sh try` first; after
-   Jacob's yes above. track: needs-yes PLAN-routing-tree.md §18
+4. **`cron-scheduler`:** the nightly job, through `./dev.sh try` first, then the real
+   crontab (approved: Jacob 2026-10-19); after step 3's first run passes, and under
+   `usage gate` before each run. track: TODO.md "The audit agent"
 
 ## 19. Replies are records (Jacob, 2026-10-19)
 
@@ -979,3 +1062,307 @@ rotated reply's row stays (test); `wiring.json` names the hook for both windows 
    track: TODO.md "Replies are records"
 2. **`hub`:** the inbox view in `PLAN-hub.md`, from this section, added to the brief's
    inputs. track: TODO.md "Replies are records"
+
+## 20. Warm roles: the agent that owns the knowledge, visible and addressable (Jacob, 2026-10-19)
+
+> "I wonder if de-abstracting sub agents might be better, as this would allow us to
+> more easily view what's going on/interact directly if I want to talk to an agent."
+> "This is exactly the sort of thing service level dispatch would prevent. It can have
+> all the relevant info in context and ready to run without running commands."
+> "EVERYTHING can be sent to an agent that owns the requisite knowledge, and we don't
+> have to be wasting compute on relearning stuff over and over and over."
+> "There is obviously a balance between space and time efficiency, but we should be
+> able to determine what works best."
+
+**Right, and it is one thing, not two.** A role the hub drives (brief item 11, D3:
+"drive") is a de-abstracted agent: a `claude` process of its own, started in its
+folder, that stays up between requests. Because it stays up, it holds its service's
+knowledge once (its CLAUDE.md, `cli.json`, the CLI's help, the store's shape) and
+answers each request from that, so nobody relearns it: the planner that ran `todo
+decisions -h` on 2026-10-19 to record three answers would instead send "dt-3: 2)
+refresh 3) fable 4) drive" to the `todo` role. Because it is a process, Jacob can see
+it (its window or transcript) and talk to it (`SendMessage` by name, or type in its
+window). Today's subagent has neither property: it starts cold (`tokens --agents`:
+every roster agent starts near 30k tokens, half of it CLAUDE.md), does one job, and
+reports ten lines into the dispatcher's context.
+
+**The rule.** A request carries facts, never procedure: what to record, what to
+answer, what to check. The role that owns the service runs its CLI. This is "one way
+in" (PLAN-services.md §3) applied to agents as it is to code: the store's CLI is its
+only writer, and the service's role is the only thing that runs that CLI on another
+role's behalf. The planner's own CLI use (the top-level todo store) ends when the
+`todo` role is warm; until then it stays, and the planner reads no `-h`: the commands
+it needs, verified, are in `PLANNER-HANDOFF.md`.
+
+**Warm or cold is decided by the knowledge, not the task.** Warm when the knowledge
+is stable and reused: a service's CLI and store (`todo`, `research`, the `checks`
+ledger, `usage`), a folder's code for its owner. Cold and siloed when the knowledge
+is the job's input: an audit of one plan, a migration check of one store (§21.1). A
+warm role whose knowledge changed is wrong, so it restarts when its folder's HEAD
+moves or its context passes `roles.context_budget` (brief item 11's rebuild).
+
+**Space against time is measured, not argued.** A warm role keeps context between
+requests; a cold dispatch pays the start again. Which is cheaper per request is a
+number per role: `tokens --agents --roles` reports tokens per request warm against
+cold, and lines printed for Jacob per request, from the ledgers. A role stays warm
+only while its number says so; the order below is a hypothesis the numbers confirm.
+
+**What it costs.** Nothing while idle. Per request, the message and the turn; the
+start context is paid once per restart instead of once per dispatch.
+
+**What moves.** The folder lock stays where it is until the hub's write lease (§6)
+exists, so the first warm roles are the ones that write only records (`mode: run`,
+§17): `todo`, `research`, the `checks` ledger. Folder writers follow the lease. A
+role window started inside its folder runs that folder's hooks and sees no roster
+definitions, so it cannot spawn roster agents: the silo is a fact of where it starts.
+`peer-cap.sh`'s two-message rule is for the two windows; a role gets a daily request
+budget (`roles.daily_budget`) instead, and its requests are ledger rows like any
+dispatch.
+
+**Visible on demand, not always.** §21's objective asks for less on screen, so a
+role's window is a tab Jacob opens, and the hub's page shows one line per role: name,
+state, the request it is on, its last reply's key.
+
+**Gates:** a request to a warm role appears in the ledger with mode and class; the
+role's reply is a record (§19) and reaches the sender; a role whose HEAD moved is
+restarted before its next request (test: commit in the folder, send, the role's start
+time is later); a role never spawns a roster agent (test: it has none to spawn);
+`tokens --agents --roles` reports per-request tokens warm against cold.
+
+### Steps
+
+1. **`research`:** the probe of brief item 11, with the measurement: one `todo answer`
+   request through a warm `todo` session (`claude -p` stream-json, or a pair window)
+   against one cold dispatch, tokens for each.
+   track: needs-yes PLAN-routing-tree.md §20
+2. **`harness`:** `agents.sh pair --role <agent>` opens a roster agent as a session in
+   its folder (iTerm2, as `pair` does), recorded by `record-session.sh`, with the daily
+   budget in `peer-cap.sh`, the HEAD-moved restart, the ledger rows, and `tokens
+   --agents --roles`; `agents.sh roles` lists the open ones.
+   track: needs-yes PLAN-routing-tree.md §20
+3. **`dispatcher`:** sends a `run` request to an open role (`agents.sh roles`) and
+   spawns only when none is open. track: needs-yes PLAN-routing-tree.md §20
+4. **`hub`:** PLAN-hub.md orders the roles: record services, then `audit`, then folder
+   writers after the lease; the role line on its page.
+   track: needs-yes PLAN-routing-tree.md §20
+
+## 21. The objective, and what it changes (Jacob, 2026-10-19)
+
+> "The objective of this app is to make it so I can use claude code better. Miss less
+> of what you say, and see less output that is unnecessary for the human aspects of
+> the decision making process. This is why being efficient with screen real estate is
+> so important."
+
+**A fixed point for the hub** (brief §3, copied there by the hub), and the test every
+view and every reply here is measured against: *did Jacob miss a thing he had to act
+on, and did he read a line he did not need?* Two numbers, both from stores: replies
+not marked read after N days (§19) and decisions open past their table (`todo
+decisions`), against lines printed for him per day (the reply ledger's `bytes`, the
+hooks' notices).
+
+**What already serves it:** §19 (every reply a record, with read marks); §13 and
+PLAN-question-routing.md (questions typed and routed, decisions as one table); brief
+item 12 (ids shown as stubs, expanded on demand); §15 (the roster page); §17.1's batch
+summary (N results, one table).
+
+**Improvements proposed, each with its gate (needs-yes):**
+
+| # | improvement | where | gate |
+|---|---|---|---|
+| 1 | **The four counts in the status line now,** before the hub: open decisions, steps for Jacob, unread replies, running dispatches, each from its CLI (`todo decisions --json`, `agents.sh replies --unread`, `dispatches --open`) | context-hygiene's `statusline.sh` | fail-open; a count that cannot be read prints `?`, never nothing |
+| 2 | **Notices print one line and a pointer.** A hook that prints for Jacob (plan-drift's twelve items at session start, doctor, the relay notices) prints the count and the command that lists them past `notices.max_lines` (3) | `.claude/lib/notice.sh`, every hook that prints | a test per hook that a long list is one line |
+| 3 | **A reply budget for the planner.** `question-gate.sh` already checks the planner's reply shape; it gains a notice (never a block) when a reply passes `reply.max_lines` (60) outside its tables, naming the plan section the prose belongs in | harness | the notice fires on a fixture over budget, not under |
+| 4 | **Unread and unanswered are different.** A reply whose Decisions table is `dt-N` carries `table: dt-N` in its ledger row, so the hub shows "awaiting your answer" apart from "unread", and `todo answer` marks the reply answered | §19 step 1 | a reply with a table is not "read" by `--read` alone |
+| 5 | **The objective review of every plan,** by siloed `audit` dispatches (§21.1): one plan each, filing proposals as records; the planner reads the render, never the plans again | `audit`, after §18 steps 1-2 | each dispatch's start context under `audit.start_budget` (12k), by `tokens --agents` |
+| 6 | **The dispatcher's reply after a fan-out is one table** (§17.1): k of N, failures named, each with its report key | §17 step 7 | a fixture of three reports renders three rows |
+
+### 21.1 Silos: cold, scoped audits beside the warm roles
+
+> "We may need audit subagents for tasks like this in the future. Migrating data, but
+> also making changes that subscribe appropriately to our design and architecture
+> decisions. This way you, the planner does not need to have a continuously ballooning
+> context, and neither does an audit agent need to have context that contains things it
+> is no longer auditing and/or never will. Silos!"
+
+Yes, and §18's `audit` is the agent; what makes it a silo is the brief and the start
+context. **The brief names its inputs and nothing else:** the objective or the
+decision it checks against (a section pointer), the one plan, store or repo it reads,
+and the record it files (`checks ledger add --kind proposal|finding`, or a research
+record). **The start context is small:** `omitClaudeMd` with "Constraints that don't
+bend" copied in, as the folder agents with their own CLAUDE.md already get, and
+`maxTurns`; the measure is `tokens --agents`, start under 12k against today's 30k.
+**Apply and verify are two agents:** the owner applies a decision or migrates a store
+(its folder, `mode: write`); an audit verifies it afterwards with only the two things
+to compare (the decision's text and the diff; the old store and the new one) and files
+the result. One agent doing both would carry both contexts and grade its own work.
+The planner reads renders: `checks ledger render --kind proposal` for the review, and
+the dispatcher's table for the rest.
+
+### Steps
+
+1. **`audit`:** the objective review (table row 5), one dispatch per live plan in `run`
+   mode, after §18 steps 1-2; the render goes to the planner as one list.
+   track: needs-yes PLAN-routing-tree.md §21
+2. **`harness`:** `omitClaudeMd` and `maxTurns` for `audit` with the start-context line
+   in `check`; `lib/notice.sh` and the cap in every hook that prints for Jacob (row 2);
+   the reply budget notice (row 3); `table:` in the reply ledger (row 4, into §19 step
+   1 if it has not landed). track: needs-yes PLAN-routing-tree.md §21
+3. **`context-hygiene`:** the four counts in the status line (row 1).
+   track: needs-yes PLAN-routing-tree.md §21
+4. **`hub`:** the objective as a §3 fixed point of the brief, and the two numbers as
+   the page's first line (Jacob's words of 2026-10-19 are the approval).
+   track: TODO.md "The objective in the hub"
+
+## 22. Answers without the model: the answer tag and the wizard sitting (Jacob, 2026-10-19)
+
+> "Are there hooks for when I text to you? Is there a way I could programmatically
+> return more decisions without you digesting them by tagging my answers to you while
+> you are thinking? This way if you are doing work, I can still do more work at the
+> same time."
+
+**Yes, and the hook exists.** `UserPromptSubmit` runs on every prompt submitted in a
+window, before the model sees it. On exit 0 it may add context; it may also block the
+prompt, and a blocked prompt is erased from context with its reason shown to Jacob
+(https://code.claude.com/docs/en/hooks#userpromptsubmit-decision-control, fetched
+2026-10-09; `kb show` that anchor for the text). Three of ours already run there:
+`agent-watch.sh`, `peer-cap.sh`, `record-session.sh` (`wiring.json`).
+
+**The answer tag.** A prompt that starts with a table id, `dt-3: 2) refresh 3) fable
+4) drive`, is an answer, not a message. A fourth hook on that event, `answer-tag.sh`
+(harness), parses exactly that shape, applies it through `todo answer --table dt-N
+'…'` (the one way in), and blocks the prompt with todo's own output as the reason:
+Jacob sees `answered dt-3: 3 row(s)` and the rows; the model never reads the prompt
+and pays nothing for it. A line that does not parse passes to the model as an ordinary
+prompt (fail-open) with the parser's reason printed first, so a typo is visible. Only a
+prompt Jacob typed qualifies: a relay arrives by the inbox socket, not as a prompt, and
+`peer-cap.sh` already tells the two apart. What the model learns: one line at its next
+turn from `record-session.sh`'s prompt context ("answered since your last turn: dt-3
+rows 2-4"), and the whole state from `todo decisions` when it acts. The id Jacob types
+is the one `todo decisions` gives the reply's table.
+
+**Mid-turn is the probe.** Whether the hook fires when the line is typed or when the
+queued line is consumed at the turn's end is not in the docs (the kb has no section on
+queued prompts). Either way the model never digests it: the block happens before the
+prompt would enter context. What differs is when the row lands, and whether `todo` runs
+while the planner's own todo command runs (the store's lock, `Store.lock()`, covers
+that). Step 1 settles it.
+
+**The sitting is the batch path.** For more than a few answers there is no window at
+all: `wizard due` in a third terminal asks every waiting-jacob item one at a time and
+writes each answer through the todo CLI (D4, `todo-source`); the planner reads `todo
+decisions` at its next turn. Nothing here passes through a model until the planner acts
+on an answer, which is the only part that needs one.
+
+**Gates:** a tagged prompt never reaches the model (test: the transcript holds no line
+with the tag's text after a blocked prompt); a line that does not parse passes through
+unchanged (fixture); the hook exits 0 on any error (the fail-open test); an answer the
+hook applied is indistinguishable in the store from one typed at the terminal (`todo
+history`); `agents.sh questions` counts answers by channel (tag, wizard, reply).
+
+### Steps
+
+1. **`harness`:** the probe: a tagged line typed while the planner is mid-turn;
+   `todo history` timestamps against the turn's end; the transcript checked for the
+   text; one line in this section with the result.
+   track: needs-yes PLAN-routing-tree.md §22
+2. **`harness`:** `answer-tag.sh` on both windows (`wiring.json`; Jacob applies), the
+   one-line notice in `record-session.sh`, the channel column in `agents.sh questions`,
+   tests as the gates above. track: needs-yes PLAN-routing-tree.md §22
+3. **`wizard`:** a definition over the top-level store's waiting-jacob decisions that
+   writes through `todo answer`; confirm it exists, else add it.
+   track: needs-yes PLAN-routing-tree.md §22
+4. **`todo`:** `todo answer --by tag|wizard|reply`, stored on the row, for the channel
+   count. track: needs-yes PLAN-routing-tree.md §22
+
+## 23. Jev in the dispatch process, and where else a decision model fits (Jacob, 2026-10-19)
+
+> "Please also do what is necessary research/plan wise to incorporate jev into the
+> dispatch process. Or any other services/processes that may benefit from it. Research
+> what would be good for this."
+
+**What is known, and from when.** PLAN-async-routing-questions.md §2 holds the facts,
+from GitHub READMEs and the OpenRouter listing on 2026-10-05 (docs.typesafe.ai was
+unreachable from the cloud session): Jev (TypeSafe AI) answers a typed question over a
+context of at most 32k tokens with a calibrated confidence, in tens of milliseconds for
+about $0.00002 a decision against Opus's seconds and cents; early access since
+2026-09-15; no self-hosting; `jev-gateway` sits between a coding agent and its API with
+a threshold per call and a `passthrough` mode. That plan's decisions A1.1, A1.6 and A3.4
+(recommended yes, not yet answered) are the rules below. None of the facts is verified
+against the vendor's docs, and the fact this section needs most is missing: **what the
+vendor retains, and trains on, of what it is sent.** Step 1 is that verification.
+
+**The rules (A1, restated for dispatch).**
+- **Jev never gates.** A `decide` call returns the answer, its confidence, the rule's
+  answer when a rule exists, and whether they agree. The caller acts on the rule's
+  answer when there is one, on Jev's only above the seam's threshold, else
+  `needs-review`: never a silent answer (A3.4).
+- **The deterministic path runs on every call** (A1.6). Every call is a ledger row with
+  both answers; the disagreements are the labelled set (A1.3), and each seam's
+  threshold is measured from it, never chosen.
+- **Unreachable or slow** (`jev-gateway`'s timeout defaults to 4,000 ms) is the rule's
+  answer, or `needs-review`.
+- **Nothing credential-shaped goes out, and nothing of Jacob's own data** until the
+  retention fact is known and Jacob has said yes per data class (the decision rows in
+  the reply of 2026-10-19). Every input passes the leak audit `applications` already
+  runs, before the call.
+- **One way in:** `tools/decide/` is the only client, a service of its own
+  (PLAN-services.md §3 shape), with `seams.json` as its table: seam, question type,
+  threshold, fallback, the data class it may send. No hook calls Jev inline.
+
+**Where it fits in dispatch.** The test for a seam: a rule exists, so not a Jev seam; a
+classification over a small context where the rule table runs out, a Jev seam; a
+judgment over the workspace, the `audit` agent with Jev as its pre-screen.
+
+| # | seam | today | with Jev | the measure |
+|---|---|---|---|---|
+| 1 | **plan drift:** `todo stale-plans` flags an item "changed" when its section's text changed at all; 15 flagged on 2026-10-19, four of them by one amended sentence (R3) that touched none | the planner reads all 15 | the diff and the item: "does this change touch the item?"; above threshold "untouched", the CLI re-pins and logs the row; else the notice as today | notices per session before and after; disagreements |
+| 2 | **routing a brief:** which service, verb and mode (§17.1) | the dispatcher's model, in context at full price; the hub's rule table (§3) later | the rule table first (a folder, a todo id, a plan pointer); Jev for a brief with none; below threshold it goes back as a `[dispatch]` question | the share of briefs the rule table resolves; Jev against the dispatcher's recorded choices on the rest |
+| 3 | **typing a question** (`question-gate.sh`) | the model types it; an untyped one is blocked once | Jev types an untyped question; below threshold the block stands | blocks per day; agreement with the model's own type |
+| 4 | **a report's outcome** (`dispatches`): done, failed, waiting, unclosed | markers parsed; markerless free text reads as `waiting` | Jev reads a markerless report: the outcome, and whether it claims more than its check output shows (the earned-claim rule) | markerless reports per week; disagreement with the dispatcher's reading |
+| 5 | **Jacob's free-text answer** (§22): "drive, yes yes yes yes. Though I wonder…" | the planner reads it | the tag stays deterministic; a free-text reply to a table maps to an option with a confidence, and a reply that holds a new question is `needs-review`, never an answer | answers mapped per week; Jacob's corrections |
+| 6 | **the audit's pre-screen** (§21.1): does this change satisfy the decision's text? | an audit dispatch per change | Jev screens first; only "no" or below threshold goes to `audit` | audit dispatches avoided; misses the nightly run finds |
+
+Not Jev: relay admission (a line parses or it does not), fan-out modes (the verb table),
+the write lease, anything `checks` runs. A rule that exists is kept.
+
+**Elsewhere in the workspace, by the same test.** Value against the class of data each
+would send, which is the privacy question above:
+
+| service | the question | data sent | note |
+|---|---|---|---|
+| `site-scrapers` | a page's text: results, empty, login, a wall | page text | a wall stays a wall and is reported; Jev names it sooner, never routes around it |
+| `applications` | which stored answer fits this form field; none fits stays `missing` | **Jacob's own data** | the highest value and the clearest privacy question; dry fill only, as today |
+| `job-import-scripts` | is this job for Jacob, before import | job text, **his profile** | today every scraped job imports |
+| `emailTools` | sender to company | **sender addresses** | string match today |
+| `data-bridge` | an unmapped source field's likely target, filed as a `needs-review` mapping step | schema names, sample values | the mapping stays data; Jev proposes, `verify.js` decides |
+| `knowledge-base` | does this section answer the question (re-ranking FTS hits) | docs text | public text, no privacy question |
+| `todo` | kind and owner of a free-text finding in a report | report text | triage |
+| `wizard` | a free-text answer to an option | Jacob's answers | as seam 5 |
+
+**Gates:** `decide` refuses a seam absent from `seams.json`; a call without a rule
+answer is allowed only for a seam whose entry says `rule: none`; a result below
+threshold carries `needs-review` (fixture); a redacted input is what the ledger shows
+(the leak audit's fixtures); the key is read from the environment and `check` fails on
+one in any file; `decide bench` prints accuracy and calibration per seam from a labelled
+set, and a seam goes live only with that number in this section.
+
+### Steps
+
+1. **`research`:** verify §2's facts against docs.typesafe.ai and the listing (access
+   today, question types, context limit, price, rate limits, timeout, SDKs) and record
+   data retention and training use for what is sent; one research record,
+   `recheck_after` 30 days. Before anything else here.
+   track: needs-yes PLAN-routing-tree.md §23
+2. **`research`:** the labelled sets from the ledgers, no Jev call: the last 30 days of
+   stale-plans flags with what became of each item (re-pinned unchanged, or edited), of
+   briefs with the agent chosen, of question-gate rows, of markerless reports; sizes,
+   and the rule table's share for seam 2. track: needs-yes PLAN-routing-tree.md §23
+3. **`deep-work`:** `tools/decide/` as a service (`cli.json`, `seams.json`, the ledger,
+   the leak audit before every call, the key from the environment), `decide ask <seam>
+   --json` and `decide bench <seam> <set>`, its `./dev.sh check` with the gates above;
+   the roster entry is harness's. track: needs-yes PLAN-routing-tree.md §23
+4. **`research`:** `decide bench` on step 2's sets for seams 1-4: accuracy, calibration,
+   the threshold per seam, cost; the numbers into this section decide which seams go
+   live. track: needs-yes PLAN-routing-tree.md §23
+5. **`todo`:** seam 1 behind `stale-plans --decide`, off by default until step 4's
+   number. track: needs-yes PLAN-routing-tree.md §23

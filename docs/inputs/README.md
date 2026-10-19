@@ -53,6 +53,15 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   (§15) and the inbox view (§19) to its §4 list is an edit at the top-level original,
   which the planner owns, so it was requested (TODO.md "Brief §4: the settings and
   inbox views"); re-copy it with `./dev.sh refresh PLAN-hub-brief.md` once made.
+- **`PLAN-routing-tree.md` and the brief re-copied 2026-10-19 (13:22)** for tl-379
+  (relay line 121, Jacob): the brief was edited at the top-level original by hub's agent
+  on that relay. Its §2 row now runs to routing-tree §16-§21 (§17 pending dt-5 row 4, §20
+  pending dt-5 row 5, §22-§23 pending rows 7-9), §3 gained fixed point 11 (§21's
+  objective), and §4 gained question 15 (the roster settings page, §15) and question 16
+  (the inbox view of replies, §19). The routing-tree copy brings in the original's
+  §20-§23 and its 12:44 edit (§10.1, §16 step 4, §17.1). Done with `./dev.sh refresh
+  PLAN-routing-tree.md PLAN-hub-brief.md`; the other copies keep their sums and their
+  drift (TODO.md hb-5).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

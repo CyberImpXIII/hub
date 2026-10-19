@@ -27,7 +27,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 |---|---|---|
 | this file | all | the task, the fixed points, the output contract |
 | `CLAUDE.md` (top level) | "How work is split here", "Gate the seams", "Make the wrong thing impossible", "Constraints that don't bend" | the house rules every plan here obeys |
-| `PLAN-routing-tree.md` | all; §11, §12, §13, §14 and §15 are decided | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub) |
+| `PLAN-routing-tree.md` | all; §11-§16, §18, §19 and §21 are decided; §17 is pending dt-5 row 4, §20 is pending dt-5 row 5, and §22-§23 are pending dt-5 rows 7-9 (none of them the plan's to settle) | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub; question 15), Fable 5.1 at max where the account allows it (§16), read and run dispatches sharing a folder, and fan-out (§17, pending dt-5 row 4), the audit agent (§18), replies as records, with the hub's inbox view (§19; question 16), warm roles: the agent that owns the knowledge, visible and addressable (§20, pending dt-5 row 5; its step 4 is the hub's), the objective every view and reply is measured against (§21, fixed point 11; its improvement rows 1-6 are pending dt-5 row 6) |
 | `PLAN-tools-folder.md` | §1, §3 (hub row), §4, §7, §8 | the criterion, the order, what harness irreducibly is (§7), the `applies_to` declaration shared by hooks and checks |
 | `PLAN-auto-relay.md` | §3–§4, §7, §9 | what the first node's inbox already does; the hub must keep every behaviour there |
 | `PLAN-question-routing.md` | §2, §4, §9 | the question kinds and the two arbiters; the hub routes these |
@@ -39,7 +39,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 | `PLAN-repo-setup.md` | §1, §2, §7.8 | the setup directive every plan obeys (§5 below cites it), what `setup` installs, and who owns the files it renders (fixed point 10) |
 | `PLAN-portable-env.md` | §1–§3 | no hardcoded paths, owner or accounts; `local.env` and `init.sh`, which the hub token and keep-alive use |
 
-The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
+The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15, and again the same day for §16-§23, questions 15-16 and fixed point 11 (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
 live at the top of the claudeTest folder, which is not a git repo.
 
 ## 3. Fixed points, not open for re-decision
@@ -135,6 +135,22 @@ live at the top of the claudeTest folder, which is not a git repo.
     planner 2026-10-05): harness's `gen` renders the manifest's `servers.<group>` entry
     into it as it renders roles, so fixed point 2 stands and the hub never opens the
     manifest. The plan says who writes which part of the registry.
+11. **The objective: Jacob uses Claude Code better** (routing-tree §21, Jacob
+    2026-10-19: "The objective of this app is to make it so I can use claude code
+    better. Miss less of what you say, and see less output that is unnecessary for the
+    human aspects of the decision making process. This is why being efficient with
+    screen real estate is so important."). Every view and every reply the hub makes is
+    measured against one test: *did Jacob miss a thing he had to act on, and did he read
+    a line he did not need?* Two numbers answer it, both read from stores, never
+    estimated: what he missed (replies not marked read after N days, from the reply
+    ledgers of question 16, and decisions open past their table, from `todo
+    decisions`) against what he read (lines printed for him per day: the reply ledger's
+    `bytes` and the hooks' notices). The two numbers are the hub page's first line
+    (routing-tree §21 step 4). The plan says where the page reads each one, through its
+    owner's CLI (fixed point 10), and gates that the line equals what the stores hold;
+    it does not reopen the objective. The improvements §21 proposes (its rows 1-6) are
+    pending dt-5 row 6 and belong to other owners; the plan cites them where they touch
+    the hub (row 4 in question 16) and builds none of them.
 
 ## 4. What the plan must settle
 
@@ -284,6 +300,91 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
     - how `stale`, `not run`, `unjustified` and `unknown` are shown, so a gap is never
       hidden;
     - its gates: the view's text equals the records' text, and a planted gap shows.
+
+15. **The roster settings page** (routing-tree §15, Jacob 2026-10-19: "I would also
+    like to be sure there is a settings page for changing what each agent is set at in
+    the hub app (e.g. opus 5.5. max effort."; owner hub). *Added 2026-10-19, after the
+    cloud pass, like questions 13 and 14.*
+
+    **What it shows.** One row per roster agent, plus the dispatcher and the planner.
+    Each row shows:
+    - the agent's model and effort, and whether each comes from the agent's own
+      override or from `coders`;
+    - its `model_reason`, when the model is not Opus;
+    - its maxTurns.
+
+    The `coders` defaults are their own row, so one change covers every agent that
+    inherits them. A pinned effort is shown next to the session's own, so the two are
+    never mistaken for each other. `.claude/settings.json` (the dispatcher's own model
+    and the hooks) is Jacob's file: the page shows it and never writes it.
+
+    **One write path, which already exists.** A change on the page asks the server to
+    run, in order:
+    1. `agents.sh set <agent> <key> <value>`, the manifest's one writer;
+    2. `gen`;
+    3. `check`;
+    4. a commit inside `.claude/`.
+
+    The page holds no copy of the roster and no second writer (fixed point 10). A change
+    `check` refuses (a non-Opus model without a `model_reason`, an effort outside the
+    allowed values) shows its message and changes nothing. The model allowlist is read
+    from the manifest's list of known models, never typed into the page. Only Jacob
+    changes a value; a role that reaches the server gets the page read-only (fixed point
+    9). After a change the page shows `agents.sh tokens --agents --since <the change's
+    date>` for that agent, so a change is kept only if the numbers say it helped.
+
+    **A dependency, not the plan's to build:** routing-tree §15 step 0, harness's `set`
+    accepting `planner` and `dispatcher` (on 2026-10-19 `agents.sh set planner effort`
+    failed: "no agent 'planner' in the roster").
+
+    **Settle:**
+    - how the page reads its rows without opening the manifest (fixed point 2):
+      through harness's CLI, the way fixed point 10 reads every tool's facts, and what
+      the page shows at a node without harness;
+    - how the server runs the four steps as one `write` request, and what the page
+      shows while they run and when one fails;
+    - its four gates (routing-tree §15):
+      - the page's rows equal `agents.sh list`, both ways;
+      - a change made on the page and the same `agents.sh set` from a shell leave
+        identical manifests (fixture);
+      - a refused change leaves the manifest's hash unchanged (fixture);
+      - the server refuses a write from a read-only role (fixture).
+
+16. **The inbox view of replies** (routing-tree §19, Jacob 2026-10-19: "These should be
+    able to be 'marked as read' in the hub once we get there."). *Added 2026-10-19, like
+    question 15.*
+
+    **What harness builds first** (routing-tree §19 step 1). A Stop hook in both windows
+    writes one row per final reply to `.claude/state/replies.jsonl` and the reply's text
+    to `.claude/state/replies/<key>.md`. Read marks are a second, append-only ledger,
+    `replies-read.jsonl`: a reply is unread until a row names it, and a `by: undo` row
+    takes the mark back. The CLI:
+    - `agents.sh replies [--unread] [--since DATE] [--json]` lists, newest first;
+    - `agents.sh replies --read <key> [--all-before DATE]` marks;
+    - `agents.sh replies show <key>` prints the text.
+
+    **The hub's part.** The inbox view lists unread replies by window (the
+    dispatcher's and the planner's). It marks a reply read only through `agents.sh
+    replies --read` (fixed point 10: the ledgers stay the truth and the server is the
+    only path). Jacob marks; every other role reads (fixed point 9). The todo store is
+    not touched: a reply that carries work gets an item through `todo add --tags
+    ref:reply:<key>`, by whoever reads it.
+
+    **Settle:**
+    - how the view reads the ledgers (through `agents.sh replies --json`, never the
+      files), and the bound on what it lists;
+    - marking one reply, marking all before a date, and undo, each through the CLI;
+    - whether a reply shows as a question-12 stub that expands to `agents.sh replies
+      show <key>`;
+    - how "unread" stays apart from "awaiting your answer" if dt-5 row 6 lands
+      (routing-tree §21 row 4: a reply whose row carries `table: dt-N`);
+    - its gates:
+      - a planted reply shows unread under its window;
+      - a mark made in the view and the same `agents.sh replies --read` from a shell
+        leave identical ledgers (fixture);
+      - a mark from a read-only role is refused (fixture);
+      - a reply whose text file is missing (`path: null`) shows as unresolved, never
+        dropped.
 
 ## 5. Output contract
 
