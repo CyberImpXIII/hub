@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (23 open, 3 closed in todo-history.json; seal 5a9227931373): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (22 open, 5 closed in todo-history.json; seal 5c23fc671ee7): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -40,18 +40,7 @@
   and re-costed §9 to 1.7-2.5M (58-87u). Decisions 9 and 14-17 await Jacob, via the
   planner. PLAN-context-hygiene.md and PLAN-services.md are still not §2 inputs or
   copies here (the planner's call; the pointer gate skips uncopied plans).
-  · added: 2026-10-19
-
-- **hb-5 · Seven inputs drifted, not refreshed**
-  (2026-10-08, `./dev.sh drift`):
-  claudeTest-CLAUDE.md, routing-tree, agent-groups, repo-setup, portable-env,
-  usage-reporting, check-progress. Only the brief was re-copied for question 11.
-  Eight on 2026-10-09: PLAN-todo-tool.md has drifted too.
-  Refresh (leak audit first) before the next cloud pass.
-  2026-10-19 (tl-316): routing-tree and the brief re-copied for routing-tree §15 with
-  the new `./dev.sh refresh COPY...`; `./dev.sh drift` then listed eight still drifted
-  (claudeTest-CLAUDE.md, agent-groups, todo-tool, cloud-offload, repo-setup,
-  portable-env, usage-reporting, check-progress).
+  2026-10-19 (tl-406): PLAN-context-hygiene.md is now a brief §2 input and a copy (42b8eb7). PLAN-services.md is not: the leak audit refused its original (home-folder path, its line 74); see the report item below.
   · added: 2026-10-19
 
 - **hb-7 · `.claude/settings.json` is modified and uncommitted, not by an agent here**
@@ -191,13 +180,6 @@
   overtaken by the fix pass; hub's check is a real gate since 47eea1a.)
   · added: 2026-10-19
 
-- **hb-21 · Routing-tree copy is the 12:28 snapshot; the original moved on at 12:44**
-  tl-356 copied PLAN-routing-tree.md at 2026-10-19 12:28 (§15-§19, sha in SHA256SUMS). At 12:44 the planner's edit added §10.1 (Jacob's D1-D5 for the cloud plan), §16 step 4 answered (research answers) and §17.1 (fan-out), and names a §20 not yet written; ./dev.sh drift lists the copy as DIFF. Not re-copied mid-edit. §10.1 D1 says hub refreshes the stale copies and SHA256SUMS before the cloud session.
-  2026-10-19 13:22 (tl-379): PLAN-routing-tree.md re-copied with the brief (§20-§23 and the 12:44 edit now in the copy). Not the full refresh D1 asks for: ./dev.sh drift still lists 8 DIFF (claudeTest-CLAUDE.md, agent-groups, todo-tool, cloud-offload, repo-setup, portable-env, usage-reporting, check-progress).
-  · work: docs
-  · done when: after the planner's §20 lands: ./dev.sh refresh (all, per D1), README bullet, ./dev.sh drift shows no DIFF
-  · added: 2026-10-19
-
 - **hb-24 · PLAN-architecture.md §9 step 10.3: your services.json registry draft is in RESEARCH-registry-drafts.md, section `tools/hub`; write it in, then checks one registered**
   Draft by deep-work 2026-10-19 (tl-322), read-only: description, stores and shapes for tools/hub, written from its CLAUDE.md and cli.json; validated as written there: checks one registered and checks one services-valid both ok on a git-archive copy of the repo with the draft as services.json, other fields unchanged. stores [] (no cli.json); no shapes; the description says planning stage, so it changes when the hub is built. Reword the description freely; stores must stay equal to cli.json's store (registered holds them equal both ways).
   filed 2026-10-19 in tools/hub/TODO.md as a bullet marked todo:tl-341: hub has no store (their_id stays null)
@@ -213,4 +195,11 @@
   · parent: ch-65
   · work: code
   · done when: the hub server serves the ctx: store's get/find/refs as a first-phase store, with a contract store.py can call
+  · added: 2026-10-19
+
+- **hb-27 · Add PLAN-services.md as a brief §2 input once the planner removes the home-folder path at its line 74**
+  2026-10-19 (tl-406): ./dev.sh refresh refused with 'PLAN-services.md:74: home-folder path' (the top-level original, a /Users/<name>/Desktop/claudeTest path in a sentence about a built-but-uncommitted tool). Hub's repo is public, so the copy cannot carry it. Routing-tree §10.3 step 1 wants it as an input; it was left out, and the brief and docs/inputs/README.md say so. Reported to the planner in tl-406's report (the dispatcher relays it); not fixed here, the file is the planner's.
+  · work: docs
+  · size: S
+  · done when: the planner replaced the path; ./dev.sh leaks ../../PLAN-services.md ok; brief §2 row (top-level original) and README row added; ./dev.sh refresh PLAN-services.md PLAN-hub-brief.md; ./dev.sh inputs and drift ok
   · added: 2026-10-19
