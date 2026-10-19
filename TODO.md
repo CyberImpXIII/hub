@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (22 open, 5 closed in todo-history.json; seal 5c23fc671ee7): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (22 open, 5 closed in todo-history.json; seal f6bb97894832): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -59,7 +59,7 @@
   and Jacob's call, since the top level is the planner's.
   · added: 2026-10-19
 
-- **hb-9 · Merging `plan/hub` into `main` conflicts in `TODO.md`, and only there**
+- **hb-9 · Merging `plan/hub` into `main` conflicts in 10 files, not TODO.md only (re-run 2026-10-19)**
   (confirmed
   2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one
   CONFLICT, TODO.md; heads aa949b2 / e80d6b7). When to merge waits on Jacob's yes on
@@ -70,6 +70,9 @@
   re-run that merge-tree before merging. Since tl-356 (2026-10-19) `main`'s TODO.md is
   rendered from `todo.json`: bring `plan/hub`'s entries in with `todo add`, never by
   merging the text.
+  2026-10-19 (tl-432) re-run: `git merge-tree --write-tree --name-only main plan/hub` (main bda5836, plan/hub 63cf780) -> 10 CONFLICTs: TODO.md, CLAUDE.md (1 hunk), PLAN-hub-brief.md (2), devtools/hubcheck.py (1), docs/inputs/{PLAN-check-progress,PLAN-repo-setup,PLAN-todo-tool(3),README,claudeTest-CLAUDE(2)}.md, docs/inputs/SHA256SUMS (2). Already 5 at 762a4fc (the head routing-tree §10.3 read), 2 at 790d4bd/392de0a, 0 at 10589a4; tl-406 42b8eb7 (full inputs refresh) took it to 9, 614b52b (leaks fix, same fix as plan/hub 995bc61) to 10. Jacob`s yes was "as long as the conflict has been noted correctly": it was not, so no merge and no H1a-0. Every non-TODO hunk reads as take-main: main holds the newer inputs refresh and SHA256SUMS, the same leaks fix, brief questions 13-16 (plan/hub side empty), CLAUDE.md newer rows. Needs Jacob: merge with take-main on those nine files, yes or no.
+  · status: waiting-jacob
+  · waits on: approval
   · added: 2026-10-19
 
 ## Unconfirmed suspicions

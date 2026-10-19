@@ -260,15 +260,15 @@
     },
     {
       "id": "hb-9",
-      "title": "Merging `plan/hub` into `main` conflicts in `TODO.md`, and only there",
+      "title": "Merging `plan/hub` into `main` conflicts in 10 files, not TODO.md only (re-run 2026-10-19)",
       "kind": "decision",
-      "status": "open",
-      "evidence": "(confirmed\n2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one\nCONFLICT, TODO.md; heads aa949b2 / e80d6b7). When to merge waits on Jacob's yes on\nPLAN-hub.md's Decisions. On the merge, take `plan/hub`'s TODO.md as the base and drop\nits own-bug entry \"`./dev.sh check` counts an UNCHECKED hook test as a FAIL\": fixed\non `main` 2026-10-08 (`cmd_hooktests` returns 3; `tests/test_hubcheck.py`\n`TestHooktests`). Not re-run since `main` gained Q7 (parts) and `plan/hub` 6d2b3f6:\nre-run that merge-tree before merging. Since tl-356 (2026-10-19) `main`'s TODO.md is\nrendered from `todo.json`: bring `plan/hub`'s entries in with `todo add`, never by\nmerging the text.",
+      "status": "waiting-jacob",
+      "evidence": "(confirmed\n2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one\nCONFLICT, TODO.md; heads aa949b2 / e80d6b7). When to merge waits on Jacob's yes on\nPLAN-hub.md's Decisions. On the merge, take `plan/hub`'s TODO.md as the base and drop\nits own-bug entry \"`./dev.sh check` counts an UNCHECKED hook test as a FAIL\": fixed\non `main` 2026-10-08 (`cmd_hooktests` returns 3; `tests/test_hubcheck.py`\n`TestHooktests`). Not re-run since `main` gained Q7 (parts) and `plan/hub` 6d2b3f6:\nre-run that merge-tree before merging. Since tl-356 (2026-10-19) `main`'s TODO.md is\nrendered from `todo.json`: bring `plan/hub`'s entries in with `todo add`, never by\nmerging the text.\n2026-10-19 (tl-432) re-run: `git merge-tree --write-tree --name-only main plan/hub` (main bda5836, plan/hub 63cf780) -> 10 CONFLICTs: TODO.md, CLAUDE.md (1 hunk), PLAN-hub-brief.md (2), devtools/hubcheck.py (1), docs/inputs/{PLAN-check-progress,PLAN-repo-setup,PLAN-todo-tool(3),README,claudeTest-CLAUDE(2)}.md, docs/inputs/SHA256SUMS (2). Already 5 at 762a4fc (the head routing-tree §10.3 read), 2 at 790d4bd/392de0a, 0 at 10589a4; tl-406 42b8eb7 (full inputs refresh) took it to 9, 614b52b (leaks fix, same fix as plan/hub 995bc61) to 10. Jacob`s yes was \"as long as the conflict has been noted correctly\": it was not, so no merge and no H1a-0. Every non-TODO hunk reads as take-main: main holds the newer inputs refresh and SHA256SUMS, the same leaks fix, brief questions 13-16 (plan/hub side empty), CLAUDE.md newer rows. Needs Jacob: merge with take-main on those nine files, yes or no.",
       "probe": null,
       "reported_to": null,
       "parent": null,
       "blocked_by": null,
-      "waits_on": null,
+      "waits_on": "approval",
       "pointer": null,
       "hinges_on": null,
       "recommend": null,
@@ -909,5 +909,5 @@
       "imported": null
     }
   ],
-  "seal": "865d9db04dfe9f92"
+  "seal": "cea9acae30963e48"
 }
