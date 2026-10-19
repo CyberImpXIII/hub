@@ -262,6 +262,14 @@ own restarts in the ledger, and `launchd` follows when that count shows the view
 missed between sessions. This reverses group-servers decision 4 (a chron.py keep-alive,
 Jacob's yes of 2026-10-03), which predates the UI-over-services principle.
 
+**Answered `session-start` on 2026-10-19 (tl-327).** Jacob: "Yes I think so. it should
+be a command runnable through the cli but with the idea that it will end as a bundled
+application." So `hub up` is a CLI command first, run by `init.sh` at session start,
+with `hub: down` in the status line when it is not up; where it ends is a bundled
+desktop application, a window over the hub's own pages (PLAN-sitegen.md §9 is the
+method that makes one page serve both), and `launchd` belongs to that stage, when the
+restart count says so. PLAN-hub.md §7 takes this in the cloud pass (§10.3).
+
 ### 10.3 The cloud plan: where it stands, and the five questions that unblock it (2026-10-19)
 
 > "Please give me 5 questions to answer that will assist in unblocking the cloud hub
@@ -278,8 +286,10 @@ Jacob's yes of 2026-10-03), which predates the UI-over-services principle.
   hb-4 ("Decisions 9 and 14-17 await Jacob") is overtaken by those rows. One delta
   came after the last yes: H1a-0b, the read route split off H1a-0, lifts the total to
   about 1.7-2.6M tokens and the cloud share to about 1.25-1.8M.
-- The merge of `plan/hub` into `main` (hb-9) conflicts in TODO.md only, and the hub
-  wrote that it waits on Jacob. Requests to other owners wait on the same yes (hb-19).
+- The merge of `plan/hub` into `main` (hb-9): on 2026-10-13 it conflicted in TODO.md
+  only; the re-run of 2026-10-19 (step 2 below) found ten files, because `main` gained
+  the inputs refresh and the brief edits in between. It waits on tl-443, in the
+  Decisions table. Requests to other owners wait on the same yes (hb-19).
 - Eight inputs have drifted (hb-5); D1 (refresh, approved) is Dispatch 118.
   PLAN-services.md and PLAN-context-hygiene.md are not inputs yet (hb-4): they become
   inputs with that refresh, since §24 step 2 rewrites the second and the first holds
@@ -299,6 +309,20 @@ Jacob's yes of 2026-10-03), which predates the UI-over-services principle.
 | 4 | Decision 9's delta: H1a-0b on the credits, the total at 1.7-2.6M | H1a-0b's cloud run; the §9 order as costed |
 | 5 | merge `plan/hub` into `main` now (hb-9) | the merge; hb-19's requests; H1a-0's dispatch to `hub` on `main` |
 
+**Answered on the evening of 2026-10-19** (dt-12): 1 is asked again in his terms
+(tl-384; §20 holds his question and the answer); 2 `declare` (tl-364; §17's steps run
+under tl-445); 3 `session-start` (tl-327; §10.2); 4 `credits` (tl-398), Jacob: "after
+I upgraded to the 5x max plan, those cloud credits changed from $100 to $250. I have
+$150 left", so H1a-0b runs on the credits, the §9 order stands as costed, and $150 is
+the balance to plan against (PLAN-cloud-offload.md keeps the line); 5 `merge` under a
+condition the re-run did not meet, so it is asked again as tl-443 (step 2).
+
+**The cloud pass and the merge are two different gates.** The merge gates H1a-0
+(local, by `hub`, on `main`) and hb-19's requests; it does not gate the cloud pass.
+The cloud pass waits on the refresh (118, tl-406) closing and on the brief carrying
+this evening's answers (§17 `declare`, D5 `session-start`, §20 as re-asked); Jacob
+starts it when hub reports tl-406 done, whatever tl-443's answer.
+
 **What is not a question.** The next cloud pass's scope is the planner's call: one
 pass, plan then build. It applies the answers above and §22-§24 to PLAN-hub.md (§4,
 §7, the re-cost), then runs H1a-0b and D0 on the credits as §9 orders, and stops when
@@ -317,9 +341,18 @@ refreshes its copy.
 1. **`hub`:** with 118: PLAN-services.md and PLAN-context-hygiene.md added to the
    brief's §2 inputs and `docs/inputs/` (hb-4), `SHA256SUMS` updated.
    track: TODO.md "Hub inputs: services and context-hygiene"
-2. **`hub`:** after question 5's yes: re-run the merge-tree, merge `plan/hub` into
-   `main`, `plan/hub`'s TODO entries through `todo add`, hb-4 closed by the rows'
-   dates; then H1a-0 (Decision 17). track: needs-yes PLAN-routing-tree.md §10.3
+2. **`hub`:** question 5 answered `merge` on 2026-10-19 ("I believe so yes. as long
+   as the conflict has been noted correctly"), a condition that meant TODO.md only.
+   The re-run found ten conflicting files (TODO.md, CLAUDE.md, PLAN-hub-brief.md,
+   devtools/hubcheck.py, SHA256SUMS and five docs/inputs copies: `main` gained the
+   refresh 42b8eb7 and the brief edits after `plan/hub` branched), so the hub stopped,
+   corrected hb-9 and waits. The condition failed as written, and the merge is asked
+   again as tl-443 (`merge-now` | `hold`, recommend `merge-now`): for the nine files
+   outside TODO.md `main`'s side is the newer one, so hub takes it, reports per file
+   anything on `plan/hub`'s side that `main` lacks (none expected; any line stops the
+   merge), brings `plan/hub`'s TODO entries in through `todo add`, runs `./dev.sh
+   check` with SHA256SUMS, closes hb-4 by the rows' dates; then H1a-0 (Decision 17).
+   track: needs-yes PLAN-routing-tree.md §10.3
 
 ## 11. Decisions (all answered "yes" by Jacob, 2026-10-03)
 
@@ -1011,32 +1044,39 @@ parallel only with its concurrency proof; the browser is one sweep at a time, in
 tool; fan out by the cheapest unit, processes before dispatches and runs before
 writes." The per-repo part is not prose: it is the `store-concurrency` gate.
 
+**Answered `declare` on 2026-10-19 (tl-364).** The steps below run in the order
+written, under one item, tl-445 ("Fan-out by declaration"); step 4 is the cloud
+pass's (§10.3) and is written into PLAN-hub.md there, not dispatched here.
+
 ### Steps
 
 1. **`harness`:** the guard's modes and the `uses: browser` class, the ledger fields,
    the brief shape (`mode:` and `uses:` lines, like `todo:`), the tests above, the
-   `dispatches` columns. track: needs-yes PLAN-routing-tree.md §17
+   `dispatches` columns.
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 2. **`research`:** `answer` safe under two calls at once and a commit that retries on
    `index.lock`, with the test; reported to it from here.
-   track: needs-yes PLAN-routing-tree.md §17
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 3. **`site-scrapers`:** its sweep verbs named in `services.json`, so a brief that
    omits `uses: browser` for one is caught; reported to it from here.
-   track: needs-yes PLAN-routing-tree.md §17
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 4. **`hub`:** carries the modes and the classes into its `route` (§6 invariants: the
-   write lease becomes a lease per class value, unbounded for `run` and `read`).
-   track: needs-yes PLAN-routing-tree.md §17
+   write lease becomes a lease per class value, unbounded for `run` and `read`); the
+   cloud pass applies it to PLAN-hub.md (§10.3).
+   track: needs-yes PLAN-routing-tree.md §10.3
 5. **`checks`:** per-verb `mode` and `uses` in the `services.json` schema, the
    `store-concurrency` gate, fixtures for an undeclared verb (strict default) and an
-   unknown `uses` value (fails). track: needs-yes PLAN-routing-tree.md §17
+   unknown `uses` value (fails).
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 6. **`site-scrapers`:** the sweep lock in the tool, after the probe above; two
    single-recipe runs at once stay allowed, with the test.
-   track: needs-yes PLAN-routing-tree.md §17
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 7. **`harness`:** `mode:` and `uses:` derived from the verb table at spawn (a
    disagreeing line refused), `fanout.max_run`, the gate on the sum, the batch
    summary, `lib/commit-records.sh`; after 5.
-   track: needs-yes PLAN-routing-tree.md §17
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 8. **`dispatcher`:** the directive paragraph into CLAUDE.md "Parallelism".
-   track: needs-yes PLAN-routing-tree.md §17
+   track: TODO.md "Fan-out by declaration: PLAN-routing-tree.md section 17 steps 1-8"
 
 ### 17.2 Service-level dispatchers: what blocks them (Jacob, 2026-10-19)
 
@@ -1085,6 +1125,11 @@ set is unknown until a first pass. Neither case is in the ledger today.
 **Recommendation:** the table now (answer §17 "declare"), and nested agents as a §17
 follow-on when a `run` dispatch is seen splitting its own work in a report, which
 `dispatches` shows as one dispatch doing N jobs in sequence.
+
+**Answered `table` on 2026-10-19 (tl-387).** The steps below are the nested path and
+stay closed; the table runs on §17's answer (tl-364, asked again in plain words the
+same evening), since the guard refuses a second dispatch into any folder until §17's
+modes exist.
 
 **Gates (nested path only):** at depth 2 a nested spawn is refused unless its parent's
 dispatch is `run` or `read` (test); a nested writer into a folder is refused like any
@@ -1252,6 +1297,38 @@ cheaper (Jacob's determination of 2026-10-19, not measured again here).
 `tokens --agents --roles` reports tokens, and lines printed for Jacob, per request by
 role, from the ledgers; that number serves §21's objective, not a choice between
 lifetimes.
+
+**Asked again the same evening (tl-384).** Jacob: "elaborate on this, I think I
+understand the question, but I'd like to be sure. From what I understand, and from
+what seems to be the case through the development of context cleaner is that there is
+no idle cost, restart cost, or health difficulty for Agents that are not used often.
+Theoretically, having long-lived roles, that are waiting for work but spin up with all
+the necessary context they need would be more eficient right?" The answer, in his
+terms (§24's gate allowlists this paragraph: it is the question, in his words):
+
+- **Idle cost: none.** A waiting process spends no tokens. He is right.
+- **Start cost: the files a role reads first** (its CLAUDE.md, the plan section, the
+  item), about 30k tokens today (§21 row 5). A process that stays up pays it once; one
+  started per request pays it every request. That is the whole saving of staying up.
+- **Against it: every request re-sends the whole conversation.** A model keeps nothing
+  between requests; the harness sends everything so far each time. A role that has
+  done five tasks sends all five with the sixth, so its requests grow with every task,
+  and compaction then drops detail. A role started per request sends only its task.
+  After one task of ordinary size the carried conversation is usually larger than the
+  start it saved; `tokens --agents` shows both columns, so the claim is checkable per
+  role, and the number decides, not the argument.
+- **Health: a waiting process can die, hang, hit a rate limit mid-wait, or hold a view
+  of files others changed since it read them.** A role started per request reads the
+  current files. "Spin up with all the necessary context" is what the per-request
+  start does: the stores, the plans and the handoff are the role's memory, and they
+  are smaller than a carried conversation.
+- **The two windows are the exception** because the conversation with Jacob is one
+  conversation.
+
+The decision as re-asked: `one-kind`, as above, recommended; or `long-lived`, a
+process per service stays up and takes requests in turn: one start per service,
+growing requests, compaction losses, and a health check and a restart rule per role
+still to write.
 
 **What moves.** The folder lock stays where it is until the hub's write lease (§6)
 exists, so the first roles routed this way are the ones that write only records
@@ -1612,7 +1689,7 @@ the nightly audit, under `usage gate`. The dispatcher holds auto-relays past
 lines it has not spawned yet.
 
 **The job: `agents.sh release [--dry-run]`** (harness), one run per cron tick:
-1. **Ready?** `todo ready --json` in every repo that `services.json` lists (todo: the
+1. **Ready?** `todo dispatchable --json` in every repo that `services.json` lists (todo: the
    `--json` form and a workspace form, if missing; a report from here). N items. N = 0
    prints "nothing ready" and exits 0 with no process started.
 2. **Room?** `usage gate` for `min(N, fanout.max_run)` dispatches at the median from
@@ -1635,8 +1712,9 @@ first try, as asked.
 
 **A cron prompt is never Jacob's.** `quote-words.sh` gives a spawn from a release the
 relay note, not "Jacob's words"; `peer-cap.sh` counts it as a peer message; it carries
-no approval and needs none: `todo ready` lists only items already approved and
-unblocked.
+no approval and needs none: `todo dispatchable` lists only items already approved,
+ready and not yet dispatched (`todo ready` ignores approval: it lists every item with a
+repo, a kind of work and a done-when; td-81, found by the dispatcher 2026-10-19).
 
 **Cadence.** Hourly. The 5h window resets at a time `usage status` prints, so an
 hourly tick releases within the hour of a reset and costs no tokens while it holds; a
@@ -1716,3 +1794,88 @@ owners' stores through it):
 
 **Not in the queue:** anything under needs-yes (`todo decisions`), the cloud pass
 (§10.3), and Jacob's own steps.
+
+## 27. The usage bars: a widget in the hub, its sources a registry (Jacob, 2026-10-19)
+
+> "I would also like to implement a widget or a 'functionality block' I guess,
+> somewhere in the hub, though I haven't figured out where in the layout/user flow it
+> will sit. For the usage bars to be. (e.g. current session amount utilized, usage
+> limit from this week, fable percentage from this week). I would also like to
+> incorporate the possibility of expanding that area to include other percentages
+> that can be dynamically changed as I determine new sources."
+
+**What a bar is.** A percentage with a name, a window, the time of its sample and
+where it came from. A bar is a row of a registry, `tools/usage/bars.json`: `name`,
+`source` (a verb of a service and the keys it returns, or one of the usage tool's
+own windows), `window` (`5h`, `7d`, `session`, `day`), `refresh` (seconds), `label`.
+Adding a source is adding a row; no code in the widget names a source. A row whose
+verb does not exist fails the usage tool's `check`, and the registry is the one
+place the widget and `usage status` read.
+
+**The three bars he named, and where each number is today.**
+
+| bar | the number | source today |
+|---|---|---|
+| the current session | the 5h window's `used_percentage`, as the status line receives it in `rate_limits.five_hour` (https://code.claude.com/docs/en/statusline#rate-limit-usage, kb copy fetched 2026-10-09) and `usage-statusline.sh` records in `limits.json` | `usage status` |
+| this week's limit | `rate_limits.seven_day.used_percentage`, the same path | `usage status` |
+| Fable this week | two readings, and the usage owner's probe decides which exists: a Fable-specific weekly window, if `rate_limits` carries one (the docs name `five_hour`, `seven_day` and `spend_limit`; nothing per model is documented, so this is `unknown` until a sample is read); otherwise the share of this week's tokens that ran on Fable, from the transcripts reader (`agents.sh tokens` already sums by model per session). Both are rows; the probe says which one is live | `usage` + `transcripts` |
+
+A fourth row costs nothing to name now and is the kind of source he means by "as I
+determine new sources": the context window of the current request (the status
+line's `context_window`), the day's tokens by role (`transcripts`), the release job's
+hold state (§25), the credit balance (§10.3, typed by Jacob, never scraped).
+
+**The verb.** `usage bars [--json]` evaluates every row and prints one list:
+`{name, pct, window, asof, source, state}`, where `state` is `ok`, `stale` (older than
+`refresh`) or `unknown` (the source failed or the field is absent). A bar is never
+`0` for a source that did not answer: it is `unknown`, with the reason. No model
+anywhere in the path.
+
+**The widget.** The hub renders the list as bars, one per row, reading `usage bars
+--json` on the row's `refresh`; a `stale` bar is drawn with its age, an `unknown` one
+with its reason. The hub's own page does not know the rows. Where it sits is the
+open question (decision below); PLAN-hub-view.md (hub's, on `plan/hub`) gets the
+placement once answered, as one component the view includes.
+
+**The Fable row's reading (planner, 2026-10-19, on the dispatcher's question from
+tl-435).** The usage probe found that a live `rate_limits` sample holds only
+`five_hour` and `seven_day` (tl-433), so the row is the second reading: the share of
+this week's tokens that went to Fable, **weighted by list price** from the manifest's
+dated prices table (the same weighting `agents.sh tokens --prompts` uses), computed by
+transcripts' `share` verb (tl-435). Each of the four counts (input, cache write, cache
+read, output) is priced at its own rate; the JSON keeps the four raw counts beside the
+share, and the bar's label says "by list price". Output alone would hide the cost of
+Fable's carried context; raw totals would weigh a cache read like an output token.
+**The window:** the `seven_day` limit's own window when `limits.json` holds its reset
+time, else the trailing seven days; the JSON says which. The Agent SDK also names
+`seven_day_opus` and `seven_day_sonnet` rate-limit types (python#ratelimitinfo, kb copy
+fetched 2026-10-09); none appeared in the live sample, so they are `unknown` until seen,
+and a per-model window, if one appears, replaces the share for that model. No yes
+needed: it is a reading, not a rule.
+
+**Decision.**
+
+| # | decision | hinges on | recommend |
+|---|---|---|---|
+| 1 | §27: where the bars sit | `strip`: a thin strip at the top of every hub page, always visible, the three bars and a `+` that opens the full list; `panel`: a panel of its own in the inbox view, opened on demand, the full list; `both`: the strip shows the first three rows, the panel the rest | strip |
+
+**Gates.**
+
+- a row naming a verb or key that does not exist fails `usage check` (fixture);
+- a source that does not answer yields `unknown` with a reason, never `0` or the last
+  value unmarked (test); a sample older than `refresh` is `stale` with its age (test);
+- `usage status` and `usage bars` agree on the two windows (test);
+- the Fable row's probe is recorded with its sample's keys in the usage repo's
+  TODO.md before the row is marked live (report);
+- the widget renders a fixture list with every state (fixture, in the hub's check).
+
+**Steps.**
+
+1. **`usage`:** `bars.json` with the three rows and the Fable probe (the keys of one
+   `rate_limits` sample, in a report; the row's source set by what the sample holds),
+   `usage bars [--json]`, the gates above. track: TODO.md "Usage bars in the hub"
+2. **`transcripts`:** a weekly share-by-model verb for the Fable row's second reading
+   if step 1's probe finds no per-model window; after 1.
+   track: TODO.md "Usage bars in the hub"
+3. **`hub`:** the component, placed by the decision; after 1 and the hub view plan.
+   track: needs-yes PLAN-routing-tree.md §27

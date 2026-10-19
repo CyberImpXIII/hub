@@ -38,30 +38,16 @@ the link kept beside the claim, and probes are only for what the docs leave open
 
   A change anywhere recomputes everything after it. There's no per-file caching.
   ([CC: how the cache is organized](https://code.claude.com/docs/en/prompt-caching#how-the-cache-is-organized))
-- **Every token in the prefix costs the same,** whichever layer it's in. A cache write
-  costs 1.25× base input (5-minute TTL) or 2× (1-hour TTL). A read costs 0.1×, or
-  **0.05× on Opus 5.5**: $0.20/MTok, the same price as a Sonnet 5.5 read. So a
-  CLAUDE.md token saved is worth exactly a system-prompt token saved. On cold Opus
-  agents, the prefix's cost is mostly the one 1.25× write, not the reads.
-  ([API: pricing](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pricing))
-- **Subagents start cold, for practical purposes:**
-  - a subagent never reads its parent's cache;
-  - two runs share a cache only when the prefix is identical: same system prompt and
-    tools, directory, and git-status snapshot;
-  - subagents get a 5-minute TTL even on a subscription.
-
-  ([CC: subagents and the cache](https://code.claude.com/docs/en/prompt-caching#subagents-and-the-cache),
-  [cache scope](https://code.claude.com/docs/en/prompt-caching#cache-scope),
-  [which TTL each request gets](https://code.claude.com/docs/en/prompt-caching#which-ttl-each-request-gets))
+- **Every token in the prefix counts the same,** whichever layer it's in. Costs here
+  are tokens at list price, from the manifest's prices table (`prices.per_mtok`, each
+  token type at its own price, copied from
+  [API: pricing](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pricing)),
+  never cache multipliers (PLAN-routing-tree.md §24, restated 2026-10-19). So a
+  CLAUDE.md token saved is worth exactly a system-prompt token saved.
 - **What follows from that:**
-  - Agents dispatched minutes or days apart, with commits landing in between, almost
-    always start cold. The audit agrees: site-scrapers' cache writes over a whole run
-    (30.6k) ≈ its first request (29.4k).
-  - So more agent types lose no cache hits that exist today.
   - A smaller prefix saves on every request of a run, starting with the first.
-- **The main windows' TTL depends on billing.** They get 1 hour on a subscription within
-  plan usage, and 5 minutes once usage credits are drawn. A 5-minute gap between prompts
-  re-writes the whole window.
+  - More agent types add nothing per request by themselves: each request carries its
+    own prefix, whichever agent sends it.
 
 **Left open by the docs:**
 - **Does a `tools` allowlist shrink the prefix?** The docs say that while tool search is
@@ -95,9 +81,9 @@ saves on every request.
 **The old Phase 0 metric**, kept for that gate: weighted tokens per human prompt.
 Pre-v2 Opus sessions give the "before" side: `a0f9528a` re-read 453.9M cached tokens
 over 1,024 requests.
-- Weight each token type by its price relative to input: cache read about 0.1, cache
-  write about 1.25 (5-minute cache) or 2 (1-hour cache), output 5.
-- Weight each model by its price.
+- Price each token type of each model at its list price from the manifest's prices
+  table, as `agents.sh tokens --prompts` does (`.claude/lib/prompt-cost.jq`), never by
+  multipliers (PLAN-routing-tree.md §24).
 - Compare per prompt, not per session, because sessions differ in length.
 - State the sample size with every number.
 
@@ -128,30 +114,21 @@ over 1,024 requests.
 - **Smaller working context.** A tests silo reads tests, not the whole repo.
 - **Fewer misroutes.**
 
-**Where it could cost more** (corrected 2026-10-02; this said "every silo pays its own
-cold start", which overstated it):
-- **The starting context isn't a one-time fee.** It rides on every request, written once
-  when cold (1.25×) and read after that (0.1×). Splitting a task across two agents sends
-  it about as many times as one agent doing both halves.
+**Where it could cost more** (corrected 2026-10-02; restated at list price 2026-10-19,
+PLAN-routing-tree.md §24):
+- **The starting context isn't a one-time fee.** It rides on every request. Splitting a
+  task across two agents sends it about as many times as one agent doing both halves.
 - **The real extra costs of a split:**
-  - one more cache write per extra agent: about 33k input-price tokens on a 29k prefix;
+  - one more start per extra agent: its prefix, about 29k tokens, on its first request;
   - rediscovery, when the second agent re-reads files the first already read;
   - a brief and a report added to the dispatcher's history.
-- **The real saving of a split:** history doesn't carry over. One agent doing two tasks
-  re-reads all of the first task on every request of the second. In a median `harness`
-  run (71 requests, 9.4M cache reads), the 40k prefix accounts for about 2.8M. History
-  is the other ~70%.
-- **Worked example, at Opus 5.5 prices** (reads 0.05×; recomputed 2026-10-02, after an
-  earlier version used 0.1×): 20 requests, each adding 3k of history.
-  - Splitting saves 300k of history reads, about 15k input-price tokens.
-  - The extra write costs about 35k.
-  - **Net: the split costs ~20k more.**
-
-  Splitting pays only when the history it avoids is above roughly 700k tokens of reads
-  per extra agent: long tasks, or a silo prefix well below 29k. Short single-role tasks
-  favour one agent. The audit's history-share column (Phase 0) decides it per task kind.
-- Because most dispatches start cold anyway (§2), more agent types lose no cache hits.
-  The folder agent stays as the owner and the fallback for tasks that span roles.
+- **Not weighed against a kept process.** Each request starts its owner in its folder
+  (PLAN-routing-tree.md §20), and how long a process lives is not a design axis (§24),
+  so a split is chosen by the knowledge each half needs. Its cost is measured per task
+  at list price (`agents.sh tokens --prompts`), never derived from cache multipliers;
+  the worked example that stood here on 2026-10-02 did both and is withdrawn.
+- More agent types add nothing per request by themselves (§2). The folder agent stays
+  as the owner and the fallback for tasks that span roles.
 - Measure **per task** (every dispatch for one request), never per agent.
 
 ## 4. Design
@@ -294,7 +271,7 @@ cold start", which overstated it):
 
 ## 8. Risks
 
-- **Cross-role tasks pay several cold starts.** Mitigation: the folder agent stays as the
+- **Cross-role tasks pay several starts.** Mitigation: the folder agent stays as the
   fallback, and everything is measured per task.
 - **A silo misses a rule it needed,** because filtering removed it. Mitigation:
   - untagged sections go to every role;
@@ -360,10 +337,9 @@ so once routing-tree lands, this component is routing-tree's.
    stands).
 4. **Context-cleaning matters more, for a sharper reason than "fewer agents".** A role
    that serves many repos must not carry repo A's context, hosts or findings into repo
-   B. Cold roles (PLAN-routing-tree.md §5) solve that by construction: one task, one
-   process. Warm roles across repos are therefore gated on a context reset at every
-   repo switch, which is PLAN-context-hygiene.md §4's component; until it exists,
-   cross-repo roles run cold. One more consequence: with one coder serving a repo at a
+   B. One task, one process solves that by construction: each request starts the role
+   in its folder (PLAN-routing-tree.md §5, §20; restated 2026-10-19, §24), so nothing
+   crosses a repo switch. One more consequence: with one coder serving a repo at a
    time, the write lease (PLAN-routing-tree.md §6) stops being a safety net and becomes
    the normal case.
 
@@ -372,8 +348,8 @@ kind, with the repo a parameter of the task: `coder`, `tester`, `auditor`, `docs
 `recipe-builder`, each a registry role with its tool allowlist, `omitClaudeMd`, and the
 repo's `CLAUDE.md` section attached per task by `quote-words.sh`'s successor in the
 `hook` service. The pilot (decision 2) is unchanged: site-scrapers first, because it
-already meets the contract. Gate: the same `tester` role, run cold against two repos'
-fixtures, produces each repo's findings and none of the other's; its starting context
+already meets the contract. Gate: the same `tester` role, started per request against two
+repos' fixtures, produces each repo's findings and none of the other's; its starting context
 is within 1k of a per-repo silo's.
 
 **10.3 Decision:** yes, Jacob 2026-10-05 ("Yes I think so. I'd love a run down of what that means though"). The rundown he asked for is 10.1-10.2; building waits on decision 1 of §6 (measure first), unchanged.

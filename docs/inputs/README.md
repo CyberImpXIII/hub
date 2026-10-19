@@ -71,6 +71,12 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   Routing-tree §20 is still marked pending dt-5 row 5 in the brief. **`PLAN-services.md`
   is not copied yet:** the leak audit refused its original (one home-folder path, its
   line 74), so it waits for its owner, the planner, to fix that line (TODO.md).
+- **Refreshed in full again 2026-10-19 (evening)**, still tl-406: the planner made
+  `PLAN-services.md` line 74 a relative path, the leak audit passed on it, and it
+  became a brief §2 input and a copy here (§1, §3's rules on ids and tags, gated
+  read-only stores and static or dynamic stores, §4 step 10), its row edited at the
+  top-level original. Seven copies had drifted since the first refresh and were
+  re-copied with it (`./dev.sh refresh`).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's
@@ -110,6 +116,7 @@ that rewrites a copy, leaves it 0644: run `./dev.sh seal` then.
 | `PLAN-repo-setup.md` | `PLAN-repo-setup.md` | brief §2 |
 | `PLAN-portable-env.md` | `PLAN-portable-env.md` | brief §2 |
 | `PLAN-context-hygiene.md` | `PLAN-context-hygiene.md` | brief §2 (since 2026-10-19) |
+| `PLAN-services.md` | `PLAN-services.md` | brief §2 (since 2026-10-19, evening) |
 | `PLAN-usage-reporting.md` | `PLAN-usage-reporting.md` | review §3 finding 3 (§3: the usage gate admission asks) |
 | `PLAN-hard-gates.md` | `PLAN-hard-gates.md` | review §3 finding 4 (§2: the `Agent:` commit stamp) |
 | `PLAN-check-progress.md` | `PLAN-check-progress.md` | review §3 finding 5 (§7: why H1a splits) |

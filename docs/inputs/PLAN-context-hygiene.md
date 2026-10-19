@@ -210,7 +210,7 @@ continues, without a clear.
   - WebSearch and WebFetch join the named tools;
   - the spill goes to the store, not `$TMPDIR`;
   - each stub names the store id and the verb that reads it back.
-- C1-C3 (the settings, the cold-cache guard, the after-compaction note) stay as written.
+- C1-C3 (the settings bundle, the context monitor, the post-compaction re-injection) stay as written.
   They serve the same aim at lower resolution.
 - §1's non-goal "rewriting history" stays for Claude Code sessions, and is lifted for
   sessions the hub runs.
@@ -358,9 +358,8 @@ stub carries both the query reference and the `ctx:` id (E11, "Settled").
 
 ## 1. Goal and non-goals
 
-**Goal.** Cut weighted usage tokens per user prompt without lowering answer quality, using four levers:
+**Goal.** Cut weighted usage tokens per user prompt without lowering answer quality, using three levers:
 - keep carried context small, since every request re-reads it;
-- stop huge contexts being rebuilt after the cache goes cold;
 - keep bulky tool output out;
 - point each prompt at the few rules or tools it needs, instead of loading them all every time.
 
@@ -384,7 +383,7 @@ Sources are code.claude.com/docs/en/…, fetched 2026-10-01. **P#** = Phase 0 pr
 | Rewrite tool arguments | **Yes.** PreToolUse `updatedInput` replaces the whole input, and permissions judge the rewritten input. Behaviour with no `permissionDecision` is unverified (**P6**) | hooks#pretooluse-decision-control |
 | Inject context | Through stdout or `additionalContext` on UserPromptSubmit or SessionStart. Capped at 10,000 chars per field; anything over becomes a file path plus a 2,000-char preview. Stays in history and is re-read on every request | hooks#json-output, #add-context-for-claude |
 | Block a prompt | **Yes.** UserPromptSubmit `decision:"block"`: the prompt never reaches Claude, and `reason` goes to the user only. Prompt text is kept in the block message and history | hooks#userpromptsubmit-decision-control |
-| Talk to the user only | `systemMessage` is "shown to the user"; whether Claude also sees it is unverified (**P4**). The status line costs **0 tokens** and gets `context_window.*`, `prompt_cache.{warm,ttl,expires_at}` and `rate_limits.five_hour.used_percentage` | hooks#json-output; statusline#available-data |
+| Talk to the user only | `systemMessage` is "shown to the user"; whether Claude also sees it is unverified (**P4**). The status line costs **0 tokens** and gets `context_window.*` and `rate_limits.five_hour.used_percentage` | hooks#json-output; statusline#available-data |
 | Compact, clear or delete | **No.** PreCompact can only block. PostCompact gets `compact_summary` but can't act on it. SessionStart with matcher `compact` can inject | hooks#precompact, #postcompact, #sessionstart |
 | Work in subagents | Tool events fire there, with `agent_id`. SubagentStart can inject but gets no task text. InstructionsLoaded logs each loaded file | hooks#hook-locations, #subagentstart, #instructionsloaded |
 | Fail open | Exit 1/127, timeouts and bad JSON are non-blocking. Only exit 2 or a valid deny/block blocks. So a missing hook script does **not** block, which contradicts CLAUDE.md's "copies, not symlinks" reasoning | hooks#other-exit-codes, #timeouts |
@@ -395,29 +394,29 @@ On macOS, Grep and Glob aren't default tools; searches arrive as Bash (tools-ref
 
 ## 3. Where the tokens go
 
-I ran read-only jq profiles over the four largest main transcripts (Sep 18–29) and their subagents. This is a preliminary sample, not the tokens audit. Weights follow API ratios: cache read 0.1, one-hour cache write 2, output 5. P9 calibrates them against the plan meter.
+I ran read-only jq profiles over the four largest main transcripts (Sep 18–29) and their subagents. This is a preliminary sample, not the tokens audit. Weights follow API ratios: cache read 0.1, one-hour cache write 2, output 5. P9 calibrates them against the plan meter. (Those ratios are this sample's 2026-10-01 method; costs are now tokens at list price, the manifest's prices table, never multipliers: PLAN-routing-tree.md §24.)
 
 1. **Carried context: 72–80% of weighted tokens.**
    - Sessions grow until compaction triggers at about 967K. Average context per request was 348–471K, peaking at 965K.
    - a0f9528a made 1,032 requests and read 454M tokens from cache. Its one compaction cut 967,576 tokens to 16,238.
    - Replaying the same growth under a lower compaction window cuts the summed context 3.0–4.1× at 200K, 2.1–3.1× at 300K and 1.8–2.8× at 400K.
    - The dispatcher pays this cost on every report it receives.
-2. **Cold-cache rebuilds: 10–19%.** A long session has 8–12 of them, mostly after an idle gap of over 60 minutes, and each rewrites the whole context. Together they are 63–84% of all cache writes.
+2. *Withdrawn 2026-10-19:* the share of cache rebuilds after idle gaps, measured here as a lever. The cache's state is not one (PLAN-routing-tree.md §24; §6 decision 3).
 3. **Bulky tool results (inside #1).**
    - Results over 8,000 chars are at most 3–19% of cache reads, an upper bound that assumes spilled output is never re-read.
    - Worst MCP results: Gmail `search_threads` 30.6K chars, Drive `search_files` 40.7K, Dropbox `fetch` 36.7K, Chrome `read_page` 50.3K. Read results reached 57.8K.
    - Tool *arguments* outweigh tool results: 836K vs 637K chars in a0f9528a (Edit 406K, Write 195K). That makes compaction the main lever, not shrinking output.
-4. **Subagent cold start.** Each spawn writes a 36–42K-token prefix. Within it: CLAUDE.md plus MEMORY about 30K chars, deferred tool names 12K, skill listing 10.6K, MCP instructions 7.4K. Subagents get a 5-minute cache TTL; one master-layer run lost 67% of its cache writes to rebuilds after gaps over 5 minutes.
+4. **Subagent start.** Each spawn writes a 36–42K-token prefix. Within it: CLAUDE.md plus MEMORY about 30K chars, deferred tool names 12K, skill listing 10.6K, MCP instructions 7.4K.
 5. **Output, including thinking: 5–6%.** Effort settings belong to the delegation layer.
 6. **Always-on CLAUDE.md: about 1–2%** of the main session. Its share is larger per subagent spawn.
 
 **Run first:** the tokens audit over 30 days of main and subagent transcripts, reporting:
-- per session: requests, average and maximum context, cache reads and writes, rebuilds with the gap before each, output, weighted total;
+- per session: requests, average and maximum context, cache reads and writes, output, weighted total;
 - per tool: result chars and *carried* volume (chars × later requests in the same compaction segment);
 - per `agent_type`: first-request prefix;
 - the replay at 200K, 300K and 400K.
 
-The ranking below holds only if this confirms #1 and #2. My research scripts (`profile`, `carry`, `compactsim`, `missscan`, `subagent` .jq) are in this session's scratchpad.
+The ranking below holds only if this confirms #1. My research scripts (`profile`, `carry`, `compactsim`, `missscan`, `subagent` .jq) are in this session's scratchpad.
 
 ## 4. Components, ranked by saving per effort
 
@@ -428,23 +427,17 @@ The ranking below holds only if this confirms #1 and #2. My research scripts (`p
   - `autoCompactWindow`: decision 1.
   - `promptSuggestionEnabled: false`: each suggestion is a request that reads the full context from cache.
   - `awaySummaryEnabled: false`: decision 7.
-  - `subagentPromptCacheTtl: "1h"`: only if subagent rebuilds exceed 37.5% of subagent writes. That is the break-even, since one-hour writes cost 1.6× five-minute writes.
 - **Injected:** 0.
 - **Fail-open:** not applicable. To revert, remove the key.
 - **Seam gate.** `check` asserts each key and value. The audit proves the setting is live: each compaction segment's peak context is at most the window plus the largest single-request growth.
 - **Measure.** Average context per request and cache reads per prompt, 7 days before and after; requests per prompt may rise at most 15%.
 
-### C2. Context monitor and cold-cache guard
-- **Mechanism.**
-  - `statusline.sh` wraps any existing status line. It shows `ctx 212k/300k · cache warm 41m · 5h 38%` and writes those numbers to `$TMPDIR/hygiene/<session_id>.json`. At 70% of the window it adds "/compact <focus> at next break".
-  - `prompt-guard.sh` (UserPromptSubmit) reads that state file if it is under 10 minutes old, otherwise the transcript tail.
-  - If idle time exceeds the TTL and context is at least 150K, it blocks once: "Cache cold, idle 2h14m: sending re-processes ~612K tokens. /clear (free), /compact <focus>, or resubmit unchanged." Resubmitting the same prompt hash within 10 minutes passes.
-  - On SessionStart `resume`, the documented `prompt_cache_likely_expired` and `context_tokens` fields drive the same warning.
-- **Injected:** 0. Block reasons never enter context.
-- **Fail-open.** A stale state file, missing field, parse error or timeout all mean allow. The hook never exits 2, and blocks only when both numbers parsed.
-- **Tests.** Each pair flips the decision: idle 59 vs 61 minutes; context 149K vs 151K; same vs changed prompt hash. A missing transcript, garbage JSON or stale state file each mean allow.
-- **Seam gate.** Status line and hook are registered and executable, checked both ways against a manifest. The state file carries a schema version.
-- **Measure.** Rebuild tokens per session. A false positive is a blocked prompt whose eventual request still read the cache; target at most one per week.
+### C2. Context monitor
+- **Mechanism.** `statusline.sh` wraps any existing status line. It shows `ctx 212k/300k · 5h 38%` and writes those numbers to `$TMPDIR/hygiene/<session_id>.json`. At 70% of the window it adds "/compact <focus> at next break".
+- **Withdrawn 2026-10-19** (PLAN-routing-tree.md §24; §6 decision 3): the status line's cache segment, and the prompt guard (`prompt-guard.sh`) that held a send after an idle gap. Neither is part of this plan; context-hygiene removes both with their tests (§24 step 2).
+- **Injected:** 0.
+- **Tests.** The status line's own, less the cache fields (§24 step 2).
+- **Seam gate.** The status line is registered and executable, checked both ways against a manifest. The state file carries a schema version.
 
 ### C3. Post-compaction re-injection (ships with C1)
 - **Mechanism.**
@@ -515,7 +508,7 @@ Three mechanisms, applied in order:
 
 **Phase 1: C1 + C3.** Stop if weighted tokens per prompt fall less than 25%, if requests per prompt rise more than 15%, or if you log a post-compaction wrong answer that C3 doesn't fix.
 
-**Phase 2: C2.** Roll back on more than one false positive a week.
+**Phase 2: C2,** the context monitor.
 
 **Phase 3: C4.** Apply step 1, then step 2 one tool at a time. Roll back a tool whose re-read rate exceeds 30%, or after any task fails for missing output.
 
@@ -529,8 +522,8 @@ At every phase: commit, run `hygiene.sh check`, measure with the audit, and reco
 
 1. **Compaction window: 200K, 300K or 400K?** The replay gives 3–4×, 2.1–3.1× or 1.8–2.8× less carried context. Hinges on how much detail loss you accept between natural breaks. **Decided: 200K, Jacob 2026-10-02** (TODO.md "Apply the auto-compact window"). It is applied: `.claude/settings.json` line 235 has `"autoCompactWindow": 200000`, which `wiring.json` requires. The fallback, if compactions prove lossy, is 300K. `statusline.window` is 200000, and context-hygiene's `files_window` gate checks that it equals every `autoCompactWindow` it can find (2026-10-08; its commit waits on the hooks re-render). Unconfirmed: that the key takes effect; the probe is `/autocompact`. Also unconfirmed (context-hygiene's agent, 2026-10-08): tools/context-hygiene has its own `.claude/settings.json` without `autoCompactWindow`. If Claude Code reads only the settings of the folder a session starts in, a session started there compacts at the default while its status line shows /200k. The probe: start a session in tools/context-hygiene and run `/context` or `/autocompact`. The same question applies to every tool folder with its own settings.
 2. **User or project settings?** `~/.claude/settings.json` covers every session from one copy, with no site-scrapers duplicate, but sits outside git. Project settings belong to harness. Hinges on whether you start sessions inside tool folders.
-3. **Guard: block, or status line only?** Blocking costs a resubmit; a warning relies on you noticing it. **Answered by Jacob, 2026-10-13: neither.** "We have gone over this more than once, cold cache doesn't matter." The cold-cache guard (`prompt-guard.sh`, C2) is dropped: not built, not wired, and the status line shows context and the 5h window without cache warmth. The planner is not to raise cache warmth again (dt-2 row 4, dt-3 row 1).
-4. **One-hour subagent TTL?** Hinges on the audit's rebuild share; break-even is 37.5%.
+3. **Guard: block, or status line only?** Blocking costs a resubmit; a warning relies on you noticing it. **Answered by Jacob, 2026-10-13: neither.** "We have gone over this more than once, cold cache doesn't matter." **Closed as withdrawn, 2026-10-19** (PLAN-routing-tree.md §24): the guard (`prompt-guard.sh`, C2) was never wired and leaves the tool with its tests; the status line shows context and the 5h window and nothing of the cache's state (dt-2 row 4, dt-3 row 1).
+4. **One-hour subagent cache lifetime?** **Withdrawn, 2026-10-19** (PLAN-routing-tree.md §24): it chose a setting by the cache's state, which is not a design axis.
 5. **claude.ai connectors per project?** Gmail, Drive, Dropbox and Todoist put about 7K chars of instructions, plus tool names, into every session and subagent. Hinges on whether only job-search sessions use them.
 6. **Recommender reach:** dispatcher prompt only, or also rewriting `Agent` prompts? The second needs harness to accept a second PreToolUse writer on `Agent`.
 7. **Prompt suggestions and session recap off?** Each adds model requests over the conversation. Hinges on whether you use them.
@@ -541,14 +534,13 @@ At every phase: commit, run `hygiene.sh check`, measure with the audit, and reco
 - **False-positive pointers** cause extra reads. Caught by the uptake metric; below 20% the recommender goes off.
 - **Spill files read back.** One extra full-context request costs more than the bytes saved. Caught by the re-read gate; C1 ships first so extra requests are cheaper.
 - **More compactions.** Each is a summarising request plus up to five file re-reads, and lossy summaries risk a plausible wrong answer. Covered by C3, the retention log and decision 1.
-- **Blocked prompts.** Retyping is free, but a false block that leads to an unneeded `/compact` is not. Watched by the false-positive gate.
 - **Silent disable or a hidden error.** A built-in tool's shape mismatch is ignored without any error. Covered by the drift counter, a P1 re-run after every Claude Code upgrade, and digests that always keep error lines.
 - **Cache busts.** Changing MCP servers or plugins mid-session rebuilds the prefix once, so apply settings between sessions.
 - **Two transcript parsers would drift,** so the audits share one reader.
 
 ## 8. Setup component
 
-Split by component. C1 (settings), C2 (monitor and guard) and C3 (re-injection) are
+Split by component. C1 (settings), C2 (the context monitor) and C3 (re-injection) are
 hooks, a status line and a settings proposal: they ship through setup's hooks component
 (PLAN-repo-setup.md §2), and settings stay Jacob's. C5 (one source for shared rules) is
 setup's rules component itself; PLAN-routing-tree.md §12 is its declared sync. C4 (bulky

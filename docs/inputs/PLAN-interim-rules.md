@@ -22,10 +22,11 @@ a hook rule, a manifest note or a ledger flag. This plan does two things:
   temporary rule nobody removes is the exception Jacob is trying not to accumulate.
 
 **What this does not decide: whether routing-tree's nodes pay.** That math is done
-(TODO.md "Confirmed"; PLAN-context-hygiene.md §2 findings 1, 2 and 4): carried
-context is 72–80% of weighted tokens, a cold start is one fixed 36–42K write per spawn
-whatever the layer, and a cache read costs the same on every model, so the saving
-lives in filtering, clearing and reloading context conditionally, which is what
+(TODO.md "Confirmed"; PLAN-context-hygiene.md §3 findings 1 and 4): carried
+context is 72–80% of weighted tokens, each spawn starts with one fixed 36–42K prefix
+whatever the layer, and a cache read is priced per model (the manifest's dated
+prices table, as of 2026-10-02; tl-409) but paid on every request whatever the layer,
+so the saving lives in filtering, clearing and reloading context conditionally, which is what
 per-node roles with small task contexts do. Interim rules are lexical flags and
 guards; they touch none of that. The review in §5 asks only whether each interim rule
 removed the pain it targets and which can retire early, never whether the permanent

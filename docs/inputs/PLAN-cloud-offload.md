@@ -17,7 +17,7 @@
   "Usage credits let you keep working past your plan's usage limit."
   <https://code.claude.com/docs/en/costs#add-usage-credits-to-your-subscription>.
   This applies to local sessions too: past the limit, Claude Code "draws on usage
-  credits" and drops the main conversation to the 5-minute cache TTL.
+  credits".
   <https://code.claude.com/docs/en/prompt-caching#which-ttl-each-request-gets>
 - **So, if the $100 are ordinary usage credits, moving work to the cloud doesn't
   change which pool pays.** Plan usage pays first and credits after, local or cloud.
@@ -26,6 +26,11 @@
   pages, and offloading is cheaper for as long as it lasts.
 - **Settled by:** claude.ai/settings/usage, "Usage credits" section, which shows the
   balance and what it covers. That's Phase 0 (§5).
+- **The balance, as Jacob reports it** (typed by him, never scraped): $100 on
+  2026-10-02; "$156 ... left" on 2026-10-13; on 2026-10-19: "after I upgraded to the
+  5x max plan, those cloud credits changed from $100 to $250. I have $150 left." So the
+  pool is $250 and $150 remain on 2026-10-19; `.claude/offload.json` clause 4 and
+  PLAN-routing-tree.md §10.3 read this line.
 
 The memory written on 2026-10-01 says "the credits are a separate budget". That was an
 assumption, and the docs above don't support it for ordinary usage credits.
