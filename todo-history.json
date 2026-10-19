@@ -80,7 +80,49 @@
       "done": "2026-10-19",
       "resolution": "Committed after tools/checks pushed parts.py 1.4.0 (0be97db): runner copy re-rendered 38d9013, inputs 1835de2, and the store with the files gate in the commit that closes this; ./dev.sh check 9 of 9 before them.",
       "imported": null
+    },
+    {
+      "id": "hb-6",
+      "title": "Brief §4: the settings and inbox views, requested of the planner",
+      "kind": "decision",
+      "status": "done",
+      "evidence": "(tl-356,\n2026-10-19, routing-tree §19 step 2). The input copy holds routing-tree §15-§19\n(`./dev.sh refresh PLAN-routing-tree.md`), but the brief's §4 asks the plan to settle\nneither the roster settings page (§15) nor the inbox view of replies (§19), and its\n§2 row stops at §15. Both are edits at the top-level `PLAN-hub-brief.md`, which the\nplanner owns, so tl-356's report requested them (two §4 questions, 15 and 16, and\nthe §2 row). Next, once made: `./dev.sh refresh PLAN-hub-brief.md`, a README bullet,\nand `./dev.sh check` (the brief's numbering and pointer gates read the new items).\n2026-10-19: the dispatcher sent the §2/§4 edit request to the planner (relay of tl-356's report).",
+      "probe": null,
+      "reported_to": null,
+      "parent": null,
+      "blocked_by": null,
+      "waits_on": null,
+      "pointer": null,
+      "hinges_on": null,
+      "recommend": null,
+      "options": null,
+      "chosen": null,
+      "jacob_words": null,
+      "repo": "hub",
+      "work": null,
+      "size": null,
+      "files": null,
+      "research": null,
+      "done_when": null,
+      "done_check": null,
+      "handoff": null,
+      "approved": null,
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-19",
+      "done": "2026-10-19",
+      "resolution": "tl-379 (2026-10-19, relay line 121, Jacob): the brief was edited at the top-level original by hub's agent on that relay (§2 row to routing-tree §16-§21, §3 fixed point 11, §4 questions 15 and 16), then ./dev.sh refresh PLAN-routing-tree.md PLAN-hub-brief.md; inputs gate: 65 pointers (53 before), 27 numbered items (24 before).",
+      "imported": {
+        "sha": "f2414f0d22b858c9",
+        "section": "hub TODO > Open decisions",
+        "title_from": "bold",
+        "sep": " "
+      }
     }
   ],
-  "seal": "c6aebdbedc034c61"
+  "seal": "0b7ef997e020eb82"
 }

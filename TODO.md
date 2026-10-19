@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (22 open, 2 closed in todo-history.json; seal d13ce8ade1af): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (22 open, 3 closed in todo-history.json; seal 181f8ad068a0): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -52,18 +52,6 @@
   the new `./dev.sh refresh COPY...`; `./dev.sh drift` then listed eight still drifted
   (claudeTest-CLAUDE.md, agent-groups, todo-tool, cloud-offload, repo-setup,
   portable-env, usage-reporting, check-progress).
-  · added: 2026-10-19
-
-- **hb-6 · Brief §4: the settings and inbox views, requested of the planner**
-  (tl-356,
-  2026-10-19, routing-tree §19 step 2). The input copy holds routing-tree §15-§19
-  (`./dev.sh refresh PLAN-routing-tree.md`), but the brief's §4 asks the plan to settle
-  neither the roster settings page (§15) nor the inbox view of replies (§19), and its
-  §2 row stops at §15. Both are edits at the top-level `PLAN-hub-brief.md`, which the
-  planner owns, so tl-356's report requested them (two §4 questions, 15 and 16, and
-  the §2 row). Next, once made: `./dev.sh refresh PLAN-hub-brief.md`, a README bullet,
-  and `./dev.sh check` (the brief's numbering and pointer gates read the new items).
-  2026-10-19: the dispatcher sent the §2/§4 edit request to the planner (relay of tl-356's report).
   · added: 2026-10-19
 
 - **hb-7 · `.claude/settings.json` is modified and uncommitted, not by an agent here**
@@ -177,6 +165,7 @@
   changes nothing:", so the refusal list now reads as part of the step-0 bullets. The
   copy here (sha256 86a06dd2...) carries it as written; re-copy after the fix with
   `./dev.sh refresh PLAN-routing-tree.md`.
+  2026-10-19 13:22 (tl-379): still split in the re-copy ('A change `check`' / 'refuses shows its message' at routing-tree §15).
   · added: 2026-10-19
 
 - **hb-18 · Reported to planner: review U1 cites a TODO.md line hub does not have**
@@ -197,6 +186,7 @@
 
 - **hb-21 · Routing-tree copy is the 12:28 snapshot; the original moved on at 12:44**
   tl-356 copied PLAN-routing-tree.md at 2026-10-19 12:28 (§15-§19, sha in SHA256SUMS). At 12:44 the planner's edit added §10.1 (Jacob's D1-D5 for the cloud plan), §16 step 4 answered (research answers) and §17.1 (fan-out), and names a §20 not yet written; ./dev.sh drift lists the copy as DIFF. Not re-copied mid-edit. §10.1 D1 says hub refreshes the stale copies and SHA256SUMS before the cloud session.
+  2026-10-19 13:22 (tl-379): PLAN-routing-tree.md re-copied with the brief (§20-§23 and the 12:44 edit now in the copy). Not the full refresh D1 asks for: ./dev.sh drift still lists 8 DIFF (claudeTest-CLAUDE.md, agent-groups, todo-tool, cloud-offload, repo-setup, portable-env, usage-reporting, check-progress).
   · work: docs
   · done when: after the planner's §20 lands: ./dev.sh refresh (all, per D1), README bullet, ./dev.sh drift shows no DIFF
   · added: 2026-10-19
@@ -206,4 +196,14 @@
   filed 2026-10-19 in tools/hub/TODO.md as a bullet marked todo:tl-341: hub has no store (their_id stays null)
   · parent: tl-341
   · done when: services.json in tools/hub carries description, stores and (where any) shapes, and 'checks one registered tools/hub' from tools/checks is ok
+  · added: 2026-10-19
+
+- **hb-25 · To hub: serve the ctx: store as a first-phase hub store (dt-5 row 4)**
+  2026-10-15: dt-5 row 4 (Jacob 2026-10-13, TODO.md): the first-phase hub stores are ctx: and todo:. No hub store or item tracks serving the ctx: store (todo repos lists no hub store; tools/hub TODO.md and PLAN-hub-brief.md do not name ctx:). Relayed by the dispatcher from this agent's report.
+  2026-10-18: re-read against §3 'Every store is static or dynamic' (ST1-ST5): unchanged. Its done_when (hub serves ctx: get/find/refs with a contract store.py calls) is ST4's form (<service>:<id> resolved through the owner's get and refs). Whether the ctx: store itself must become SQLite (ST1) or is static-immutable (ST2) is a separate item §4 step 10.4's planner files from 10.3's report, not this one.
+  2026-10-19: re-pinned (tl-373). The §3 change since the 2026-10-18 pin is the R3 amendment (research routing: desk research to research on the model PLAN-routing-tree.md §16 prefers); it touches none of ST1-ST5 or the ctx: hub-store row this item rests on, so the pin is only refreshed.
+  2026-10-19: todo check fails 'reports ch-65: hub has a store now: pair it with todo report ch-65 --to hub' -- present at fff36a6 too (stash run), not from the re-pin. Left for the dispatcher: pairing writes hub's store, outside tl-373's scope.
+  · parent: ch-65
+  · work: code
+  · done when: the hub server serves the ctx: store's get/find/refs as a first-phase store, with a contract store.py can call
   · added: 2026-10-19
