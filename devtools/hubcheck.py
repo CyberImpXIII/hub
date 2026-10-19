@@ -25,7 +25,8 @@ at a throwaway fixture. Findings name a file, a line and a KIND, never a value.
           truncates); its exit code must agree with its report
   drift   each copy against its original at the workspace top (informational)
   refresh copy every original over its copy, leak audit first, then rewrite
-          SHA256SUMS
+          SHA256SUMS. `refresh COPY...` does only the named copies; the
+          others keep their SHA256SUMS lines unchanged
 """
 import hashlib
 import json
@@ -329,11 +330,23 @@ def drift(root: Path):
     return diff, gone
 
 
-def refresh(root: Path):
+def refresh(root: Path, only=None):
+    """Copy originals over their copies, leak audit first; rewrite SHA256SUMS.
+
+    `only`: copy names (a copy's file name, e.g. PLAN-routing-tree.md, or the
+    original's name) to refresh; the rest are left as they are and keep their
+    SHA256SUMS line as it was, never re-hashed, so a hand-edited copy is not
+    laundered into a fresh sum. A name that is no copy refuses the whole run.
+    """
     top = workspace(root)
     if top is None:
         return ["the workspace top is not reachable (set HUB_WORKSPACE)"]
     ps = pairs(root, top)
+    if only:
+        unknown = [n for n in only if not any(n in (c.name, o.name) for c, o in ps)]
+        if unknown:
+            return [f"not a copy in {README}: {n}" for n in unknown]
+        ps = [(c, o) for c, o in ps if c.name in only or o.name in only]
     missing = [str(o) for _, o in ps if not o.is_file()]
     if missing:
         return [f"original missing: {m}" for m in missing]
@@ -348,7 +361,14 @@ def refresh(root: Path):
         tmp.write_bytes(orig.read_bytes())
         tmp.chmod(SEALED)
         os.replace(tmp, copy)
-    lines = [f"{sha256(c)}  {c.relative_to(root)}" for c, _ in ps]
+    fresh = {str(c.relative_to(root)) for c, _ in ps}
+    kept = {p: h for _, h, p in sums_rows(root) if h} if only and (root / SUMS).is_file() else {}
+    lines = []
+    for c, _ in pairs(root, top):
+        rel = str(c.relative_to(root))
+        h = sha256(c) if rel in fresh else kept.get(rel)
+        if h:
+            lines.append(f"{h}  {rel}")
     (root / SUMS).write_text("\n".join(lines) + "\n")
     return []
 
@@ -453,13 +473,15 @@ def main(argv):
             print(json.dumps({"differ": diff, "gone": gone}))
         return 1 if (diff or gone) else 0
     if cmd == "refresh":
-        f = refresh(root)
+        f = refresh(root, args or None)
         for x in f:
             print(f"  FAIL  {x}" if not x.endswith(":") else f"  {x}")
         if not f:
-            print(f"  ok    refresh: {len(readme_rows(root))} copies written, {SUMS} rewritten")
+            n = len(args) if args else len(readme_rows(root))
+            print(f"  ok    refresh: {n} copies written, {SUMS} rewritten"
+                  + (f" (only {', '.join(args)}; the rest keep their sums)" if args else ""))
         return 1 if f else 0
-    print("usage: hubcheck.py inputs|sealed|seal|files|leaks [FILE...]|drift [--json]|refresh|checks <checks CLI>", file=sys.stderr)
+    print("usage: hubcheck.py inputs|sealed|seal|files|leaks [FILE...]|drift [--json]|refresh [COPY...]|checks <checks CLI>", file=sys.stderr)
     return 2
 
 

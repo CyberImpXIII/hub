@@ -436,6 +436,53 @@ class TestDriftAndRefresh(Base):
         self.assertEqual((self.r / "docs/inputs/PLAN-a.md").read_text(), "plan a\n")
         self.assertEqual(hc.gate_inputs(self.r), [])
 
+    def test_refresh_only_copies_the_named_and_leaves_the_rest(self):
+        (self.fx.top / "PLAN-a.md").write_text("plan a, v2\n")
+        (self.fx.top / "CLAUDE.md").write_text("top rules, v2\n")
+        sums_before = {p: h for _, h, p in hc.sums_rows(self.r)}
+        self.assertEqual(hc.refresh(self.r, ["PLAN-a.md"]), [])
+        self.assertEqual((self.r / "docs/inputs/PLAN-a.md").read_text(), "plan a, v2\n")
+        self.assertEqual((self.r / "docs/inputs/claudeTest-CLAUDE.md").read_text(), "top rules\n")
+        sums = {p: h for _, h, p in hc.sums_rows(self.r)}
+        self.assertNotEqual(sums["docs/inputs/PLAN-a.md"], sums_before["docs/inputs/PLAN-a.md"])
+        self.assertEqual(sums["docs/inputs/claudeTest-CLAUDE.md"], sums_before["docs/inputs/claudeTest-CLAUDE.md"])
+        self.assertEqual(sums["PLAN-hub-brief.md"], sums_before["PLAN-hub-brief.md"])
+        self.assertEqual(hc.gate_inputs(self.r), [])
+        self.assertEqual(hc.drift(self.r), (["docs/inputs/claudeTest-CLAUDE.md"], []))
+
+    def test_refresh_only_does_not_launder_a_hand_edited_copy(self):
+        (self.r / "docs/inputs/claudeTest-CLAUDE.md").write_text("edited by hand\n")
+        self.assertEqual(hc.refresh(self.r, ["PLAN-a.md"]), [])
+        self.assertFinding(hc.gate_inputs(self.r), "claudeTest-CLAUDE.md does not match its sum")
+
+    def test_refresh_only_takes_the_original_name_too(self):
+        (self.fx.top / "CLAUDE.md").write_text("top rules, v2\n")
+        self.assertEqual(hc.refresh(self.r, ["CLAUDE.md"]), [])
+        self.assertEqual((self.r / "docs/inputs/claudeTest-CLAUDE.md").read_text(), "top rules, v2\n")
+        self.assertEqual(hc.gate_inputs(self.r), [])
+
+    def test_refresh_only_refuses_an_unknown_name_and_copies_nothing(self):
+        (self.fx.top / "PLAN-a.md").write_text("plan a, v2\n")
+        sums_before = (self.r / "docs/inputs/SHA256SUMS").read_text()
+        f = hc.refresh(self.r, ["PLAN-a.md", "PLAN-nope.md"])
+        self.assertFinding(f, "not a copy in docs/inputs/README.md: PLAN-nope.md")
+        self.assertEqual((self.r / "docs/inputs/PLAN-a.md").read_text(), "plan a\n")
+        self.assertEqual((self.r / "docs/inputs/SHA256SUMS").read_text(), sums_before)
+
+    def test_refresh_only_through_dev_sh_passes_the_names(self):
+        # the seam: dev.sh's `refresh COPY...` must reach hubcheck's `only`, or a
+        # named refresh silently becomes a full one
+        (self.fx.top / "PLAN-a.md").write_text("plan a, v2\n")
+        (self.fx.top / "CLAUDE.md").write_text("top rules, v2\n")
+        out = subprocess.run([sys.executable, str(Path(hc.__file__)), "refresh", "PLAN-a.md"],
+                             capture_output=True, text=True, env={**os.environ, "HUB_ROOT": str(self.r)})
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("1 copies written", out.stdout)
+        self.assertEqual((self.r / "docs/inputs/claudeTest-CLAUDE.md").read_text(), "top rules\n")
+        dev = (Path(hc.__file__).resolve().parent.parent / "dev.sh").read_text()
+        self.assertIn('refresh)   shift; cmd_refresh "$@" ;;', dev)
+        self.assertIn('cmd_refresh() { python3 devtools/hubcheck.py refresh "$@"; }', dev)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -50,8 +50,9 @@ usage() {
   plans      setup plans . (every PLAN-*.md not done has a Setup component heading)
   checks     tools/checks: checks run . --json, every failing line (credential-shaped values, hooks, rules, TODO, help)
   drift      each copy against its original at the workspace top (a note in check, never a fail)
-  refresh    copy every original over its copy (leak audit first) at mode 0444, rewrite SHA256SUMS
-  seal       set every copy to mode 0444, content untouched (after a clone or a checkout)
+  refresh    copy every original over its copy (leak audit first) at mode 0444, rewrite SHA256SUMS;
+             refresh COPY... does only those (e.g. PLAN-routing-tree.md), the rest keep their sums
+  seal      set every copy to mode 0444, content untouched (after a clone or a checkout)
 EOF
 }
 
@@ -102,7 +103,7 @@ cmd_sealed()  { python3 devtools/hubcheck.py sealed; }
 cmd_seal()    { python3 devtools/hubcheck.py seal; }
 cmd_leaks()   { python3 devtools/hubcheck.py leaks "$@"; }
 cmd_drift()   { python3 devtools/hubcheck.py drift "$@"; }
-cmd_refresh() { python3 devtools/hubcheck.py refresh; }
+cmd_refresh() { python3 devtools/hubcheck.py refresh "$@"; }
 
 cmd_plans() {
   local out code
@@ -156,7 +157,7 @@ case "${1:-}" in
   plans)     cmd_plans ;;
   checks)    cmd_checks ;;
   drift)     shift; cmd_drift "$@" ;;
-  refresh)   cmd_refresh ;;
+  refresh)   shift; cmd_refresh "$@" ;;
   ""|-h|--help|help) usage ;;
   *) echo "unknown command: $1"; usage; exit 2 ;;
 esac
