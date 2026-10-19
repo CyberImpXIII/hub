@@ -8,7 +8,8 @@
 > to every Decision (warm roles dropped, `setup` the one writer of `hub.json`, his words
 > by id, every limit a registry value, the coder's lease-scoped Edit rule, cloud phases
 > as defaults) and from the brief's §4 questions 11 and 12 (§11, §12). Nothing is built.
-> Sections 1–12 answer the brief's §4 in order; the terminal front end Jacob described on
+> Sections 1–12 answer the brief's §4 in order, and §15 its question 15 (written locally
+> 2026-10-19; questions 13, 14 and 16 are open); the terminal front end Jacob described on
 > 2026-10-04 is PLAN-hub-view.md (review finding 7). The planner reviews this file with
 > Jacob and runs `kb check` on it; the cloud phases of §9 are built from `TODO.md`'s
 > items once approved.
@@ -719,6 +720,7 @@ the test, never claudeTest or any repo of ours.
 | **agent last** (routing-tree §14.3) | `hub status` counts model turns by the step that caused them (validate, gate, route, model); a fixture where a routable cause recurs three times yields a proposed rule; `doctor` flags a node whose step-4 turns rise without step-3 findings | H1a-2 (counts), G1 (checks) |
 | **references by id** (§12) | a planted `todo:` id in a fixture body renders a stub of the id, the store's line cut at `stub_chars`, its source and date; `hub get <id>` and `GET /refs/<id>` return exactly the fixture store's `get` output, byte for byte; `hub send --ref x:1` with an undeclared prefix is refused naming the declared prefixes; a body carrying more than `stub_chars` of a referenced record's text is flagged `pasted: <id>` in the ledger and answered with a `report`; a store whose `get` is missing makes `hub check` red on `stores` and every stub for its prefix `unchecked`, never `ok`; an id the store cannot find renders `unresolved: not found`, still in the delivered text; a record changed since the send renders `changed since cited` with the cited line kept; a sender's own `refs` field is overwritten like `origin`; every prefix in `stores` has an executable `get` and every `ids` declaration is in `stores`, both ways | H1a-2 (`ctx:` for `origin_id`), R1 (the rest) |
 | **driven session** (§11) | the D0 probe's clauses, per mechanism, recorded with `claude --version`; in D1 as tests on a fixture: a message written to stdin is acknowledged on stdout and the hub's list equals the acknowledged messages plus the `result` lines; no rebuild lands while a fixture background subagent sleeps past its turn's `result` line (the `parent_tool_use_id` run is open), and it lands within one poll of that run's `tool_result`; a rebuild from a `ctx:` id leaves the next answer knowing Y and not X, with the same process alive for the block edit and a `cache_read_input_tokens` ≥ the unchanged prefix for the resume; after a rebuild `hub origin` never says `jacob`; a rebuild file containing a line from a recorded `tool_result` is refused; every message of the pre-rebuild list is in the snapshot the ledger names; `hub session` verbs are refused from a role's Bash (the hook denies them: no owner grants them to a role) and accepted from the context-hygiene CLI and the view | D0, D1 |
+| **roster settings** (§15; routing-tree §15's four gates) | on a fixture node whose fixture repo declares `settings` with a fixture CLI: **rows both ways**: the panel's rows equal the `list` verb's rows, no row added or dropped, a blank field shown as `not set` or `unknown`, never empty; at the top node a local audit compares the served rows with `agents.sh list`'s names plus `coders`, both ways, and is UNCHECKED where harness is absent; **page equals shell**: the fixture CLI records its argv and its store, and a change made on the panel and the same `set` line run from a shell give identical argv and byte-identical stores (that the real `set` gives one manifest for one argv is harness's test, Risks); **a refusal changes nothing**: a fixture verb exiting non-zero leaves the store's sha256 unchanged, the panel shows its `FAIL` lines and the row as re-read, and a timeout shows `unchecked`, never `unchanged` (that a `check` refusal rolls back is harness's test of its all-or-nothing verb); **roles are refused**: a `write-request` for the `settings.set` verb stamped with any role is refused, answered and logged, never run, including a fixture role whose declaration lists the verb; also: a model not in `models` is never offered, a missing `models` makes the field read-only, and a key not in `settable` has no control; every outcome is one ledger row | RS (rows both ways with V1) |
 
 → Each row lands with its phase; a phase with a row missing is not done.
 
@@ -760,6 +762,7 @@ says so in this table.
 | **H3** | hierarchy | cloud (default) | `/register`, the heartbeat from `limits.heartbeat_s` and `heartbeat_misses` (in the export), advertisement, down-child routing, `hub up --tree`, `status --tree`, the standalone case, S3 (`vocab`, classes) and S4 (`--propose`); the fixture tree three levels deep. Making site-scrapers the first live child node is the local follow-up (one `deep-work` job, ~1–2u). Roles inside a repo beyond `coder` stay gated on agent-groups (routing-tree §11 decision 4) | — | 160–200k (6–7u) + 1–2u local |
 | **S2** | sync, blocks | local | marked blocks in the nine CLAUDE.md copies: one dispatch per owner, each ~0.5–1u, through the dispatcher | the three `dev.sh sync`, `test_doc_claims.py`'s rule half, `cmd_plan`'s copy half, after the same-verdict test | 9 × 15–30k (5–9u total) |
 | **V1–V3** | the view | local | PLAN-hub-view.md, built after H3 | — | there |
+| **RS** | the roster settings panel (§15) | local (its panel is a view panel, and its verb reaches `.claude/` through harness; its gates run on fixtures) | **read half, with V1:** the panel from a declared `settings.list` verb, the `settings` entry in the `services.json` schema, the rows-both-ways gate. **Write half, after H1b, P-RS1 and Decision 18:** the `write-request` for the `settings.set` verb, one at a time per repo, the refused and unreachable displays, the cost line, the other three gates. P-RS1 is a script in `tools/hub/probes/` like H0's. **Harness job beside it, local** (~1–2u): `list --json`, a `models` list, `tokens --agents --json`, the all-or-nothing settings verb, and its `cli.json` entry if Decision 18 says yes | — | 60–110k (2–4u) + ~1–2u local; an analogy with H1a-0b (one route, one rule, one panel), not a derivation |
 | **H4** | relegate the dispatcher | local | its hook (§4) allows only Read, Grep, `hub send`, `hub get`, `SendMessage` and denies the rest (its tool list a default only, Decisions 12 and 15 dissolved); the `operator` role; the dispatch ledger and `agent-watch` merge into `hub log`; `quote-words.sh` injects the `origin_id` stub through `hub origin`; window-to-window `SendMessage` goes through `hub send`. **Dispatcher job**: rewrite "How work is split here" after Jacob approves the text | `held-not-lost` (cap half), `stale-spawn`, `report-shape` once roles exist | 150–200k (5–7u) + the dispatcher's edit |
 | **R2** | the other stores declare their ids | local | one dispatch per owner (knowledge-base for `kb:` section ids, research for `rs-<n>`, data-bridge for its records), each adding an `ids` entry to its `services.json` and checking its `get <id>` prints one record and one line; the hub changes nothing, `stores` picks them up at `hub reload`. After R1, and only once each owner's `get` exists (PLAN-services.md §3, not an input here) | — | 3 × 15–30k (2–3u total) |
 | **D0** | the driven-session probe | local | §11's probe: the three rebuild mechanisms, the idle point with a background subagent, each clause pass or fail with `claude --version`, in `tools/hub/probes/`; the result picks the mechanism and sets D1's scope | — | 20–40k (1u) |
@@ -806,7 +809,7 @@ H1a-2, H2 and H3 at no change to their ranges. The rise over the 1.4–1.9M Jaco
 approved on 2026-10-09 is the two questions, which were asked after that yes; Decision
 9 asks for it again. Order of dispatch: H0 → H1a-0 (+ harness) → H1a-0b → H1a-1 → H1a-2
 (+ harness, + setup) → S1 →
-H1b → R1 → H2 → G1 → H3 → S2 → V1–V3 → H4 → R2 → D0 → D1. G1 sits after H2 because a
+H1b → R1 → H2 → G1 → H3 → S2 → V1–V3 (RS's read half with V1, its write half after) → H4 → R2 → D0 → D1. G1 sits after H2 because a
 `check-red` message needs the loop controls and the write lease to exist before checks
 start sending roles work, and before H3 because the pilot is one repo at the top node.
 R1 sits after H1b because a stub's first reader is a cold role and its first id is the
@@ -1046,7 +1049,7 @@ own (routing-tree §14.1). `hub check`: every prefix in `stores` has an executab
 `ids` declaration is in `stores`; two repos declaring one prefix fail.
 
 **The syntax inside a message.** A reference is the bare id in the body (`ctx:7f3a`,
-`todo:td-27`, `rs-12`), found by the declared patterns, or named with `--ref` on `hub
+`todo:td-27`, `rs-<n>`), found by the declared patterns, or named with `--ref` on `hub
 send`, which already carries the pointer and takes an id as it takes a path. The server
 scans the body at `/route`, fills the envelope's `refs` list beside `body` (`{id,
 store, line, source, date, hash, status}`), and overwrites any `refs` a sender set, as
@@ -1093,6 +1096,133 @@ seen, not assumed.
 
 → H1a-2 (`ctx:` and `origin_id`), R1 (the rest, with `todo:`), R2 (the other stores by
 their owners); gates in §8 "references by id".
+
+*Questions 13 and 14 (the wizard, the assurance view) were added to the brief after
+this plan's cloud passes and are not answered yet; their sections keep their numbers
+when written. Question 16 likewise.*
+
+## 15. The roster settings page
+
+The requirement is brief §4 question 15 and routing-tree §15 (Jacob, 2026-10-19: "a
+settings page for changing what each agent is set at in the hub app (e.g. opus 5.5. max
+effort."). Written locally on 2026-10-19 by the hub owner (top-level item tl-310), from
+the state of harness's CLI on that day, read from `.claude/agents.sh` and
+`.claude/cli.json` by the owner and not copied here. Nothing of it is built.
+
+**What the hub knows about the roster: nothing.** Fixed point 2 holds: the page is a
+panel of the view (PLAN-hub-view.md), and like every panel it reads a tool's facts
+through that tool's declared CLI (fixed point 10). The hub's code holds no roster word.
+A repo offers the panel by declaring, in its own `services.json`, a `settings` entry:
+`{"list": "<a read verb of its cli.json>", "set": "<a write verb of its cli.json>"}`.
+At the top node that repo is harness. A node whose repos declare no `settings` entry
+shows no panel, and `hub status` says `settings: none declared`, never an empty table
+that looks like an empty roster.
+
+**Reading the rows** (brief: "how the page reads its rows without opening the
+manifest"). The page shows what the `list` verb prints as JSON, row for row. It adds
+nothing, sorts nothing and fills no blank. Harness's `agents.sh list` prints text today,
+without the facts §15 asks for. So harness owes a `list --json`, `list` being already a
+declared verb. Its shape, proposed here and harness's to settle:
+
+```
+{"models": [...], "efforts": [...],
+ "rows": [{"name", "kind": "coders|agent|planner|dispatcher",
+           "model": {"value", "from": "own|coders"}, "effort": {"value", "from"},
+           "model_reason", "maxTurns", "prefer", "resolved", "settable": [keys]}],
+ "settings_json": {"model"}}
+```
+
+- **`coders` is its own row**, so one change covers every agent that inherits it
+  (routing-tree §15).
+- **`settable`** is what `set` accepts for that row. On 2026-10-19 the planner takes
+  `model` and `effort`, and the dispatcher takes `model`, `quote_last` and
+  `quote_max_chars` but no effort (harness hx-105, waiting on Jacob). The page offers
+  only the listed keys, so it cannot offer a change `set` would refuse by shape.
+- **`models` is the allowlist**, read from harness, never typed into the page. §15 says
+  "the manifest's list of known models". No such list exists today: the schema accepts a
+  pattern (`sonnet|opus|haiku|fable|inherit|claude-…`), and the nearest list is the
+  `prices` table. Until harness emits `models`, the model field is shown, not editable,
+  and labelled `no model list from harness`. It is never a free-text box.
+- **`prefer` and `resolved` are routing-tree §16's** (preferred, fallback, resolved).
+  They are shown when present and as `not set` when absent, never left blank.
+- **`settings_json.model`** is the dispatcher's own model in `.claude/settings.json`,
+  Jacob's file. The page shows it and has no control for it. Harness reads it, so the
+  hub never opens `.claude/` (§8 "direction audit").
+- **The session's own effort** beside the pinned one. The page shows it only if a
+  source reports it, and none is known to: the `claude agents --json` fields quoted in §4
+  and PLAN-hub-view.md §2 are `kind`, `pid`, `status`, `waitingFor` and `sessionId`, with no effort. Until
+  a probe finds one, the cell reads `session effort: unknown`. The pinned value is
+  labelled `pinned`, so neither is mistaken for the other.
+
+**Changing a value** (brief: "how the server runs the four steps as one `write`
+request"). The four steps are set, gen, check and a commit inside `.claude/`. The server
+does **not** run them as a sequence of its own, because its code holds no tool's command
+(fixed point 10, §8 "services as data"). The page sends one `write-request`:
+
+```
+{role: "view", tool: <the declaring repo>, verb: <its settings.set verb>,
+ args: [<row>, <key>, <value>, ...]}
+```
+
+The declared verb runs all four steps in order and is all-or-nothing. Harness owes that
+verb. Today `set` does the first two: it validates the change against
+`lib/manifest-schema.jq`, writes it, runs `gen`, rolls back if `gen` fails, and prints
+`next: ./.claude/agents.sh check, then commit`. A `check` refusal after the write
+therefore leaves the manifest changed. Routing-tree §15's gate ("a refused change leaves
+the manifest's hash unchanged") holds today only for a refusal by the schema.
+
+`set` is also a `not_verb` in harness's `cli.json`: "a server caller would carry no
+agent identity for it to check -- whether the hub may run it is an open decision". That
+is Decision 18. The page sends `model` and `model_reason` in one request, since `set`
+moves them only together.
+
+**While it runs and when it fails.** While the verb runs, the row shows `changing:
+<key> <old> → <new>` and the panel takes no second change. One write per declaring repo
+at a time, the lease's rule applied to one verb. When it ends:
+- **ok:** the row is read again from `list` and shows `changed <date>`, plus the cost
+  line below.
+- **refused:** the verb's `FAIL` lines, verbatim and cut at `limits.stub_chars` with
+  the full text one click away. The row is read again from `list`, which shows it
+  unchanged, so the page never claims a value the manifest does not hold.
+- **unreachable or timed out:** `unchecked: <repo> unreachable`, never "unchanged",
+  since the page cannot know.
+
+Every outcome is one ledger row (§3).
+
+**Who may change it.** Only Jacob, from the page (routing-tree §15; fixed point 9). How
+the server tells Jacob's click from a role is not yet settled; it is Decision 18:
+- **What is solid.** A role's call reaches the server through `hub hook gate` (§3
+  H1a-0), which stamps the role. The server refuses a `settings.set` verb from any
+  stamped role, whatever the verb's declaration says.
+- **The gap is the local-trust risk (Risks).** Any local process holding `HUB_TOKEN`
+  can POST directly. Unless a role cannot read the token, a role could pose as the
+  view.
+- **Probe P-RS1, local, before the write half is built.** A cold role in its sandbox
+  tries to read `.claude/local.env` with Read, with Bash `cat`, and through a store
+  read. Pass: all three fail. The probe records the result with `claude --version`.
+  This plan does not claim the sandbox can deny a read: no docs are quoted here for it.
+- **If the probe fails,** the page stays read-only. Each row then offers the exact
+  `agents.sh set` line for Jacob to run with `!` in a prompt box, where
+  `dispatch-guard.sh` already tells his command from a model's.
+
+**The cost of a change.** After an ok, the row shows `tokens --agents --since <the
+change's date>` for that row, read through harness's declared `tokens` verb (routing-tree
+§15: a change is kept only if the numbers say it helped). It needs a `--json` form, which
+harness's usage text does not show today. Until one exists the cell reads `cost: no JSON
+from harness`; the page does not parse the text table.
+
+**What the hub builds, and when.** Phase RS (§9) adds:
+- the panel;
+- the `settings` entry in the `services.json` schema;
+- the `write-request` route for one `settings.set` verb;
+- the four gates (§8 "roster settings").
+
+RS comes after V1, which brings the view, and H1b, which brings the `write` service.
+**The read half is useful alone.** A read-only panel needs only harness's `list --json`.
+It can ship once V1 does, before the write half and before Decision 18.
+
+→ RS; gates in §8 "roster settings"; harness's part in Risks "Reports owed"; Decisions
+18 and 19.
 
 ---
 
@@ -1254,6 +1384,17 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
   `services-valid`, `registry-matches`) that this plan depends on; `tools/usage`: the
   `usage gate <estimate>` command with its exit codes (§3). Per review finding 9 these
   go out after Jacob's yes, from `TODO.md`'s "Reported to other owners", each once.
+  **Added 2026-10-19 for §15** (sent at once through the dispatcher, since RS's read
+  half needs no Decision): `harness`: `agents.sh list --json` in §15's shape, with the
+  `coders` row, `from` per key, `settable` per row and a `models` list (§15 assumes "the
+  manifest's list of known models", which does not exist); `tokens --agents --since D
+  --json`; one settings verb that runs set, gen, check and the `.claude/` commit
+  all-or-nothing, rolling back a `check` refusal, with its test; and that verb's
+  `cli.json` entry only if Decision 18 says yes.
+- **The settings page's write rests on a probe** (§15, P-RS1). If a role can read
+  `HUB_TOKEN`, it can pose as the view, and the server's role stamp does not help. In
+  that case the page stays read-only and the write is Jacob's `!` line. The plan
+  claims no sandbox read-deny it has not run.
 - **The output contract named a branch, `plan/hub`.** This session was directed to
   `claude/determined-edison-tx5h9v` and may not push elsewhere; the planner renames
   or merges. Nothing else in the repo was changed, per the brief.
@@ -1279,3 +1420,5 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
 | 15 | §12: `Bash(hub get *)` joins the read-only tool list beside `Bash(hub send *)`, widening Decision 12 by one read verb that runs only a store's `get` | the alternative is each store's own CLI on the list, one entry per store, which D3's `hygiene get` wording implied; one verb keeps the list short and the stores' CLIs off every role | **Dissolved with Decision 12: Jacob 2026-10-13** (PLAN-services.md §3 step 3 "Widened"): there is no list to widen; `hub get` stays as the server's read route, and the hook sends a role's store read to it as a `read-request` whatever tool the role used (§4, §12) |
 | 16 | §12: the first-phase stores are `ctx:` (H1a-2, for `origin_id`) and `todo:` (R1); kb section ids, research `rs-<n>` and data-bridge records join in R2 by their owners' `ids` declarations, each when its `get` exists | which stores answer `get <id>` today (todo does, PLAN-todo-tool.md §3; the others are PLAN-services.md §3's, not an input) | yes. **Approved: Jacob 2026-10-13** |
 | 17 | §3 H1a-0: the write gate is a slice of its own before H1a-1, run locally; a role's writable repos are derived from `owners` at render time, and there is no per-role `writes` list (§2); its hook **fails closed for writes** when the server is down, the one exception to "every hook fails open" (§8); the hook stays unregistered until `setup plans edit|add` and todo's import exist | whether a planner with the server down may be unable to write at all (the answer is `hub up`, named in the deny line); whether writable repos are a declared list or derived from `owners` (answered: derived) | yes. The gate itself: **Jacob 2026-10-13** (PLAN-services.md §3). **Its shape approved: Jacob 2026-10-13** ("Derived from owners"), which drops the per-role `writes` list the 6d2b3f6 draft had. The planner's and the dispatcher's set is the `owners` row `workspace` and nothing else (PLAN-services.md §3 step 3, "The hub owner's four questions" 1, approved: Jacob 2026-10-13; §2) |
+| 18 | §15: the hub may run harness's settings write verb for a request from the view, and refuses it for every role; today `set` is a `not_verb` in harness's `cli.json` ("a server caller would carry no agent identity for it to check -- whether the hub may run it is an open decision") | whether the server can tell Jacob's click from a role's direct POST: probe P-RS1 (a sandboxed role cannot read `HUB_TOKEN` by Read, Bash or a store read); if it fails, the page stays read-only and shows each row's `agents.sh set` line for Jacob to run with `!` | yes, once P-RS1 passes; read-only with the `!` line until then. Open: Jacob's, through the planner (harness's TODO.md names the planner) |
+| 19 | §15, §9: the four steps (set, gen, check, the `.claude/` commit) are one harness verb, all-or-nothing, not a sequence the hub runs; RS adds 60–110k (2–4u) plus ~1–2u of harness to Decision 9's total, after its yes | fixed point 10 (the server holds no tool's command); today `set` stops after `gen`, so a `check` refusal leaves the manifest changed and routing-tree §15's third gate would fail on it | yes |
