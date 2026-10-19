@@ -716,3 +716,266 @@ hooks) is Jacob's file. The page shows it and never writes it.
 **Owner:** hub, from this section. It is added to the hub brief's inputs.
 
 track: TODO.md "Roster settings page"
+
+## 16. Fable 5.1 at max, where the account allows it (Jacob, 2026-10-19)
+
+> "I'd also like to set Research, and Planning to default to Max effort fable 5.1
+> conditional upon the user being able to run Fable (so a plan that allows it or usage
+> credits, plus fable usage if that is what they have)."
+
+Approved: Jacob 2026-10-19. The audit agent (§18) joins the list by his next message
+("that should also be conditionally fble 5.1 and max").
+
+**The policy.** The roles that think rather than build, the planner, `research` and
+`audit`, prefer `claude-fable-5-1` at effort `max`. Their fallback is what they run
+today: the `coders` default, Opus 5.5 at `high`. Every other agent stays on `coders`.
+Jacob ended the 2026-10-03..05 Fable trial for the planner and harness himself; this
+section reinstates it for the planner only because he raised it again.
+
+**The manifest shape.** An agent, or the `planner` block, gains one key:
+
+```
+"prefer": {"model": "claude-fable-5-1", "effort": "max", "when": "fable"}
+```
+
+`model` and `effort` stay the fallback. `check` requires a `model_reason` beside any
+`prefer` whose model is not Opus, as it does for `model` today.
+
+**The condition `fable`, in one place.** `usage can-run <model>` answers `ok`, `hold
+<until>`, `credits`, `refused` or `unknown`, from a record in `~/.claude/usage/
+models.json` (`model`, `checked_at`, `result`, `evidence`):
+
+- **A probe,** at most once per `probes.model_ttl_hours` (24): one `claude -p` call
+  with `--model <model>` and `--max-turns 1` on a one-word prompt. `ok` is a reply;
+  anything else is recorded with its exit code and stderr. What a credits-only plan or
+  a plan without Fable prints is unknown here: Jacob's plan has Fable. Research
+  settles it (step 1) or the record says `unverified` and the probe treats every
+  non-reply as `refused`.
+- **Jacob's own answer:** `usage can-run --set <model> ok|no "<reason>"`, dated,
+  for the case the probe cannot tell. A wizard question can ask it.
+- **The meter.** The status line's `rate_limits` carries `five_hour` and `seven_day`
+  only (code.claude.com/docs/en/statusline#rate-limit-usage, kb mirror of
+  2026-10-09), so a separate Fable window cannot be read there today, though the
+  desktop app shows one (seen 2026-10-03). Until the status line carries it, a
+  rate-limit `StopFailure` in a session on that model sets `hold` until the reset
+  time the failure names, through the reporter `usage-failure.sh` already runs. When
+  the platform adds the window, `usage gate --model` reads it and this paragraph is
+  retired.
+- **Fail-safe:** every answer but `ok` resolves to the fallback. A wrong `ok` fails
+  loudly at the spawn, never silently.
+
+**Where it is resolved.**
+- `agents.sh gen` renders each definition with the resolved model and effort, and a
+  line `resolved: prefer|fallback, checked <time>` so the choice is visible in the
+  file.
+- `agents.sh run planner` resolves at launch and passes `--model` and `--effort` (the
+  frontmatter does not set a main thread's effort, as the header of the planner
+  definition records).
+- `doctor` says when a definition's resolution is older than the TTL or no longer
+  matches `can-run`, and names `gen`.
+- `check` fails a rendered definition whose model is neither its `prefer` nor its
+  fallback.
+- The settings page (§15) shows all three: preferred, fallback and resolved.
+
+**The measure.** `agents.sh tokens --agents --since 2026-10-19` per agent, and the
+re-runs avoided, judged after a week, as CLAUDE.md asks of every model change. The
+price table already holds a `claude-fable-5-1` row, so `tokens --prompts` prices it.
+
+**Gates, in the same change:** a record past the TTL is never used (test); `credits`
+and `refused` resolve to the fallback (fixtures); a `prefer` without `model_reason`
+fails `check` (fixture); `gen` writes the `resolved:` line and `run --dry-run` prints a
+matching `--model` and `--effort` (tests); a Fable rate-limit hit sets `hold` (fixture);
+a hand edit of `models.json` to a stale `ok` is caught by the TTL, not trusted.
+
+### Steps
+
+1. **`research`:** the probe question, recorded and answered: what `claude -p --model
+   claude-fable-5-1` returns on a plan without Fable and on one where Fable bills
+   usage credits (exit code, stderr), from the docs through kb, else `unverified`.
+   track: TODO.md "Fable where allowed"
+2. **`usage`:** `can-run`, `--set`, the TTL, the hold from a hit; tests.
+   track: TODO.md "Fable where allowed"
+3. **`harness`:** `prefer` in the manifest, `check`, `gen`, `run`, `doctor`; the
+   planner and `research` set to prefer Fable at max, `audit` when §18 lands; after
+   step 2. track: TODO.md "Fable where allowed"
+4. **Who answers research questions on Fable.** R3 (PLAN-services.md §3) puts the
+   desk work in `deep-work`; `research` records and checks. If the deepest answers are
+   the aim, the model that answers must be the one preferred here. Options: (a)
+   `research` answers as well as records, and R3 is amended; (b) a new `researcher`
+   agent; (c) `deep-work` keeps answering, on Opus. track: needs-yes
+   PLAN-routing-tree.md §16
+
+## 17. Read and run dispatches share a folder (Jacob, 2026-10-19)
+
+> "I know that we have coding agents that we have limited to having only one making
+> changes at a time. This makes sense. But in terms of running site scraping
+> agents/tools in parallel, or research agents in parallel, I think there is no reason
+> not do this with this type of agent. Can we be sure we have a framework that allows
+> for this type of work/agents to be non-blocking when it needs to be?"
+
+**No, not today.** `dispatch-guard.sh` treats every dispatch as a writer: a second
+dispatch into a folder is refused with "one writer -- X is already running" whatever
+the second one does (its line 384). So two scrape runs, or two research questions, run
+one after the other. `deep-work` has no folder and is not held (unverified: from the
+guard's folder rule -- settle: `bash .claude/hooks/test-dispatch-guard.sh`). Inside one
+run, `site-scrapers` already loads many pages at once; the serial part is the dispatch.
+
+**Three modes, declared on the brief** (`mode: write|run|read`; the default is
+`write`, today's behaviour):
+- **`write`:** edits code, recipes, docs or settings. One per folder, as now.
+- **`run`:** produces records only through the folder's own CLI (a scrape, a research
+  answer, an audit finding), and commits them. Any number at once.
+- **`read`:** writes nothing. Any number at once.
+
+Neither `run` nor `read` blocks a `write`, and a `write` blocks neither. What keeps
+them apart is the store, not the lock: each store's CLI is safe under concurrent
+writes (site-scrapers: WAL and a busy timeout, recorded in its CLAUDE.md), and a run
+records the recipe version it used (unverified: site-scrapers -- settle:
+`node query.js --help`, the run record's fields). Only writers exclude writers.
+
+**One contention class, from PLAN-check-progress.md §10's vocabulary:** `uses:
+browser`. Two dispatches that declare it do not overlap: the guard holds the second
+and names the first. CLAUDE.md records why ("Contention produces failures
+indistinguishable from real ones": five recipes failing under two sweeps that passed
+alone). A single-recipe run does not declare it; a sweep (verify, health) does. A sweep
+that ran without declaring it is found afterwards by the ledger audit, not prevented.
+
+**What a `run` or `read` dispatch must not do is edit code.**
+- **Enforced** where the guard can tell, from inside the subagent, which dispatch it
+  belongs to: then the dispatcher's own write block applies to that agent for the
+  length of the dispatch. Whether a PreToolUse call inside a subagent carries a key the
+  spawn record holds is harness's first probe.
+- **Detected** otherwise: at `SubagentStop`, the folder's working tree before and after
+  (`lib/dirty-files.sh`, which knows the dispatch even though it cannot name a writer,
+  hx-94) flags a `run` or `read` dispatch that changed a file outside its CLI's
+  stores.
+- The ledger records `mode` and `uses`; `agents.sh dispatches` prints them.
+
+**What the owners need first:** `research` is safe under two `answer` calls at once,
+and its commit retries on `index.lock` (a test with two concurrent answers, both
+landing); `site-scrapers` names which of its verbs are sweeps in `services.json`, so a
+brief that omits `uses: browser` for one is caught. Each is a report to that owner.
+
+**Gates:** two `run` dispatches into one folder are both admitted (test); a `write`
+while a `run` runs is admitted (test); two `write` are refused, as now (test); the
+second of two `uses: browser` is held (test); a `read` dispatch that wrote a file is
+flagged (fixture); malformed `mode` passes as `write` (test, fails open to the strict
+case).
+
+### Steps
+
+1. **`harness`:** the guard's modes and the `uses: browser` class, the ledger fields,
+   the brief shape (`mode:` and `uses:` lines, like `todo:`), the tests above, the
+   `dispatches` columns. track: needs-yes PLAN-routing-tree.md §17
+2. **`research`:** `answer` safe under two calls at once and a commit that retries on
+   `index.lock`, with the test; reported to it from here.
+   track: needs-yes PLAN-routing-tree.md §17
+3. **`site-scrapers`:** its sweep verbs named in `services.json`, so a brief that
+   omits `uses: browser` for one is caught; reported to it from here.
+   track: needs-yes PLAN-routing-tree.md §17
+4. **`hub`:** carries the modes into its `route` (§6 invariants).
+   track: needs-yes PLAN-routing-tree.md §17
+
+## 18. The audit agent (Jacob, 2026-10-19)
+
+> "I also think we need to have programatic audits as well as an auditing agent, that
+> should also be conditionally fble 5.1 and max."
+
+Approved: Jacob 2026-10-19.
+
+**What exists.** The programmatic audits are built and run on demand: `checks all`,
+`checks practices` (97 live rows on 2026-10-19, baseline 774 red cells), `hooks
+copies`, `hooks audit`, site-scrapers' `audit.js`, `research audit`, the route
+guard's `unrouted` audit, `agents.sh dispatches`. No agent audits, and nothing runs
+the audits on a schedule. PLAN-architecture.md §10's two audits named `deep-work`
+because no audit agent existed.
+
+**The agent: `audit`.** A roster agent with no folder, `deep-work`'s shape, that:
+- prefers Fable 5.1 at max (§16), with the roster default as its fallback;
+- **cannot edit:** `disallowedTools` removes Edit, Write and NotebookEdit, and `check`
+  asserts it on the rendered definition; Bash writes are caught as the dispatcher's
+  are. Every dispatch of it is `mode: run` (§17);
+- **writes findings only through CLIs:** `checks ledger` (PLAN-architecture.md §9
+  step 6: rule, `path:line`, owner, evidence, state), `todo report` to each owner,
+  `research answer` when a finding answers a recorded question. The readable report
+  (`RESEARCH-<audit>.md`) is rendered from the ledger by `checks ledger render`, so
+  the report's text equals the ledger's, as PLAN-architecture.md §10 already requires
+  of the hub view. No finding without a `path:line` is accepted;
+- **reads the programmatic audits first,** and judges only what they cannot: the
+  `unknown` and `unchecked` cells, and whether a rule with no check could have one.
+  Each such rule comes back to Jacob as a candidate gate, in a Decisions row through
+  the planner.
+
+**The programmatic audits on a schedule.** A job through `chron.py`
+(scriptingTools/chronjobScheduler), nightly, runs the programmatic set above with
+`--json` into the ledger; the hub's assurance view shows the latest; `doctor` prints
+"last audit <n> days ago" past two days. A scheduled job is Jacob's yes: track:
+needs-yes PLAN-routing-tree.md §18.
+
+**Gates, in the same change:** a Write by `audit` is refused (test against the
+rendered definition); a finding without `path:line` is refused by `checks ledger`
+(fixture); the rendered report equals the ledger records (test); a finding for another
+owner lands in that owner's store (test, through `todo report`); the definition's
+model is its `prefer` or its fallback (§16's check).
+
+### Steps
+
+1. **`harness`:** `audit` in the manifest (no folder, `model_reason`, `prefer` per
+   §16, `disallowedTools`), `gen`, `check`, commit; after §16 step 3.
+   track: TODO.md "The audit agent"
+2. **`checks`:** `ledger add` and `ledger render`, if §9 step 6 did not build them.
+   track: TODO.md "The audit agent"
+3. **`audit`:** PLAN-architecture.md §10's two audits, its first runs, in that order,
+   under the `usage gate` rule there. track: TODO.md "The audit agent"
+4. **`cron-scheduler`:** the nightly job, through `./dev.sh try` first; after
+   Jacob's yes above. track: needs-yes PLAN-routing-tree.md §18
+
+## 19. Replies are records (Jacob, 2026-10-19)
+
+> "Do we have a way to keep track of comments that are returned by you or the
+> dispatcher in the same way we keep track of todos and decisions? These should be
+> able to be 'marked as read' in the hub once we get there."
+
+**No.** A window's final reply exists in its transcript and nowhere else. The one row
+per reply that `question-gate.sh` writes (`.claude/state/question-gate.jsonl`) holds
+the reply's hash and the gate's verdict, not its text; `agents.sh rebrief` shows a
+text can be read back from a transcript, which is what a lost one costs.
+
+Approved: Jacob 2026-10-19.
+
+**The record.** A Stop hook in both windows, `reply-ledger.sh`, writes one row per
+final reply to `.claude/state/replies.jsonl` (`key`, `t`, `role`, `session`, `turn`,
+`sha`, `bytes`, `title`, `path`) and the reply's text to
+`.claude/state/replies/<key>.md`. The unit is the reply, every reply, because that is
+the only rule that needs no judgement: a reply that was only "done" is one row Jacob
+marks read in a second. `title` is the reply's first heading, else its first line,
+cut at 80 characters. The ledger goes through `lib/append.sh` like the others, so a
+row it cannot write is kept and said, never dropped. Nothing is captured from Jacob's
+own prompts, and nothing from a subagent's report: those are already the
+dispatcher's reply once relayed.
+
+**Read is a second ledger,** `replies-read.jsonl` (`key`, `t`, `by`), append-only
+like `relay-receipts.jsonl`: a reply is unread until a row names it, and the mark can
+be undone by a `by: undo` row. `agents.sh replies [--unread] [--since DATE] [--json]`
+lists newest first, 15 lines in text, unread first; `agents.sh replies --read <key>
+[--all-before DATE]` marks; `agents.sh replies show <key>` prints the text. The hub's
+inbox view (§13 roles: Jacob writes, every other role reads) lists unread replies by
+window and marks them read only through that CLI (§14: the server is the only path).
+The todo store is not touched: a reply that carries work gets a todo item through
+`todo add --tags ref:reply:<key>` as today, by whoever reads it.
+
+**Gates, in the same change:** malformed hook input exits 0 and writes nothing
+(test); a text file that cannot be written leaves a row with `path: null` and is said
+(test); a read mark for an unknown key is refused (test); `--unread` after a mark
+drops the reply and an `undo` row brings it back (test); the listing is bounded
+(test); `replies/` is rotated past `spawn_watch`'s own horizon rule, 90 days, and a
+rotated reply's row stays (test); `wiring.json` names the hook for both windows and
+`doctor` says when it is not wired.
+
+### Steps
+
+1. **`harness`:** the hook, the two ledgers, `agents.sh replies`, the tests, the
+   `wiring.json` entry; Jacob applies the settings change (`wiring --apply`).
+   track: TODO.md "Replies are records"
+2. **`hub`:** the inbox view in `PLAN-hub.md`, from this section, added to the brief's
+   inputs. track: TODO.md "Replies are records"

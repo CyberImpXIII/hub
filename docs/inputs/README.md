@@ -45,6 +45,14 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   PLAN-routing-tree.md PLAN-hub-brief.md`, which copies only the named ones (leak
   audit first) and leaves every other `SHA256SUMS` line as it was. Not a full
   refresh: eight other copies had drifted and stay as they were (TODO.md).
+- **`PLAN-routing-tree.md` alone re-copied 2026-10-19 (later)** for routing-tree §19
+  step 2: the original gained §16 (Fable 5.1 at max where allowed), §17 (read and run
+  dispatches share a folder), §18 (the audit agent) and §19 (replies are records, with
+  the hub's inbox view). Done with `./dev.sh refresh PLAN-routing-tree.md`; only its
+  `SHA256SUMS` line changed. The brief is not re-copied: adding the settings view
+  (§15) and the inbox view (§19) to its §4 list is an edit at the top-level original,
+  which the planner owns, so it was requested (TODO.md "Brief §4: the settings and
+  inbox views"); re-copy it with `./dev.sh refresh PLAN-hub-brief.md` once made.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's
