@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (25 open, 5 closed in todo-history.json; seal 9cc14d3f4446): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (24 open, 6 closed in todo-history.json; seal 4a889c9b6579): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -41,6 +41,7 @@
   planner. PLAN-context-hygiene.md and PLAN-services.md are still not §2 inputs or
   copies here (the planner's call; the pointer gate skips uncopied plans).
   2026-10-19 (tl-406): PLAN-context-hygiene.md is now a brief §2 input and a copy (42b8eb7). PLAN-services.md is not: the leak audit refused its original (home-folder path, its line 74); see the report item below.
+  2026-10-19 evening (tl-406): PLAN-services.md is now a brief §2 input and a copy too (hb-27 closed).
   · added: 2026-10-19
 
 - **hb-7 · `.claude/settings.json` is modified and uncommitted, not by an agent here**
@@ -156,6 +157,7 @@
   bare `§N` without a plan name, and a pointer split across a line break. The ok line
   prints how many it checked (49 on 2026-10-04), so a regex that stops matching shows
   as a drop, not a pass.
+  2026-10-19 (tl-406): a quoted name in the §2 read column must start a '## ' heading; a '### ' subsection (PLAN-services.md §3's rules) FAILs as 'no heading starting so', so the PLAN-services.md row names §3 and puts its three subsection names in the why column. Open: whether the gate should accept '###' quotes.
   · added: 2026-10-19
 
 - **hb-15 · `sealed` is red on a fresh clone**
@@ -211,13 +213,6 @@
   · parent: ch-65
   · work: code
   · done when: the hub server serves the ctx: store's get/find/refs as a first-phase store, with a contract store.py can call
-  · added: 2026-10-19
-
-- **hb-27 · Add PLAN-services.md as a brief §2 input once the planner removes the home-folder path at its line 74**
-  2026-10-19 (tl-406): ./dev.sh refresh refused with 'PLAN-services.md:74: home-folder path' (the top-level original, a /Users/<name>/Desktop/claudeTest path in a sentence about a built-but-uncommitted tool). Hub's repo is public, so the copy cannot carry it. Routing-tree §10.3 step 1 wants it as an input; it was left out, and the brief and docs/inputs/README.md say so. Reported to the planner in tl-406's report (the dispatcher relays it); not fixed here, the file is the planner's.
-  · work: docs
-  · size: S
-  · done when: the planner replaced the path; ./dev.sh leaks ../../PLAN-services.md ok; brief §2 row (top-level original) and README row added; ./dev.sh refresh PLAN-services.md PLAN-hub-brief.md; ./dev.sh inputs and drift ok
   · added: 2026-10-19
 
 - **hb-29 · Phase RS: build the roster settings panel (PLAN-hub.md §15) once V1, H1b, P-RS1 and Decision 18 allow**
