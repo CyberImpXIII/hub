@@ -321,7 +321,48 @@
       "done": "2026-10-19",
       "resolution": "brief §4 question 11 now notes D3 'drive' (routing-tree §10.1) and PLAN-hub.md §11 on plan/hub; edited at the top-level original, re-copied with ./dev.sh refresh PLAN-hub-brief.md (only its SHA256SUMS line), recorded in docs/inputs/README.md. Not done (outside done-when): brief line 30's per-section marks for §25-§27",
       "imported": null
+    },
+    {
+      "id": "hb-28",
+      "title": "Roster settings page: may the hub run harness's settings write verb (Decision 18), and is it one all-or-nothing verb (19)",
+      "kind": "decision",
+      "status": "done",
+      "evidence": "2026-10-19 (tl-310): PLAN-hub.md §15 on plan/hub (not on main, hence the routing-tree pointer), Decision 18. harness .claude/cli.json lists set under not_verbs ('a server caller would carry no agent identity ... whether the hub may run it is an open decision'); harness TODO.md names the planner for it. Decision 19 rides with it: the four steps (set, gen, check, .claude/ commit) as one all-or-nothing harness verb; RS costs 60-110k + 1-2u harness on top of Decision 9.",
+      "probe": null,
+      "reported_to": null,
+      "parent": "tl-310",
+      "blocked_by": null,
+      "waits_on": "approval",
+      "pointer": "PLAN-routing-tree.md §15",
+      "hinges_on": "probe P-RS1: whether a sandboxed role can read HUB_TOKEN (Read, Bash cat, store read); if it can, the server cannot tell Jacob's click from a role's POST. Recommended shape: yes once P-RS1 passes; until then a read-only page offering each row's agents.sh set line for Jacob to run with !",
+      "recommend": "yes",
+      "options": null,
+      "chosen": null,
+      "jacob_words": null,
+      "repo": "hub",
+      "work": "decision",
+      "size": "S",
+      "files": null,
+      "research": null,
+      "done_when": "Jacob's answer to PLAN-hub.md Decisions 18 and 19 is recorded in the table (via the planner)",
+      "done_check": null,
+      "handoff": null,
+      "approved": {
+        "by": "jacob",
+        "date": "2026-10-19",
+        "source": "answer 2026-10-19 (dt-20 row 2)"
+      },
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-19",
+      "done": "2026-10-19",
+      "resolution": "accepted",
+      "imported": null
     }
   ],
-  "seal": "2e12c3842e1544b8"
+  "seal": "0184bc0b91cc8f00"
 }

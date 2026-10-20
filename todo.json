@@ -830,43 +830,6 @@
       "imported": null
     },
     {
-      "id": "hb-28",
-      "title": "Roster settings page: may the hub run harness's settings write verb (Decision 18), and is it one all-or-nothing verb (19)",
-      "kind": "decision",
-      "status": "waiting-jacob",
-      "evidence": "2026-10-19 (tl-310): PLAN-hub.md §15 on plan/hub (not on main, hence the routing-tree pointer), Decision 18. harness .claude/cli.json lists set under not_verbs ('a server caller would carry no agent identity ... whether the hub may run it is an open decision'); harness TODO.md names the planner for it. Decision 19 rides with it: the four steps (set, gen, check, .claude/ commit) as one all-or-nothing harness verb; RS costs 60-110k + 1-2u harness on top of Decision 9.",
-      "probe": null,
-      "reported_to": null,
-      "parent": "tl-310",
-      "blocked_by": null,
-      "waits_on": "approval",
-      "pointer": "PLAN-routing-tree.md §15",
-      "hinges_on": "probe P-RS1: whether a sandboxed role can read HUB_TOKEN (Read, Bash cat, store read); if it can, the server cannot tell Jacob's click from a role's POST. Recommended shape: yes once P-RS1 passes; until then a read-only page offering each row's agents.sh set line for Jacob to run with !",
-      "recommend": "yes",
-      "options": null,
-      "chosen": null,
-      "jacob_words": null,
-      "repo": "hub",
-      "work": "decision",
-      "size": "S",
-      "files": null,
-      "research": null,
-      "done_when": "Jacob's answer to PLAN-hub.md Decisions 18 and 19 is recorded in the table (via the planner)",
-      "done_check": null,
-      "handoff": null,
-      "approved": null,
-      "dispatched": null,
-      "retire": null,
-      "tags": null,
-      "plan_pins": null,
-      "detector": null,
-      "plan_step": null,
-      "added": "2026-10-19",
-      "done": null,
-      "resolution": null,
-      "imported": null
-    },
-    {
       "id": "hb-29",
       "title": "Phase RS: build the roster settings panel (PLAN-hub.md §15) once V1, H1b, P-RS1 and Decision 18 allow",
       "kind": "note",
@@ -909,12 +872,14 @@
       "id": "hb-30",
       "title": "Reported to harness: list --json, a models list, tokens --json and an all-or-nothing settings verb, for the settings page (PLAN-hub.md §15)",
       "kind": "note",
-      "status": "open",
-      "evidence": "2026-10-19 (tl-310), from reading .claude/agents.sh cmd_list/cmd_set and .claude/cli.json: list prints text only, without per-key source (own|coders), model_reason, maxTurns, a coders row, or a models list (manifest-schema.jq accepts a pattern; routing-tree §15 assumes 'the manifest's list of known models', which does not exist); tokens --agents has no --json in its usage text; set stops after gen and prints 'next: check, then commit', so a check refusal leaves the manifest changed. To harness (its store, .claude/todo.json, is not in todo's scan, so claudeTest is named), through the dispatcher in tl-310's report.",
+      "status": "blocked",
+      "evidence": "2026-10-19 (tl-310), from reading .claude/agents.sh cmd_list/cmd_set and .claude/cli.json: list prints text only, without per-key source (own|coders), model_reason, maxTurns, a coders row, or a models list (manifest-schema.jq accepts a pattern; routing-tree §15 assumes 'the manifest's list of known models', which does not exist); tokens --agents has no --json in its usage text; set stops after gen and prints 'next: check, then commit', so a check refusal leaves the manifest changed. To harness (its store, .claude/todo.json, is not in todo's scan, so claudeTest is named), through the dispatcher in tl-310's report.\n2026-10-19 (hb-30 dispatch) re-verified, nothing of it built in harness: 'agents.sh list --json' exits 0 and prints the text table (cmd_list reads no argument, so 'list --bogus' exits 0 too: a JSON caller gets text with a success code); 'tokens --agents --json' exits 1 with its usage; cmd_set still ends at gen with 'next: check, then commit'. Step 0 is done (set takes planner: model effort prefer model_reason; dispatcher: model quote_last quote_max_chars). The report is tl-442 in the top-level store; .claude/todo.json and .claude/TODO.md hold no counterpart (grep tl-442: 0), so harness has not taken it. The settings verb also rides on Decision 19 (hb-28, pending Jacob). Hub-side work: none possible (stage planning; the shape is harness's to settle, so a hub gate pinned to the proposed shape would be a second copy of it).\n2026-10-19 22:29 (later): another session closed hb-28 with resolution 'accepted' (chosen and jacob_words null) while this dispatch's check ran, so Decision 19 (one all-or-nothing settings verb) no longer waits on Jacob as the line above says; the verb is harness's to build, still unbuilt.",
       "probe": null,
       "reported_to": null,
       "parent": "tl-310",
-      "blocked_by": null,
+      "blocked_by": [
+        "tl-442"
+      ],
       "waits_on": null,
       "pointer": null,
       "hinges_on": null,
@@ -929,8 +894,16 @@
       "research": null,
       "done_when": "harness has list --json in PLAN-hub.md §15's shape (coders row, from per key, settable, models), tokens --agents --json, and one all-or-nothing settings verb (set, gen, check, .claude/ commit; rollback on a check refusal) with tests; or harness answered no with a reason",
       "done_check": null,
-      "handoff": null,
-      "approved": null,
+      "handoff": {
+        "date": "2026-10-19",
+        "text": "done: re-verified 2026-10-19, nothing built, harness store has no counterpart of tl-442; re-reported through the dispatcher. next: harness builds list --json / tokens --agents --json / the settings verb (after Decision 19) or answers no. verify: ./.claude/agents.sh list --json | jq -e '.rows and .models' ; ./.claude/agents.sh tokens --agents --json | jq -e . ; ./.claude/agents.sh list --bogus exits non-zero",
+        "commit": "7ba74e7"
+      },
+      "approved": {
+        "by": "jacob",
+        "date": "2026-10-19",
+        "source": "Jacob 2026-10-19 via auto-relay line 228 (origin jacob)"
+      },
       "dispatched": null,
       "retire": null,
       "tags": null,
@@ -1017,5 +990,5 @@
       "imported": null
     }
   ],
-  "seal": "ec0528986b7f9260"
+  "seal": "f15f50176f3135fc"
 }
