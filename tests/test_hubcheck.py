@@ -319,6 +319,21 @@ class TestLeaks(Base):
         (self.r / "ok.md").write_text(text)
         self.assertEqual(hc.gate_leaks(self.r), [])
 
+    def test_a_named_file_that_cannot_be_read_is_a_finding_not_ok(self):
+        # `dev.sh leaks FILE` cds to the repo first, so a relative FILE from elsewhere
+        # does not exist there; that once printed "ok" having audited nothing.
+        gone = self.r / "nowhere" / "PLAN-x.md"
+        # main's wording of the same fix (tl-406); this test, from plan/hub 995bc61,
+        # adds what main's lacks: the CLI exits 1 and prints FAIL, never ok
+        self.assertFinding(hc.leaks_in([gone], self.r), "not audited, cannot read it")
+        p = subprocess.run([sys.executable, str(Path(hc.__file__)), "leaks", str(gone)],
+                           capture_output=True, text=True, env={**os.environ, "HUB_ROOT": str(self.r)})
+        self.assertEqual(p.returncode, 1, p.stdout)
+        self.assertIn("FAIL", p.stdout)
+        self.assertNotIn("ok    leaks", p.stdout)
+        (self.r / "real.md").write_text("clean\n")   # the same call on a readable file is ok
+        self.assertEqual(hc.leaks_in([self.r / "real.md"], self.r), [])
+
 
 class TestChecks(Base):
     """gate_checks reads `checks run --json`'s report: every failing line, never the truncated text."""

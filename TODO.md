@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (25 open, 9 closed in todo-history.json; seal 41f69c7e98a3): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (51 open, 11 closed in todo-history.json; seal a181aa532132): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -37,38 +37,10 @@
   hub commit. Refresh before handing the cloud a new pass (`./dev.sh refresh`).
   · added: 2026-10-19
 
-- **hb-4 · `plan/hub` carries the §5.11 pass and H1a-0**
-  (2026-10-13): the cloud pass applied
-  D1-D4, 5.5, D9 and answered brief §4 questions 11-12 (§11, §12, Decisions 14-16);
-  the local pass (6d2b3f6) added slice H1a-0 "the write gate" before H1a-1
-  (PLAN-services.md §3 steps 3, 7), `roles.<r>.writes`, §8 "write gate", Decision 17,
-  and re-costed §9 to 1.7-2.5M (58-87u). Decisions 9 and 14-17 await Jacob, via the
-  planner. PLAN-context-hygiene.md and PLAN-services.md are still not §2 inputs or
-  copies here (the planner's call; the pointer gate skips uncopied plans).
-  2026-10-19 (tl-406): PLAN-context-hygiene.md is now a brief §2 input and a copy (42b8eb7). PLAN-services.md is not: the leak audit refused its original (home-folder path, its line 74); see the report item below.
-  2026-10-19 evening (tl-406): PLAN-services.md is now a brief §2 input and a copy too (hb-27 closed).
-  · added: 2026-10-19
-
 - **hb-7 · `.claude/settings.json` is modified and uncommitted, not by an agent here**
   (mtime 2026-10-15 20:45; +3 hook registrations: git-funnel, store-guard x2). It is
   most likely Jacob applying setup's proposal for the 790d4bd render (Own limits,
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
-  · added: 2026-10-19
-
-- **hb-9 · Merging `plan/hub` into `main` conflicts in 10 files, not TODO.md only (re-run 2026-10-19)**
-  (confirmed
-  2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one
-  CONFLICT, TODO.md; heads aa949b2 / e80d6b7). When to merge waits on Jacob's yes on
-  PLAN-hub.md's Decisions. On the merge, take `plan/hub`'s TODO.md as the base and drop
-  its own-bug entry "`./dev.sh check` counts an UNCHECKED hook test as a FAIL": fixed
-  on `main` 2026-10-08 (`cmd_hooktests` returns 3; `tests/test_hubcheck.py`
-  `TestHooktests`). Not re-run since `main` gained Q7 (parts) and `plan/hub` 6d2b3f6:
-  re-run that merge-tree before merging. Since tl-356 (2026-10-19) `main`'s TODO.md is
-  rendered from `todo.json`: bring `plan/hub`'s entries in with `todo add`, never by
-  merging the text.
-  2026-10-19 (tl-432) re-run: `git merge-tree --write-tree --name-only main plan/hub` (main bda5836, plan/hub 63cf780) -> 10 CONFLICTs: TODO.md, CLAUDE.md (1 hunk), PLAN-hub-brief.md (2), devtools/hubcheck.py (1), docs/inputs/{PLAN-check-progress,PLAN-repo-setup,PLAN-todo-tool(3),README,claudeTest-CLAUDE(2)}.md, docs/inputs/SHA256SUMS (2). Already 5 at 762a4fc (the head routing-tree §10.3 read), 2 at 790d4bd/392de0a, 0 at 10589a4; tl-406 42b8eb7 (full inputs refresh) took it to 9, 614b52b (leaks fix, same fix as plan/hub 995bc61) to 10. Jacob`s yes was "as long as the conflict has been noted correctly": it was not, so no merge and no H1a-0. Every non-TODO hunk reads as take-main: main holds the newer inputs refresh and SHA256SUMS, the same leaks fix, brief questions 13-16 (plan/hub side empty), CLAUDE.md newer rows. Needs Jacob: merge with take-main on those nine files, yes or no.
-  · status: waiting-jacob
-  · waits on: approval
   · added: 2026-10-19
 
 ## Unconfirmed suspicions
@@ -94,6 +66,26 @@
   2026-10-19 (tl-453): 'todo get dt-17' from claudeTest printed 'UNCHECKED: dt-17: no scanned store has prefix dt'; 'todo find table:dt-17' refused 'table' as a namespace. The tables live in claudeTest/todo-records.json (dt-15..dt-19 present), so the brief's dt-17 row 4 (tl-384) was read from the file by hand. Unverified whether dt- ids are meant to resolve through get (PLAN-services.md §3: every record has an id and get).
   · probe: todo -C <claudeTest> get dt-17
   · added: 2026-10-19
+
+- **hb-50 · Unconfirmed: context persists across stream-json turns in one -p process**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). Cited (agent-sdk/streaming-input#benefits, 'Context persistence: maintain conversation context across multiple turns naturally', read live 2026-10-13; PLAN-hub.md §11), not yet run.
+  · probe: D0 first clause: message A "remember X", message B "what was X", B result contains X, with a result line between them
+  · added: 2026-10-20
+
+- **hb-51 · Unconfirmed: a turn's result line may precede a background subagent's completion in a stream-json session**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §11, the idle point. The headless page says the run stays open for background subagents at exit; whether a mid-session turn's result waits is not said. The hub waits for the tool_result either way, so a yes costs nothing but the record.
+  · probe: D0 fourth clause: a fixture background subagent sleeping 20 s; record whether result arrives before its tool_result
+  · added: 2026-10-20
+
+- **hb-52 · Unconfirmed: --resume <path> accepts a transcript the hub wrote**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §11, M2. The flag is documented for a session's own transcript; the line format is not. A fail leaves M3 as the rebuild.
+  · probe: D0 M2 clause, with the claude --version
+  · added: 2026-10-20
+
+- **hb-62 · Unconfirmed: an Edit(<repo>/...) allow rule under dontAsk in a -p role denies an edit outside the repo, and the sandbox writable set follows it**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §4, Decision 13. Both documented (permissions#read-and-edit; sandboxing#permission-rules: 'Edit allow rules | Grant write access to specific paths, the same way sandbox.filesystem.allowWrite does'); neither run.
+  · probe: H0 Edit-rule clause, with Edit and with a Bash echo >, inside and outside the repo
+  · added: 2026-10-20
 
 ## Reported to other owners
 
@@ -183,6 +175,7 @@
   , drafted there, to
   send after Jacob's yes on PLAN-hub.md's Decisions. (The planner's §4a report was
   overtaken by the fix pass; hub's check is a real gate since 47eea1a.)
+  2026-10-20 (tl-432): plan/hub merged into main; its eight requests are now items hb-53..hb-60 (one per owner; the harness one beside hb-30). Jacob's merge-now (tl-443) frees them; sending each once (todo report --to <owner>) is the next step, not done in tl-432.
   · added: 2026-10-19
 
 - **hb-24 · PLAN-architecture.md §9 step 10.3: your services.json registry draft is in RESEARCH-registry-drafts.md, section `tools/hub`; write it in, then checks one registered**
@@ -232,3 +225,122 @@
   · size: S
   · done when: the routing-tree copy matches its original (./dev.sh refresh PLAN-routing-tree.md) and the brief's line 30 marks §25-§27, or a recorded decision says neither is needed
   · added: 2026-10-19
+
+- **hb-35 · Phase H1a-0, the write gate (local, before cloud item 1)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), section 'Cloud phases'. PLAN-hub.md §3 H1a-0; §9 row H1a-0; §8 rows 'write gate', 'help == implemented', 'kill the server' first part, 'direction audit', 'no names in the program'; Decisions 13 and 17; PLAN-services.md §3 steps 3 and 7. Size 80-130k (3-5u) local, plus ~1u of harness for the hook (tl-234). The hook is registered in the planner window only after setup plans edit|add and todo's import exist, and a cli.json declares the top-level PLAN-*.md as a store.
+  · work: code
+  · done when: hub up|down|status and the token check work; POST /write-request allows exactly a declared verb on a store the role may write (derived from owners at render time, Decision 17: the planner and dispatcher from the workspace row) and denies the rest with the verb to use, found by resolving the path to its owner, reading a fixture stores.json for store-ness and the owner cli.json for the verb; hub hook gate sees every tool call and passes every read with no server call; the hook denies writes with the server killed; hub check fails a workspace role that is not a roles key and a workspace path under a repos row; every §8 write gate clause passes in tests/
+  · added: 2026-10-20
+
+- **hb-36 · Phase H1a-0b, the read route (cloud, after H1a-0)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §3 H1a-0b; §9 row H1a-0b; §8 row 'read route'. Size 50-90k (2-3u), split off H1a-0. Inputs: PLAN-hub.md §2 (owners, workspace, stores, stores.json), §3, §8, §12; docs/inputs/PLAN-todo-tool.md §3. Runs on the credits (routing-tree §10.3 answer 4). The real stores.json is setup's to render; H1a-0b does not wait on it.
+  · work: code
+  · done when: POST /read-request answers a fixture declared-prefix id and a path a fixture stores.json lists with the store get; a Read of an owned non-store path and of an unowned path are plain Read, never denied, with no server call; with the server killed a declared-prefix read and a Read of a listed store path are denied with the hub status line and a Read of an unlisted path is allowed; with stores.json removed every Read of a path is plain Read and hub status reports it missing; every answer is a ledger row; every other §8 read route clause passes in tests/
+  · added: 2026-10-20
+
+- **hb-37 · Phase H1a-1, the program with no routing yet (cloud item 1)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §9 row H1a-1; §2 registry, §3 hub up, §7 status --json, §8 rows help == implemented, vocabulary, registry, kill the server first half, direction audit, no names in the program, services as data audit, owners both ways schema. Size 80-130k (3-5u), extends H1a-0's server skeleton. Inputs: PLAN-hub.md §1-§3, §7, §8; PLAN-routing-tree.md §2, §7, §14.6-§14.8; docs/inputs/PLAN-group-servers.md §1a; docs/inputs/PLAN-portable-env.md §3.1.
+  · work: code
+  · done when: hub init writes a starter that passes hub check; the §2 example registry passes hub check with no child, limits and stores included; a warm mode fails hub check (Decision 1); hub up binds, writes .hub/server.json, answers /health and /status with the token and refuses without it; hub status --json reports {"up": false} within one second after a kill and hub up restores held/dead-letter/ledger state from .hub/; hub --help == the subcommands and docs/API.md == the served routes, both ways, in a test; nothing under tools/hub/ reads .claude/ or names a repo, path or command (two audits in ./dev.sh check)
+  · added: 2026-10-20
+
+- **hb-38 · Phase H1a-2, the relay through the server (cloud item 2)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §9 row H1a-2; §1, §3 (Dispatch section path, admission list), §8 rows determinism, kill the server hook half, origin, admission gate half, limits both ways budget and stub, references by id ctx: half, failures are messages, agent last counts, fails open every hook. Size 140-200k (5-7u). Inputs: PLAN-hub.md §1, §3, §8, §12; docs/inputs/PLAN-auto-relay.md §2-§4, §9; PLAN-question-routing.md §3-§4; PLAN-usage-reporting.md §3; PLAN-routing-tree.md §3, §6, §13.3, §14.3, §14.7. The .claude/ hook sources are not copied (PLAN-cloud-offload.md §8): rebuilt from contracts, the planner diffs behaviour at review. Beside it, local: harness (gen renders .claude/hub-roles.json, never hub.json; three hooks become one-line callers; user-prompt hook; dispatch-guard reads hub status --json) and tools/setup (the hub component writes hub.json from the role list, drift in its check).
+  · work: code
+  · done when: /route stamps origin from a fixture transcript (forged jacob -> model; a Jacob turn carries origin_id and its stub line, never the text; hub get ctx:<id> returns the prompt a fixture ctx: CLI stored; a body with the prompt past stub_chars is flagged pasted); admission (identical dropped, invalid dead-lettered with notice, budget_per_conversation + 1 held, released by a fixture Jacob prompt once); a fixture usage CLI asked (0 goes, warn holds a job without a checkpoint, hold queues with one line); limits export equals hub.json limits both ways and a budget of 1 holds on the second model message naming the limit; hub hook planner-stop and dispatcher-stop forward through /route and with the server killed relay direct or block once; hub hook user-prompt with the server killed still stores the prompt; a delivery failure reaches the owners row; 100 fixture envelopes route identically twice; every hook exits 0 on malformed input
+  · added: 2026-10-20
+
+- **hb-39 · Phase S1, declared sync for files (cloud item 3)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §6; §9 row S1; §8 row sync first three clauses. Size 120-180k (4-6u). Inputs: PLAN-hub.md §6; PLAN-routing-tree.md §12; docs/inputs/PLAN-tools-folder.md §8; docs/inputs/PLAN-repo-setup.md §2.
+  · work: code
+  · done when: hub sync --check with no server prints ok | behind N | missing | edited locally | override | undeclared per child and artifact on a fixture tree with drift injected into each; hub sync --apply <id> writes into this node only; a root with no children prints nothing to sync (root, no children); every declared source exists and every target holds it; an edit inside a copied file is caught; --json output is what tools/checks hooks-installed will read (documented in docs/API.md)
+  · added: 2026-10-20
+
+- **hb-40 · Phase H1b, the first spawn and the write service (cloud item 4)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §9 row H1b; §3 H1b; §4 cold row; §8 rows conformance, per-branch report, read-only roles, services as data write, admission spawn half. Size 150-200k (5-7u). Inputs: PLAN-hub.md §3, §4, §8; PLAN-routing-tree.md §5, §13.2-§13.4, §14.6; docs/inputs/PLAN-hard-gates.md §2, §3; PLAN-group-servers.md §1a. Probe first, local, H0: hub send from inside a cold role and dontAsk honouring the tool list; if H0 has not run, the session runs those two on a fixture and records the result.
+  · work: code
+  · done when: a task to a fixture repo set up from its path alone spawns claude -p --agent <role> read-only (hook the gate, flags a default only) with the origin_id stub line, reads the stream to its result line, records usage in the ledger and returns a report; the role write-request runs the fixture CLI declared verb and an undeclared verb is refused and answered; a Bash write in the sandbox fails and the same write as a write-request succeeds; a commit write makes carries Agent: <role>; two tasks to one dir run in turn; three spawns with two failing on different steps report each outcome; hub log --usage shows the spawn in 1u
+  · added: 2026-10-20
+
+- **hb-41 · Phase R1, references by id (cloud item 5)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §12; §9 row R1; §8 row references by id. Size 120-170k (4-6u). Inputs: PLAN-hub.md §2 (stores, limits.stub_chars), §12, §8; docs/inputs/PLAN-todo-tool.md §3 and §4 step 4; PLAN-routing-tree.md §14.1, §14.8.
+  · work: code
+  · done when: a fixture services.json ids entry appears in stores at hub up and hub reload; a planted todo: id renders a stub (id, line cut at stub_chars, source, date); hub get <id> and GET /refs/<id> return the store get output byte for byte; hub send --ref x:1 with an undeclared prefix is refused naming the declared prefixes; a sender refs is overwritten; a body with more than stub_chars of a referenced record is flagged pasted: <id> and answered, hub log --pasted counts it; a store whose get is missing makes hub check red on stores and its stubs unchecked; an unknown id renders unresolved: not found; a record changed between send and expand renders changed since cited; two repos declaring one prefix fail hub check
+  · added: 2026-10-20
+
+- **hb-42 · Phase H2, agent to agent (cloud item 6)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §9 row H2; §4 The coder's exception; §5 Cross-repo claims; §8 rows lease, loops, claims, limits both ways hops and ping-pong, failures are messages proposal. Size 160-200k (6-7u); lease and routes --proposed may split off as H2b. Inputs: PLAN-hub.md §2-§5, §8; PLAN-routing-tree.md §3, §6, §9, §10 phase 2, §13.5, §14.7; docs/inputs/PLAN-interim-rules.md §4. Probe first, local, H0: the Edit-rule clause.
+  · work: code
+  · done when: a report from fixture node A naming B path arrives at B as bug-report and B report closes the conversation with the top dispatcher inbox receiving neither; a claim with no owner dead-letters with notice; a ping-pong is held at pingpong_hold and a hop-limit message dead-letters, each read from limits and biting at 1; two tasks to one repo coder run in turn, the second report says it queued; the coder Edit rule holds inside the repo and fails outside (Edit and Bash echo >); green edit committed by write with Agent:, red comes back check-red with nothing committed; the lease clause (leased coder may Edit a source file, not todo.json; without the lease neither); a coder without the lease has no Edit rule; the third identical re-route of an unowned kind appears in hub routes --proposed
+  · added: 2026-10-20
+
+- **hb-43 · Phase G1, the check and hook services (cloud item 7)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §9 row G1; §1 last row; §8 rows services as data check/hook, owners both ways flip, agent last checks. Size 150-200k (5-7u); the site-scrapers pilot is a local follow-up (1-2u). Inputs: PLAN-hub.md §1, §2, §8; PLAN-routing-tree.md §14.2, §14.3, §14.6; docs/inputs/PLAN-group-servers.md §3.2, §5; PLAN-agent-groups.md §4.4.
+  · work: code
+  · done when: a check request {repo, scope} runs only the command the repos row names on a fixture repo; green returns a report to from; red returns one check-red per finding to the owners row with file:line, suite output in the ledger never the body; a check that raises is check-broken to tools/checks; flipping the fixture result moves the message between the two; /stop blocks once (max_blocks) and the verdict stands; hook answers a fixture history question from the ledger within its timeout and the caller continues without it when the server is down; hub status counts model turns by step
+  · added: 2026-10-20
+
+- **hb-44 · Phase H3, hierarchy (cloud item 8)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §9 row H3; §5; §6 S3 and S4; §8 rows hierarchy, conformance child half, vocabulary with children, limits both ways heartbeat, sync last three clauses. Size 160-200k (6-7u); site-scrapers as the first live child is a local follow-up (1-2u). Inputs: PLAN-hub.md §5, §6, §8; PLAN-routing-tree.md §1, §7, §8, §9, §12; docs/inputs/PLAN-repo-setup.md §7.5, §7.8.
+  · work: code
+  · done when: a child posts /register on hub up with the parent token, is heartbeated every limits.heartbeat_s and marked down after limits.heartbeat_misses (one miss at 1), and hub down de-registers it; a three-level fixture tree leaves no grandchild in any parent .hub/children/; a de-registered child tags route to the parent dispatcher with notice; a child advertising a parent tag is refused; hub up --tree and hub status --tree cover the tree; a node with no HUB_PARENT_URL runs as a root and says so; hub sync --propose sends drift as a sync message; a vocab entry is inherited and cannot be redefined; a write-request for a rendered file in a child is served by the child server with no message in the parent ledger
+  · added: 2026-10-20
+
+- **hb-45 · Phase D1, driven sessions (cloud item 9, after D0)**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §11; §9 row D1; §8 row driven session. Size 120-180k (4-6u). After D0, local (§9 row D0, 20-40k): D0 decides which of M1, M2, M3 this builds; not dispatchable until D0 has run. Inputs: PLAN-hub.md §4, §11, §12, §8; the D0 result in tools/hub/probes/. Decision 14 (2026-10-13): D0 runs on a fixture before anything touches the planner window.
+  · work: code
+  · done when: on a fixture role: hub session start runs the stream-json process with --replay-user-messages and the hub list equals the acknowledged messages plus the result lines; the idle point holds; a rebuild from a ctx: id by the chosen mechanism leaves the next answer knowing Y and not X; after a rebuild hub origin says model; a rebuild file with a recorded tool_result line is refused; every pre-rebuild message is in the snapshot the ledger names; hub session from a role Bash is refused and answered; no committed registry names a driven role
+  · added: 2026-10-20
+
+- **hb-46 · stores.json is setup's to render, and is not built**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Open decisions. PLAN-hub.md §2 and the Setup component table; PLAN-services.md §3 step 3, 'Two more from the hub owner' 1. The hub reads it, on fixtures until setup writes the real one (read-only, beside hub.json, from every owner's cli.json, re-rendered whenever setup runs at any repo, drift when it no longer matches). The plan/hub entry says reported to tools/setup through the 2026-10-13 session's report; unverified that it reached setup -- settle: tools/todo/todo find repo:setup (from the top level).
+  · added: 2026-10-20
+
+- **hb-47 · The workspace row has no source yet**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Open decisions. The manifest has no owners block (grep '"owners"' .claude/agents.manifest.json: nothing, 2026-10-13) and .claude/hub-roles.json does not exist (H1a-2's harness job renders it), so the row reaches hub.json only once harness renders it into the role list: name it in the H1a-2 harness job's brief. H1a-0 is built on fixtures and does not wait on it.
+  · added: 2026-10-20
+
+- **hb-48 · The planner's kb check on the 2026-10-13 citations**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Open decisions. The cloud pass read these pages live from code.claude.com and quoted them; the anchors are slugged headings, unverified offline: prompt-caching#how-the-cache-is-organized, #cache-lifetime, #check-cache-performance; headless#auto-approve-tools, #continue-conversations, #stream-responses, #follow-subagent-messages, #background-tasks-at-exit; cli-reference#cli-flags, #system-prompt-flags-in-resumed-conversations; hooks#userpromptsubmit, #stop; permissions#read-and-edit; sandboxing#permission-rules; agent-sdk/overview#compare-the-agent-sdk-to-other-claude-tools; agent-sdk/streaming-input#benefits. An anchor that does not resolve is a wrong pointer to a right quote.
+  · probe: kb check --all PLAN-hub.md PLAN-hub-view.md (the planner, locally; the mirror is private)
+  · added: 2026-10-20
+
+- **hb-49 · kb check cannot run in the cloud**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Own limits. The docs mirror is private and local (docs/inputs/README.md). Citations are written as "quote" (url#anchor) from live reads (2026-10-05, 2026-10-13); only the planner's kb check --all PLAN-hub.md PLAN-hub-view.md settles them. Still marked unverified in the text: the Wave Terminal and Tabby quotes (PLAN-hub-view.md §4; docs.waveterm.dev was blocked from the container, its GitHub sources read instead). The streaming-input claim is cited (PLAN-hub.md §11) and still unrun (D0).
+  · added: 2026-10-20
+
+- **hb-53 · To send to cron-scheduler: chron.py list --json, and the server list from hub status --json --tree**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). chron.py list --json returning [{job, next_run, schedule, enabled}] (PLAN-hub.md §7; PLAN-hub-view.md §2, V2); and reading the server list from hub status --json --tree instead of the manifest (PLAN-hub.md §7, Decision 5, approved 2026-10-09; changes group-servers decision 4's data source, not its owner).
+  · added: 2026-10-20
+
+- **hb-54 · To send to harness: gen renders .claude/hub-roles.json, never hub.json; hooks become hub hook callers**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). gen renders .claude/hub-roles.json (roles with default tools, routes, children, server from servers.<group>, owners defaults, its source hash) and never hub.json (PLAN-hub.md §2, Decision 2); auto-relay.sh, question-gate.sh and record-session.sh become one-line callers of hub hook; a UserPromptSubmit hook for the two windows, hub hook user-prompt, stores each typed prompt in ctx: (Decision 3); dispatch-guard.sh reads hub status --json; quote-words.sh injects the origin_id stub through hub origin, not the text (PLAN-hub.md §1, §2; beside H1a-2 and in H4). Distinct from hb-30 (list --json, models, tokens, the settings verb).
+  · added: 2026-10-20
+
+- **hb-55 · To send to tools/setup: the hub component is the one writer of hub.json at every node**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). Reading .claude/hub-roles.json where it exists and writing the starter where it does not, with drift in its idempotent check (PLAN-hub.md §2, Decision 2); the rest of the component (PLAN-hub.md Setup component: services.json with verbs, tags and ids, cli.json skeletons, registry.proposed.json, --node, local.env keys, .gitignore lines, checks run . as the last step); and stores.json (see the stores.json item).
+  · added: 2026-10-20
+
+- **hb-56 · To send to context-hygiene: the ctx: store takes typed prompts from hub hook user-prompt**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). Through its own CLI, answering get <id> with one line and the text (PLAN-hub.md §1, §12; its write verb is that plan's to name); its CLI calls hub session rebuild <id> --from ctx:<id> when its monitor says it is time, with the rendered list as a ctx: record (§11); and a question: are ctx: records immutable, so a cited snapshot never changes (§12 changed since cited)? Related: hb-25.
+  · added: 2026-10-20
+
+- **hb-57 · To send to todo: todo get ID is read as is as the second store**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). PLAN-hub.md §12, R1; the todo repo's services.json declares ids for todo: when the component installs it.
+  · added: 2026-10-20
+
+- **hb-58 · To send to tools/checks: hub sync --check --json readers and the four §14.8 contract checks**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). rules-in-sync and hooks-installed read hub sync --check --json after S1 (PLAN-hub.md §6); and the four contract checks of routing-tree §14.8 (check-json, accessor, services-valid, registry-matches) that PLAN-hub.md depends on and does not build.
+  · added: 2026-10-20
+
+- **hb-59 · To send to knowledge-base: mirror the external tools' docs the hub cites**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). Jacob 2026-10-05: 'we want the docs for every external tool put into the knowledge base, rather than storing the entirety of the code in context' (a builder asks kb q, not cat on a vendored tree). Add Claude Code's docs/en/agent-sdk/streaming-input (absent from the mirror; PLAN-hub.md §11 cites it from a live read), docs/en/prompt-caching (§4, §11), Wave Terminal's documentation (docs.waveterm.dev: customwidgets, wsh-reference, layouts and config at least) and tmux's manual (PLAN-hub-view.md §4, V0), and the same for any host, library or CLI a later phase adopts.
+  · added: 2026-10-20
+
+- **hb-60 · To send to tools/usage: usage gate <estimate> with exit 0 = go, warn / hold on non-zero**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Reported to other owners: not sent (per review finding 9 they go out after Jacob's yes on PLAN-hub.md's Decisions, each once; hb-19). usage gate <estimate> with exit code 0 = go and the words warn / hold with a hold time on non-zero (PLAN-hub.md §3; PLAN-usage-reporting.md §3).
+  · added: 2026-10-20
+
+- **hb-61 · The role list's shape is wider than REVIEW §5.8's wording**
+  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Open decisions (a confirmation for the planner with harness, not a decision for Jacob). 5.8 described .claude/hub-roles.json as each role's name, mode, dir and tools plus the routes; PLAN-hub.md §2 also puts children, server (port, keep-alive from servers.<group>) and the owners defaults in it, because gen no longer writes hub.json. The planner confirms the shape with harness before the H1a-2 harness job; the alternative is setup flags, which would make the port a per-machine argument against Decision 10.
+  · added: 2026-10-20

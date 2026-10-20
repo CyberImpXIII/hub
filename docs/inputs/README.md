@@ -37,6 +37,18 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   top-level original, copied over by hand, and only its `SHA256SUMS` line rewritten.
   Not a refresh: seven other copies had drifted and were left as they were, since
   refreshing them is a decision (TODO.md).
+- **Refreshed 2026-10-09, on `plan/hub`** (carried in by the merge of 2026-10-20, tl-432;
+  `main`'s later refreshes replaced these copies) for the next cloud pass
+  (PLAN-hub-review.md §5.11 step 1, copied as `docs/REVIEW-2026-10-09.md`). The leak
+  audit was run on the originals first and found nothing; then `./dev.sh refresh`. Eight
+  copies had drifted: `claudeTest-CLAUDE.md`, `PLAN-routing-tree.md`,
+  `PLAN-agent-groups.md`, `PLAN-todo-tool.md`, `PLAN-repo-setup.md`,
+  `PLAN-portable-env.md`, `PLAN-usage-reporting.md`, `PLAN-check-progress.md`.
+- **Refreshed 2026-10-12, on `plan/hub`** (carried in the same way) for brief §4
+  question 12 (references by id, shown as a stub and expanded on demand;
+  PLAN-hub-review.md §5.12, re-copied as `docs/REVIEW-2026-10-09.md`). Leak audit on the
+  originals first (and on the review), nothing found; then `./dev.sh refresh`. Two
+  copies had drifted: the brief and `claudeTest-CLAUDE.md`.
 - **`PLAN-routing-tree.md` and the brief re-copied 2026-10-19** for routing-tree §15,
   the roster settings page (Jacob, 2026-10-19; owner hub), so `PLAN-hub.md` plans it.
   The brief's §2 row now says §11-§15 are decided and names the page; it was edited at
