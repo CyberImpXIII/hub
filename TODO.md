@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (24 open, 9 closed in todo-history.json; seal 6f3aeef2c325): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (25 open, 9 closed in todo-history.json; seal 41f69c7e98a3): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -15,6 +15,11 @@
   · work: test
   · done when: the test compares with tools/checks' committed runner (git show HEAD:checkslib/parts.py) or is UNCHECKED while the source is uncommitted; a fixture shows each
   · added: 2026-10-19
+
+- **hb-34 · devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report t...**
+  reported from tools/todo to tools/hub in dispatch toolu_01XngPqWP4Abzbj63Ght5hjp, filed from the dispatch ledger by the delegation layer's report filer: devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report them missing once the store moves to todo.db -- input: `todo --root <workspace> migrate --readers` lines 94-102 -- expected: check through `todo -C . check` or accept the exports; there is no tl item for this yet
+  · parent: tl-471
+  · added: 2026-10-20
 
 ## Open decisions
 
