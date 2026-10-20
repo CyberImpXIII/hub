@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (51 open, 11 closed in todo-history.json; seal a181aa532132): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (57 open, 12 closed in todo-history.json; seal 10e48cf1edc3): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -42,6 +42,16 @@
   most likely Jacob applying setup's proposal for the 790d4bd render (Own limits,
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
   · added: 2026-10-19
+
+- **hb-69 · Where HUB_TOKEN comes from: the environment (built) or .claude/local.env (plan §3 step 1)**
+  · status: waiting-jacob
+  · waits on: approval
+  · pointer: PLAN-hub.md §3
+  · hinges on: §3 step 1 has the hub read .claude/local.env; §8's direction audit forbids the program reading .claude/. H1a-0 reads HUB_TOKEN from the environment only, so whoever registers the hook must put it there
+  · recommend: env
+  · options: env = the environment only (as built); the harness sets it when it registers the hook; amend §3 step 1; file = a token file outside .claude/ named in hub.json
+  · files: src/cli.js
+  · added: 2026-10-20
 
 ## Unconfirmed suspicions
 
@@ -87,7 +97,18 @@
   · probe: H0 Edit-rule clause, with Edit and with a Bash echo >, inside and outside the repo
   · added: 2026-10-20
 
+- **hb-63 · unverified: setup plans edit --from <file> cannot be fed under the gate, since every Write is denied, so the planner cannot make the file**
+  src/gate.js denies every Edit/Write/NotebookEdit/MultiEdit (Decision 17); --from reads a file. Needs --from - (stdin) on setup's side, or a scratch-path exception decided in the plan
+  · probe: with the gate registered, try a planner Write to a scratch file, then setup plans edit --from it
+  · files: src/gate.js
+  · added: 2026-10-20
+
 ## Reported to other owners
+
+- **hb-68 · Reported to hooks: write-targets.sh drops a -* operand after -- (touch -- -odd gives no target)**
+  bash tests/hub/write-targets-oracle.sh <lib> /w/node 'touch -- -odd' prints nothing; expected /w/node/-odd. Held in classify.test.js KNOWN
+  · reported to: hooks on 2026-10-20 (no counterpart yet)
+  · added: 2026-10-20
 
 ## Notes
 
@@ -226,12 +247,6 @@
   · done when: the routing-tree copy matches its original (./dev.sh refresh PLAN-routing-tree.md) and the brief's line 30 marks §25-§27, or a recorded decision says neither is needed
   · added: 2026-10-19
 
-- **hb-35 · Phase H1a-0, the write gate (local, before cloud item 1)**
-  from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), section 'Cloud phases'. PLAN-hub.md §3 H1a-0; §9 row H1a-0; §8 rows 'write gate', 'help == implemented', 'kill the server' first part, 'direction audit', 'no names in the program'; Decisions 13 and 17; PLAN-services.md §3 steps 3 and 7. Size 80-130k (3-5u) local, plus ~1u of harness for the hook (tl-234). The hook is registered in the planner window only after setup plans edit|add and todo's import exist, and a cli.json declares the top-level PLAN-*.md as a store.
-  · work: code
-  · done when: hub up|down|status and the token check work; POST /write-request allows exactly a declared verb on a store the role may write (derived from owners at render time, Decision 17: the planner and dispatcher from the workspace row) and denies the rest with the verb to use, found by resolving the path to its owner, reading a fixture stores.json for store-ness and the owner cli.json for the verb; hub hook gate sees every tool call and passes every read with no server call; the hook denies writes with the server killed; hub check fails a workspace role that is not a roles key and a workspace path under a repos row; every §8 write gate clause passes in tests/
-  · added: 2026-10-20
-
 - **hb-36 · Phase H1a-0b, the read route (cloud, after H1a-0)**
   from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432). PLAN-hub.md §3 H1a-0b; §9 row H1a-0b; §8 row 'read route'. Size 50-90k (2-3u), split off H1a-0. Inputs: PLAN-hub.md §2 (owners, workspace, stores, stores.json), §3, §8, §12; docs/inputs/PLAN-todo-tool.md §3. Runs on the credits (routing-tree §10.3 answer 4). The real stores.json is setup's to render; H1a-0b does not wait on it.
   · work: code
@@ -343,4 +358,21 @@
 
 - **hb-61 · The role list's shape is wider than REVIEW §5.8's wording**
   from plan/hub TODO.md (0057a4b), carried in by the merge of 2026-10-20 (tl-432), Open decisions (a confirmation for the planner with harness, not a decision for Jacob). 5.8 described .claude/hub-roles.json as each role's name, mode, dir and tools plus the routes; PLAN-hub.md §2 also puts children, server (port, keep-alive from servers.<group>) and the owners defaults in it, because gen no longer writes hub.json. The planner confirms the shape with harness before the H1a-2 harness job; the alternative is setup flags, which would make the port a per-machine argument against Decision 10.
+  · added: 2026-10-20
+
+- **hb-64 · A read verb from a role outside the writers is denied (e.g. items list): cli.json verbs do not say read or write**
+  tests/hub fixture: verbs add|done|list are all write requests; gate.js treats any declared verb on a store as a write. Needs cli.json to mark read verbs (checks' schema) or the classifier to pass them as reads
+  · files: src/gate.js, src/classify.js
+  · added: 2026-10-20
+
+- **hb-65 · stores.json format in H1a-0 is the fixture's ({stores:1, entries:[{path, declared_by}]}); setup owns the real one (hb-46): align when it lands**
+  · files: src/registry.js, docs/API.md
+  · added: 2026-10-20
+
+- **hb-66 · The no-names audit uses workspace folder names as a stand-in for roster agent names (reading the roster would break the direction rule it audits)**
+  · files: tests/hub/audit.test.js
+  · added: 2026-10-20
+
+- **hb-67 · The classifier sees less than the shared write-target parser: git checkout/restore, patch, vim/ex/ed, sqlite3 pass as reads; listed in classify.test.js KNOWN. Decide: run the shared parser, or port its reach**
+  · files: src/classify.js, tests/hub/classify.test.js
   · added: 2026-10-20
