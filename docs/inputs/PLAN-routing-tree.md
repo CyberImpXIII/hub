@@ -336,6 +336,30 @@ refreshes its copy.
 `core.hooksPath` unset; `setup tools/hub --dry-run` prints the exact lines) and hb-7
 (its `.claude/settings.json`, modified on 2026-10-15 and uncommitted, his to commit).
 
+**The merge, in plain words (tl-443; Jacob on 2026-10-19: "I don't understand this
+decision").** `tools/hub` has two branches. `main` holds the brief, the copies of the
+plans the hub reads (`docs/inputs/`) and the hub's own TODO store; it has moved 22
+commits since the branches parted on 2026-10-09 (two inputs refreshes, the brief's
+edits, the store). `plan/hub` holds the hub's plan itself, PLAN-hub.md and
+PLAN-hub-view.md: the cloud session's draft of 2026-10-04, the local passes of 10-09 and
+10-13, and §15's answer today. Nothing joins them, so the plan and the brief it answers
+live on different branches, and the hub's first code (H1a-0, the write gate, Decision
+17) has no one branch to be built on. Merging joins them into `main`. Git does that
+alone except where both branches changed the same lines of one file; there it stops
+and asks, and ten files are in that state. The planner read each on 2026-10-19 at
+19:45: in all ten, `main`'s last edit is from 2026-10-19 and `plan/hub`'s from 10-09 to
+10-13; `main`'s brief carries question 12, which `plan/hub` had added (5 hits to 1);
+`main`'s `devtools/hubcheck.py` carries `plan/hub`'s fix (a file it cannot read is a
+finding, never a pass) in other words; `CLAUDE.md`'s one differing line is a refresh
+date; the five `docs/inputs/` copies, `SHA256SUMS` and `docs/inputs/README.md` are
+today's copies of the originals against 10-09's. So for the nine files outside
+TODO.md, keeping `main`'s version loses nothing seen; the hub's per-file report in step
+2 is the proof, not this reading. TODO.md is rendered from the store and never edited
+by hand, so `plan/hub`'s entries (one per phase, written on 10-13) come in through
+`todo add` and the file is rendered again. `merge-now`: hub does that, runs `./dev.sh
+check`, then builds H1a-0 on `main`. `hold`: the two branches stay, and H1a-0, hb-19's
+requests and §10.4's path wait. The cloud pass is unaffected either way.
+
 ### Steps
 
 1. **`hub`:** with 118: PLAN-services.md and PLAN-context-hygiene.md added to the
@@ -352,7 +376,53 @@ refreshes its copy.
    anything on `plan/hub`'s side that `main` lacks (none expected; any line stops the
    merge), brings `plan/hub`'s TODO entries in through `todo add`, runs `./dev.sh
    check` with SHA256SUMS, closes hb-4 by the rows' dates; then H1a-0 (Decision 17).
+   With it: hb-28 retitled to the question as §15 words it ("Two decisions came back
+   from the hub's plan"), no other change to the item.
    track: needs-yes PLAN-routing-tree.md §10.3
+
+### 10.4 The hub is the goal: the path to its first self-directed request (Jacob, 2026-10-19)
+
+> "Additionally, are we working, and by me I mean you AND I, towards getting the hub
+> fleshed out? How soon will it be ready to develop itself? I'd like to dispatch a
+> bunch of our todos but I'd like to be focused on that as a goal"
+
+**Where the day went.** Partly towards it: the inputs refresh (tl-406, done at 19:31),
+the settings page's plan (§15, on `plan/hub`), the five questions (§10.3) and their
+answers. The dispatch ledger for 2026-10-19 shows thirty-six spawns that ran; seven
+were the hub's (tl-316, tl-356, tl-379, tl-406 twice, tl-310, tl-432) and the other
+twenty-nine went to twelve other agents, because the queue of §26 ran the store's
+order, which was by owner, not by the hub's path. From this section on, the hub's path
+holds the queue's first slot (§26, "The hub path first").
+
+**"Develops itself" means:** a request such as "tools/hub: build phase R1" goes to the
+hub; the hub starts the `hub` role in its folder (§20); the role's writes pass the
+write gate; its report lands in the hub's ledger. In PLAN-hub.md §9's order that is the
+end of phase **H1b, the first spawn**. The dispatcher stays the front door until H4,
+and the view (V1) is not needed for it.
+
+**The path, in order, and whose hand each step is in** (costs from PLAN-hub.md §9 on
+`plan/hub`; `u` is 29k tokens):
+
+| # | step | whose hand | cost | state, 2026-10-19 19:50 |
+|---|---|---|---|---|
+| 1 | the merge (tl-443) | Jacob: one answer | none | Decisions row 1 |
+| 2 | the merge, then H0 (the probes) and H1a-0 (the write gate) on `main`; harness's hook half (tl-234) after H1a-0 | `hub`, local; then `harness` | H0 40-90k; H1a-0 80-130k; harness ~1u | tl-432, blocked by step 1 |
+| 3 | the brief carries the evening's answers: line 30's marks (§17 `declare`, §20 asked again, §22-§23 pending), question 7 (`session-start`, §10.2), question 15 (PLAN-hub.md §15's Decisions 18-19), and its five warm/cold hits rewritten (§24 step 6, line 121 folded in); the copy refreshed | `hub`, local | 15-30k | Dispatch 204 |
+| 4 | §20, one kind of role (tl-384) | Jacob: one answer | none | Decisions row 4; PLAN-hub.md §4 waits on it |
+| 5 | the cloud pass: PLAN-hub.md §4, §7 and the re-cost from the answers; then H1a-0b, H1a-1, H1a-2, S1 and H1b in §9's order, as far as the credits go (Decision 9's rule) | Jacob starts it (D2: Fable 5.1 at max) once step 3 reports and step 4 is answered; it runs on the $150 | 50-90k, 80-130k, 140-200k, 120-180k, 150-200k: 540-800k together | waits on steps 3 and 4 |
+| 6 | beside it: H1a-2's harness and setup halves; §17 step 1 (tl-445, the modes and classes the hub's `route` reads in §17 step 4) | `harness`, `setup`, local | 1-2u each | tl-445 is line 189 of the queue |
+
+**How soon.** Steps 1 and 4 are two answers. Step 2 is two or three local dispatches,
+about 120-220k tokens plus harness's. Step 3 is one small dispatch. Step 5 is one cloud
+session: five phases, 540-800k tokens on the credits; Decision 9's rule stops it when
+the credits run short, and whatever it leaves runs locally in the same order, one
+dispatch per phase. If the credits carry the session to H1b, the hub takes its first
+self-directed request at the end of that session. Wall clock is not the cost; the two
+usage windows are, which is why the local steps take the first slot rather than
+waiting their turn behind the other repos.
+
+**What does not block it:** Decisions rows 2 (phase RS comes after V1) and 3 and 5-17;
+every non-hub line of the queue; the merge's `hold` answer slows step 2 only.
 
 ## 11. Decisions (all answered "yes" by Jacob, 2026-10-03)
 
@@ -822,6 +892,29 @@ other.
 
 **Who may change it:** Jacob, from the page. A role that reaches the server gets the
 page read-only (§13).
+
+**Two decisions came back from the hub's plan (hb-28, one Decisions row; PLAN-hub.md
+§15 on `plan/hub`, its Decisions 18 and 19), in plain words.** The page changes an
+agent's model or effort by running harness's own command, `agents.sh set`, then `gen`,
+`check` and a commit. Today harness's `cli.json` marks `set` as a command the hub's
+server may not run, because a request arriving at the server carries no proof of who
+sent it. **Decision 18** asks whether the hub may run it at all for a click on the
+page, while refusing it for every role. The catch is the local-trust gap: the page
+proves itself with `HUB_TOKEN`, a secret in the hub's `local.env`. If a role the hub
+started can read that file (through the Read tool, `cat` in Bash, or a store read), it
+can send the same request the page sends, and the server cannot tell Jacob's click from
+a role's POST. The probe **P-RS1** tries exactly that from a role in its sandbox,
+before the write half is built. If the role cannot read the token, the page may write;
+if it can, the page stays read-only and shows, per row, the `agents.sh set` line for
+Jacob to run himself with `!`. **Decision 19** asks whether the four steps are one
+all-or-nothing verb in harness, rolled back when `check` refuses, rather than four
+calls the hub makes in turn. Today `set` stops after `gen`, so a refused `check` would
+leave the manifest changed and the third gate below would fail; one verb means a
+half-applied change cannot exist. It adds 60-110k (the hub's RS phase) and 1-2u of
+harness to Decision 9's total. The read half of the page (the rows, from harness's
+`list --json`) needs neither decision and ships with V1. **`yes`** answers both: the
+hub may write once P-RS1 passes, through one all-or-nothing harness verb; until the
+probe passes, the read-only page.
 
 **The model allowlist** is read from the manifest's list of known models, never typed
 into the page.
@@ -1651,6 +1744,18 @@ line (`> `), because Jacob's words are never edited. A hit in another sense of a
 gets a dated allow entry naming the file, not a wider pattern. A rule restated four
 times is a hook, not a rule.
 
+**The decision (tl-381), in plain words.** Every live file is rewritten either way: the
+plans, the docs, the code, TODO.md, the memory files. The question is the dated
+records: the research documents (`RESEARCH-*.md`, rendered from `research.json` and
+never hand-edited), the review record (PLAN-hub-review.md), and the hub's
+`docs/inputs/` copies, pinned by `SHA256SUMS`, each of which says what was true on its
+date. `live-only`: the records keep their words, the `banned-terms` gate allowlists
+them by name, and a search of history still finds the old words there and nowhere
+else. `records-too`: the records are rewritten as well, which needs a research verb
+that edits a rendered document, a hub re-pin of its inputs, and a history that no
+longer says what was found. Recommended `live-only`: a record that is edited stops
+being a record.
+
 ### Steps
 
 1. **`deep-work`:** the top-level documents in the inventory, live documents only (the
@@ -1663,8 +1768,9 @@ times is a hook, not a rule.
 4. **`harness`:** its row, after step 3. track: TODO.md "Scrub the temperature axis"
 5. **`checks`:** its row and the `banned-terms` gate with its fixtures.
    track: TODO.md "Scrub the temperature axis"
-6. **`hub`:** the brief's five hits at the top-level original, with 121; `./dev.sh
-   refresh` after step 1. track: TODO.md "Scrub the temperature axis"
+6. **`hub`:** the brief's five hits at the top-level original, with 121, which line 204
+   folds into §10.4 step 3 (one hub spawn, not two); `./dev.sh refresh` after step 1.
+   track: TODO.md "Scrub the temperature axis"
 7. **`site-scrapers`:** its three hits, one line in its report.
    track: TODO.md "Scrub the temperature axis"
 8. **`job-import-scripts`:** its one hit, one line in its report.
@@ -1755,6 +1861,9 @@ hand):
 - **Order is priority.** The Dispatch lines of 2026-10-19 (122 onward) are the queue in
   order; the list below is the same order by item. A line with an "after" waits for
   it; everything else starts when a slot frees.
+- **The hub path first (Jacob, 2026-10-19, 19:40; §10.4).** The first free slot goes
+  to the next dispatchable step of §10.4's path, ahead of every line below it in the
+  queue; when no step of the path is dispatchable, the slot runs the order below.
 - **Four open dispatches at a time, one per folder.** Four is the number §17 names as
   `fanout.max_run`, used here as the queue's limit and not as §17's gate, which stays
   needs-yes (tl-364). Two heavy checks never run at once (the parallelism rule: a
@@ -1780,7 +1889,7 @@ owners' stores through it):
 | 4 | each owner with a parts file | PLAN-check-progress.md §10 step 2 (mark `uses`, the `--jobs 1` comparison, timings) |
 | 5 | context-hygiene | tl-373 (re-pin ch-65, left open by the 12:58 dispatch); §21 step 3; §24 step 2; ch-5, ch-49, ch-50, ch-58, ch-59, ch-60, ch-67, ch-69, ch-70, ch-73 |
 | 6 | audit (after tl-350) | §21 step 1 |
-| 7 | hub | §21 step 4; §24 step 6 (with line 121); §10.3 step 1 (with line 118); TODO.md "Roster settings page" (tl-310); hb-21, hb-22, hb-25 sized first |
+| 7 | hub | §10.4's path first (the rule above): §24 step 6 inside §10.4 step 3 (line 204, folding in 121), then the merge and H1a-0 (tl-432) once row 1 is answered; §21 step 4; TODO.md "Roster settings page" (tl-310, after V1); hb-21, hb-22, hb-25 sized first |
 | 8 | wizard | §22 step 3 |
 | 9 | research | §23 steps 1-2; PLAN-text-channel.md §6 step 1; PLAN-sitegen.md §8 step 1; PLAN-bookstore-venues.md §7 steps 1-2; TODO.md "Ownership gates audit" (tl-303); TODO.md "Scraping frameworks assessed" (tl-352) |
 | 10 | deep-work | §24 step 1; PLAN-services.md §3 step 7.3 (the Practices backfill, su-91) |

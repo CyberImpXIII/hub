@@ -27,7 +27,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 |---|---|---|
 | this file | all | the task, the fixed points, the output contract |
 | `CLAUDE.md` (top level) | "How work is split here", "Gate the seams", "Make the wrong thing impossible", "Constraints that don't bend" | the house rules every plan here obeys |
-| `PLAN-routing-tree.md` | all; §11-§16, §18, §19 and §21 are decided; §17 is pending dt-5 row 4, §20 is pending dt-5 row 5, and §22-§23 are pending dt-5 rows 7-9 (none of them the plan's to settle) | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), cold and warm roles (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub; question 15), Fable 5.1 at max where the account allows it (§16), read and run dispatches sharing a folder, and fan-out (§17, pending dt-5 row 4), the audit agent (§18), replies as records, with the hub's inbox view (§19; question 16), warm roles: the agent that owns the knowledge, visible and addressable (§20, pending dt-5 row 5; its step 4 is the hub's), the objective every view and reply is measured against (§21, fixed point 11; its improvement rows 1-6 are pending dt-5 row 6) |
+| `PLAN-routing-tree.md` | all; §11-§16, §18, §19 and §21 are decided (§21's improvement rows are needs-yes in §21); §17 is answered `declare` (tl-364), its §17.2 answered `table` (tl-387); §20 is asked again (dt-17 row 4, tl-384, pending); §22-§23 are pending (needs-yes in each section); §24 is decided, its records question pending (dt-17 row 3, tl-381); §25-§27 carry their status in each section (none of them the plan's to settle) | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), how a message reaches an agent: each request starts its owner in its folder (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub; question 15), Fable 5.1 at max where the account allows it (§16), read and run dispatches sharing a folder, and fan-out (§17, answered `declare`), the audit agent (§18), replies as records, with the hub's inbox view (§19; question 16), service roles: the agent that owns the knowledge, visible and addressable (§20, asked again; its step 1 is the hub's), the objective every view and reply is measured against (§21, fixed point 11; its improvement rows are needs-yes), one kind of role, with costs at list price and no design axis for how long a role lives (§24; question 4) |
 | `PLAN-tools-folder.md` | §1, §3 (hub row), §4, §7, §8 | the criterion, the order, what harness irreducibly is (§7), the `applies_to` declaration shared by hooks and checks |
 | `PLAN-auto-relay.md` | §3–§4, §7, §9 | what the first node's inbox already does; the hub must keep every behaviour there |
 | `PLAN-question-routing.md` | §2, §4, §9 | the question kinds and the two arbiters; the hub routes these |
@@ -41,7 +41,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 | `PLAN-context-hygiene.md` | §0 | the launcher that restarts a whole session, its rebuild guards, its Later paragraph (a session a program runs) and the `ctx:` store: question 11, and the `ctx:` ids of question 12 (routing-tree §10.3 step 1, added 2026-10-19) |
 | `PLAN-services.md` | §1; §3, its three store rules (next column); §4 step 10 | the architecture rules the hub serves, each a §3 subsection: every record has an id and tags, and enters context as its id (question 12); every data store is gated and read-only, written only through its owner's CLI (the write gate H1a-0 builds); every store is static or dynamic, with references by id through the owner (ST1-ST5; the `ctx:` store) (routing-tree §10.3 step 1, added 2026-10-19) |
 
-The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15, and again the same day for §16-§23, questions 15-16 and fixed point 11; every copy was refreshed 2026-10-19 (later) and `PLAN-context-hygiene.md` and `PLAN-services.md` became inputs (routing-tree §10.3 step 1; the second once the leak audit passed on its original, the same evening) (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
+The inputs are copies in `docs/inputs/` of this repo, taken 2026-10-04; `PLAN-routing-tree.md` and this file were re-copied 2026-10-19 for §15, and again the same day for §16-§23, questions 15-16 and fixed point 11; every copy was refreshed 2026-10-19 (later) and `PLAN-context-hygiene.md` and `PLAN-services.md` became inputs (routing-tree §10.3 step 1; the second once the leak audit passed on its original, the same evening); `PLAN-routing-tree.md` and this file were re-copied again that night, when this file took the evening's answers (routing-tree §10.4 step 3, §24 step 6) (sums in `SHA256SUMS`; the top-level `CLAUDE.md` is stored as `claudeTest-CLAUDE.md` so it is read as an input, not loaded as instructions). The originals
 live at the top of the claudeTest folder, which is not a git repo.
 
 ## 3. Fixed points, not open for re-decision
@@ -88,8 +88,9 @@ live at the top of the claudeTest folder, which is not a git repo.
    dispatcher when no rule names one; dead-letter is where it rests, not where it ends.
    Only "the server is down" is left to the sender's command hook. The plan places the
    §13.4 gates with their parts; it must not give a role a write path of its own, let
-   the stamp depend on the receiving window, or end a failure as a log line. Cold roles
-   get this at phase 1; warm roles wait for the sandbox probe in §13.2. Which owner a
+   the stamp depend on the receiving window, or end a failure as a log line. Roles get
+   this at phase 1; the sandbox probe in §13.2 comes first for a role that takes a
+   further message while it runs (one kind of role, routing-tree §20). Which owner a
    failure goes to is fixed point 10's owner table (decision 32, answered by §14.4 and
    §14.7), never the sender's or the dispatcher's judgment.
 10. **One server per node with four services declared as data, an owner per seam kind,
@@ -108,7 +109,7 @@ live at the top of the claudeTest folder, which is not a git repo.
       short timeout. With the server down the system degrades to today's (command hooks
       block, the dispatcher spawns, `dev.sh check` runs by hand, the Dispatch section
       uses the inbox socket). Build order: routing-tree phase 1 builds `route` and
-      `write` for cold roles; `check` and `hook` arrive in PLAN-group-servers.md phase 1,
+      `write` for the roles it starts; `check` and `hook` arrive in PLAN-group-servers.md phase 1,
       on site-scrapers.
     - **The agent is last** (§14.3, decision 37). Validate, run the gate, route by the
       registry; a model turn is spent only after those, and `hub status` counts model
@@ -151,7 +152,7 @@ live at the top of the claudeTest folder, which is not a git repo.
     (routing-tree §21 step 4). The plan says where the page reads each one, through its
     owner's CLI (fixed point 10), and gates that the line equals what the stores hold;
     it does not reopen the objective. The improvements §21 proposes (its rows 1-6) are
-    pending dt-5 row 6 and belong to other owners; the plan cites them where they touch
+    needs-yes in §21 and belong to other owners; the plan cites them where they touch
     the hub (row 4 in question 16) and builds none of them.
 
 ## 4. What the plan must settle
@@ -172,15 +173,28 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
    what `hub up` does on the first day at the top level, how the planner's Dispatch
    section reaches it instead of the dispatcher's socket, and how the dispatcher stays
    the fallback with the guard's "server down" test.
-4. **Roles and modes.** Cold by default; warm only where the probe in routing-tree §5
-   passes and `tokens --agents` shows it cheaper. Name the probe and its pass condition.
+4. **Roles and modes.** One kind of role (routing-tree §20, §24): the roster agent for
+   a service or folder, started by the hub in its folder for each request. How long it
+   lives is not a design axis, and no part is gated on a token comparison between
+   lifetimes. Settle the order roles are routed in (record services, then `audit`, then
+   folder writers after the write lease: routing-tree §20 "What moves"), the `mode` each
+   request declares (routing-tree §17), how a role is seen and reached while it runs,
+   and the two probes it waits on, each with its pass condition: a running role takes a
+   second message on stdin (routing-tree §5), and it keeps its sandbox across messages
+   (routing-tree §13.2). §20 is asked again (dt-17 row 4, tl-384, pending); the cloud
+   pass starts once it is answered (routing-tree §10.4 step 5).
 5. **Children.** Registration, tag advertisement, the hop limit, dead-letter, and the
    standalone case (a cloned repo runs `hub up` as a root).
 6. **Declared sync** (routing-tree §12): the sync list, marked blocks, `vocab` mode,
    and how `setup` and `tools/checks` consume it, so the eight hook copies and seven
    rule copies become one declaration each.
-7. **Keep-alive and control.** Through `chron.py` (group-servers decision 4) and
-   `init.sh` (portable-env); say what the hub exposes for that and nothing more.
+7. **Keep-alive and control.** Answered `session-start` (routing-tree §10.2, tl-327,
+   Jacob 2026-10-19): `init.sh` (portable-env) runs `hub up --tree` at every session
+   start, and no cron line runs it; the status line shows `hub: down` when it is not
+   up. `hub up` is a CLI command first; the hub ends as a bundled application, and
+   `launchd` comes at that stage, when the restart count `hub up` keeps in the ledger
+   says so. This reverses group-servers decision 4 (a `chron.py` keep-alive). Say what
+   the hub exposes for that and nothing more.
 8. **Gates, in the same change as each part** (CLAUDE.md "Gate the seams"): every
    documented command exists and every command is documented; every declared tag has a
    route and every route a tag; a kill-the-server test; a conformance fixture that is
@@ -351,6 +365,12 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
       - a refused change leaves the manifest's hash unchanged (fixture);
       - the server refuses a write from a read-only role (fixture).
 
+    **Where it stands.** PLAN-hub.md §15 (on `plan/hub`; on `main` after the merge,
+    routing-tree §10.3) holds the page's design, probe P-RS1 (whether a sandboxed role
+    can read the hub's token) and Decisions 18-19 (whether the hub may run harness's
+    settings write verb, and whether that is one all-or-nothing verb), pending Jacob
+    (hub TODO hb-28).
+
 16. **The inbox view of replies** (routing-tree §19, Jacob 2026-10-19: "These should be
     able to be 'marked as read' in the hub once we get there."). *Added 2026-10-19, like
     question 15.*
@@ -377,8 +397,8 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
     - marking one reply, marking all before a date, and undo, each through the CLI;
     - whether a reply shows as a question-12 stub that expands to `agents.sh replies
       show <key>`;
-    - how "unread" stays apart from "awaiting your answer" if dt-5 row 6 lands
-      (routing-tree §21 row 4: a reply whose row carries `table: dt-N`);
+    - how "unread" stays apart from "awaiting your answer" if routing-tree §21 row 4
+      (a reply whose row carries `table: dt-N`; needs-yes) is approved;
     - its gates:
       - a planted reply shows unread under its window;
       - a mark made in the view and the same `agents.sh replies --read` from a shell

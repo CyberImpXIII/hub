@@ -77,6 +77,14 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   read-only stores and static or dynamic stores, §4 step 10), its row edited at the
   top-level original. Seven copies had drifted since the first refresh and were
   re-copied with it (`./dev.sh refresh`).
+- **Refreshed 2026-10-19 (night)** for tl-453 (relay line 204; routing-tree §10.4
+  step 3, with §24 step 6 folded in): the brief, edited at the top-level original,
+  carries the evening's answers (line 30's marks: §17 `declare`, §20 asked again as
+  dt-17 row 4, §22-§23 needs-yes; question 7 `session-start`; question 15's state on
+  `plan/hub`), and its five temperature-axis hits are restated as one kind of role
+  (§24). The routing-tree copy brings in §10.3's "The merge, in plain words" and its
+  step 2, the new §10.4, and later edits to §15, §24 and §26. Done with `./dev.sh
+  refresh`; only those two had drifted.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's
