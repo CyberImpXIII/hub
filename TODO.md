@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (24 open, 6 closed in todo-history.json; seal 4a889c9b6579): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (25 open, 7 closed in todo-history.json; seal 114f32700875): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -50,16 +50,6 @@
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
   · added: 2026-10-19
 
-- **hb-8 · Where the brief is edited.**
-  routing-tree §13.5 says hub owns the brief, but
-  `docs/inputs/README.md` makes the top-level `PLAN-hub-brief.md` its original, and
-  `./dev.sh refresh` copies the original over `PLAN-hub-brief.md` here. So fixed point
-  9 (2026-10-04) was written at the top-level original and refreshed in; an edit made
-  only to this repo's copy would be undone by the next refresh. Hinges on whether the
-  copy direction should flip for the brief (this repo the original); the planner's
-  and Jacob's call, since the top level is the planner's.
-  · added: 2026-10-19
-
 - **hb-9 · Merging `plan/hub` into `main` conflicts in 10 files, not TODO.md only (re-run 2026-10-19)**
   (confirmed
   2026-10-08: `git merge-tree --write-tree origin/main origin/plan/hub` -> one
@@ -106,6 +96,11 @@
   · probe: time ./dev.sh test hooktests inside commit.sh's env vs a plain shell, with another repo's check running
   · work: test
   · size: S
+  · added: 2026-10-19
+
+- **hb-31 · Unverified: decision tables (dt-N) do not resolve through todo get; relayed to todo in tl-453's report**
+  2026-10-19 (tl-453): 'todo get dt-17' from claudeTest printed 'UNCHECKED: dt-17: no scanned store has prefix dt'; 'todo find table:dt-17' refused 'table' as a namespace. The tables live in claudeTest/todo-records.json (dt-15..dt-19 present), so the brief's dt-17 row 4 (tl-384) was read from the file by hand. Unverified whether dt- ids are meant to resolve through get (PLAN-services.md §3: every record has an id and get).
+  · probe: todo -C <claudeTest> get dt-17
   · added: 2026-10-19
 
 ## Reported to other owners
@@ -230,4 +225,11 @@
   · work: code
   · size: M
   · done when: harness has list --json in PLAN-hub.md §15's shape (coders row, from per key, settable, models), tokens --agents --json, and one all-or-nothing settings verb (set, gen, check, .claude/ commit; rollback on a check refusal) with tests; or harness answered no with a reason
+  · added: 2026-10-19
+
+- **hb-32 · Brief question 11 does not yet note D3 'drive'**
+  2026-10-19 (tl-453): brief §4 question 11 still says 'Settle: whether the hub runs these sessions'; D3 answered drive (routing-tree §10.1) and PLAN-hub.md §11 on plan/hub answered it. Not restated: outside tl-453's done-when. Also not restated: brief line 30 gives no per-section marks for §25-§27 (it points at each section's own status).
+  · work: docs
+  · size: S
+  · done when: the brief's question 11 notes D3 'drive' (routing-tree §10.1), edited at the top-level original and refreshed
   · added: 2026-10-19
