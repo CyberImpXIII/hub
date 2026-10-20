@@ -85,6 +85,11 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   (§24). The routing-tree copy brings in §10.3's "The merge, in plain words" and its
   step 2, the new §10.4, and later edits to §15, §24 and §26. Done with `./dev.sh
   refresh`; only those two had drifted.
+- **The brief alone re-copied 2026-10-19 (late)** for hb-32: question 11 now notes
+  D3 **drive** (routing-tree §10.1) and that `PLAN-hub.md` §11 on `plan/hub` plans
+  it, leaving the mechanism and the rest of the item to settle. Edited at the
+  top-level original; done with `./dev.sh refresh PLAN-hub-brief.md`, which rewrote
+  only its `SHA256SUMS` line.
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

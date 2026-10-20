@@ -211,8 +211,10 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
     message list, so it clears and rebuilds the context on its own, with no keystroke
     and no restart, and can edit one block while the session continues. It takes the
     idle point (the turn and every agent it started have finished) from the event
-    stream, not from ledgers. Settle: whether the hub runs these sessions, and through
-    stream-json or the SDK, with the probe that decides and its pass condition; which
+    stream, not from ledgers. Whether the hub runs these sessions is answered: **drive**
+    (D3, Jacob 2026-10-19, routing-tree §10.1), so this item is a requirement, and
+    `PLAN-hub.md` §11 (branch `plan/hub`) plans it as the `driven` role mode. Settle:
+    through stream-json or the SDK, with the probe that decides and its pass condition; which
     events make the idle point, and the test that no rebuild lands while an agent runs;
     what the hub exposes to clear, rebuild and address one block, and who may call it;
     how it relates to the context-hygiene launcher that restarts a whole session; and

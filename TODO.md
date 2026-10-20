@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (25 open, 7 closed in todo-history.json; seal 114f32700875): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (25 open, 8 closed in todo-history.json; seal a4adfa40df9e): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -227,9 +227,10 @@
   · done when: harness has list --json in PLAN-hub.md §15's shape (coders row, from per key, settable, models), tokens --agents --json, and one all-or-nothing settings verb (set, gen, check, .claude/ commit; rollback on a check refusal) with tests; or harness answered no with a reason
   · added: 2026-10-19
 
-- **hb-32 · Brief question 11 does not yet note D3 'drive'**
-  2026-10-19 (tl-453): brief §4 question 11 still says 'Settle: whether the hub runs these sessions'; D3 answered drive (routing-tree §10.1) and PLAN-hub.md §11 on plan/hub answered it. Not restated: outside tl-453's done-when. Also not restated: brief line 30 gives no per-section marks for §25-§27 (it points at each section's own status).
+- **hb-33 · Routing-tree copy drifted again; brief line 30 lacks §25-§27 marks**
+  2026-10-19 (hb-32): after ./dev.sh refresh PLAN-hub-brief.md, ./dev.sh drift printed 'DIFF docs/inputs/PLAN-routing-tree.md' (the original moved on after tl-453's refresh); left as it was, outside hb-32. Also from hb-32: brief line 30 still gives no per-section marks for routing-tree §25-§27 (it points at each section's own status).
+  · probe: cd tools/hub && ./dev.sh drift
   · work: docs
   · size: S
-  · done when: the brief's question 11 notes D3 'drive' (routing-tree §10.1), edited at the top-level original and refreshed
+  · done when: the routing-tree copy matches its original (./dev.sh refresh PLAN-routing-tree.md) and the brief's line 30 marks §25-§27, or a recorded decision says neither is needed
   · added: 2026-10-19
