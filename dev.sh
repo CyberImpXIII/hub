@@ -29,7 +29,7 @@ usage() {
 ./dev.sh <command>
 
   check      every part of check.parts.json (a part per test module, then hooktests,
-             files, inputs, sealed, leaks, plans, checks), each with its own timeout,
+             hubtests, files, inputs, sealed, leaks, plans, checks), each with its own timeout,
              run by devtools/parts.py; ends "check: N of M passed; failed: ...", then
              the drift note; non-zero if any fails. --resume: only the parts whose files
              changed since they passed (and those that did not pass); --only <part>: just
@@ -42,6 +42,10 @@ usage() {
              while their files are unchanged
   hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh); one ending
              `UNCHECKED: <why>` with exit 3 makes the gate unchecked, never ok
+  hubtests   the program's tests (tests/hub/*.test.js, node --test): the write gate on a
+             fixture node, the server, the classifier and its parity with the shared
+             write-target parser, help == implemented, the direction and no-names audits;
+             read from the TAP summary; a test skipped UNCHECKED makes it unchecked
   files      the files this repo needs are present; dev.sh is executable
   inputs     docs/inputs/ copies match SHA256SUMS; README table, SHA256SUMS and disk agree; brief §2 covered
   sealed     every copy is mode 0444: a marker, not a guard (Edit and Write change a 0444 file);
@@ -97,6 +101,31 @@ cmd_hooktests() {
   echo "  ok    hooktests: $n hook test files, all cases passed"
 }
 
+# The program's own tests (tests/hub/*.test.js, node:test), read from the TAP
+# summary, not the exit code: a pass needs "# fail 0" and "# pass N" with N > 0.
+# A test skipped with `UNCHECKED: <why>` (the shared write-target parser absent, a
+# lone clone with no workspace around it) makes the gate 3, named; any other skip
+# is a FAIL. Serial (--test-concurrency=1): the timing test measures the probe.
+cmd_hubtests() {
+  local out code pass fail skip unch other
+  command -v node >/dev/null 2>&1 || { echo "  FAIL  hubtests: node not on PATH (the program's runtime)"; return 1; }
+  out=$(node --test --test-reporter=tap --test-concurrency=1 --test-timeout=120000 tests/hub/*.test.js 2>&1); code=$?
+  pass=$(printf '%s\n' "$out" | sed -n 's/^# pass \([0-9]*\)$/\1/p' | tail -1)
+  fail=$(printf '%s\n' "$out" | sed -n 's/^# fail \([0-9]*\)$/\1/p' | tail -1)
+  skip=$(printf '%s\n' "$out" | sed -n 's/^# skipped \([0-9]*\)$/\1/p' | tail -1)
+  unch=$(printf '%s\n' "$out" | grep -c '# SKIP UNCHECKED: ')
+  other=$(( ${skip:-0} - unch ))
+  if [ $code -ne 0 ] || [ "${fail:-x}" != 0 ] || [ "${pass:-0}" -eq 0 ] || [ $other -ne 0 ]; then
+    printf '%s\n' "$out" | grep -E '^not ok|^ +error:|# SKIP' | head -20 | sed 's/^/        /'
+    echo "  FAIL  hubtests: exit $code, pass ${pass:-?}, fail ${fail:-?}, skipped ${skip:-?} ($other not UNCHECKED)"; return 1
+  fi
+  if [ "$unch" -gt 0 ]; then
+    printf '%s\n' "$out" | grep -o 'UNCHECKED: .*' | sed 's/^/  /'
+    echo "  UNCHECKED  hubtests: $pass passed, $unch unchecked"; return 3
+  fi
+  echo "  ok    hubtests: $pass node tests passed (tests/hub)"
+}
+
 cmd_files()   { python3 devtools/hubcheck.py files; }
 cmd_inputs()  { python3 devtools/hubcheck.py inputs; }
 cmd_sealed()  { python3 devtools/hubcheck.py sealed; }
@@ -149,6 +178,7 @@ case "${1:-}" in
   check)     shift; cmd_check "$@" ;;
   test)      shift; cmd_test "$@" ;;
   hooktests) cmd_hooktests ;;
+  hubtests)  cmd_hubtests ;;
   files)     cmd_files ;;
   inputs)    cmd_inputs ;;
   sealed)    cmd_sealed ;;

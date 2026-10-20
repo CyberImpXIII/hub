@@ -7,3 +7,5 @@ __pycache__/
 registry.proposed.json
 .claude/state/
 .progress/
+# the hub server's state at a node (pidfile, ledger, log): run-time, never committed
+.hub/

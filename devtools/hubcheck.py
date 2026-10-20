@@ -45,8 +45,12 @@ NOT_COPIES = {"README.md", "SHA256SUMS"}
 # todo.json and todo-history.json are the todo store (prefix hb, 2026-10-19). The
 # shared todo-valid check gates a store only when todo.json exists and passes a repo
 # without one, so a deleted store would go quiet there: required here instead.
+# bin/hub is the program's entry and docs/API.md its documented routes (H1a-0):
+# the hubtests part runs both, but a missing entry would fail there as a confusing
+# spawn error, so it is named here.
 REQUIRED = ["CLAUDE.md", "PLAN-hub-brief.md", "TODO.md", "todo.json", "todo-history.json",
-            "dev.sh", ".gitignore", str(README), str(SUMS)]
+            "dev.sh", ".gitignore", str(README), str(SUMS), "bin/hub", "docs/API.md"]
+EXECUTABLE = ["dev.sh", "bin/hub"]
 
 # Public-safety terms. The repo is public; these are the shapes that identify a
 # person or a machine. Allowed addresses are generic, not anyone's own.
@@ -266,8 +270,9 @@ def seal(root: Path):
 
 def gate_files(root: Path):
     f = [f"{r}: missing" for r in REQUIRED if not (root / r).is_file()]
-    if (root / "dev.sh").is_file() and not os.access(root / "dev.sh", os.X_OK):
-        f.append("dev.sh: not executable")
+    for x in EXECUTABLE:
+        if (root / x).is_file() and not os.access(root / x, os.X_OK):
+            f.append(f"{x}: not executable")
     return f
 
 

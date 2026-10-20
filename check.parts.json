@@ -7,6 +7,8 @@
    "always": "compares devtools/parts.py with tools/checks' runner source and runs the shared checks CLI, outside this repo"},
   {"name": "hooktests", "run": "./dev.sh hooktests", "files": [".claude"], "timeout_s": 2400,
    "always": "two hook tests (test-prefer-recipes, test-troubleshooting) read site-scrapers beside this repo"},
+  {"name": "hubtests", "run": "./dev.sh hubtests", "files": ["dev.sh", "bin", "src", "tests/hub", "docs/API.md"], "timeout_s": 900,
+   "always": "the classifier's parity test runs tools/hooks' shared write-target parser, and the no-names audit reads the workspace's folder names, outside this repo"},
   {"name": "files", "run": "./dev.sh files", "files": ["."]},
   {"name": "inputs", "run": "./dev.sh inputs", "files": ["."], "role": "docs"},
   {"name": "sealed", "run": "./dev.sh sealed", "files": ["."], "role": "docs",

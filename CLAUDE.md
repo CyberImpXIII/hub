@@ -1,14 +1,27 @@
 # hub
 
 The node server from PLAN-routing-tree.md, built as a portable tool. **Stage:
-planning.** Nothing is built yet; the task is `PLAN-hub-brief.md` at the root,
-whose output is `PLAN-hub.md`.
+H1a-0 built** (the write gate, PLAN-hub.md §3, Decision 17): `bin/hub` (Node, no
+packages) with `up`, `down`, `status`, `check` and `hook gate`; the plan is
+`PLAN-hub.md`, from `PLAN-hub-brief.md`. The hook is **not registered** anywhere:
+registering it is harness's step, after `setup plans edit|add` and todo's import
+exist (§3).
+
+**This repo's exception to "every hook fails open": `hub hook gate` fails
+CLOSED for writes.** With the server down, unreachable, refusing `HUB_TOKEN`, or
+the token unset, a write is denied with one line naming `hub status`; a read
+still passes with no server call; an unparseable call is denied. Each deny the
+hook gives itself is a ledger row. Held by `tests/hub/kill-server.test.js`. The
+server holds no rule of its own: what a role may write is derived from
+`hub.json`'s `owners`, never listed per role (`src/gate.js`).
 
 | doing this | use |
 |---|---|
 | the task, its fixed points and its output contract | `PLAN-hub-brief.md` |
 | the brief's inputs and the review's fix-pass inputs (copies, refreshed in full 2026-10-19) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
-| before committing | `./dev.sh check`: the parts of `check.parts.json` (unit tests, hook tests, required files, the inputs against `SHA256SUMS`, the copies at mode 0444 (`sealed`: a marker, not a guard; after a clone, `./dev.sh seal`), the leak audit, `setup plans .`, `checks run .`), run by the shared runner `devtools/parts.py` (setup's rendered copy of tools/checks' runner); a gate whose sibling tool is missing exits 3, an `UNCHK` part: never ok, not red, named in the summary line. Iterate with `./dev.sh test <part>`, then `./dev.sh check --resume`; run the whole check once before the commit. `--json` prints the one schema, one check per part; `tests/test_parts.py` holds the wiring |
+| the program | `bin/hub --help`; `src/` (cli, server, gate, classify, registry, ledger, client); routes in `docs/API.md` (held equal to the server's table); state at a node in `.hub/` (pidfile, `ledger.jsonl`, log; gitignored); `HUB_TOKEN` from the environment, never stored |
+| the program's tests | `./dev.sh hubtests` (`tests/hub/*.test.js`, node:test, fixture nodes in temp git repos, never a repo of ours) |
+| before committing | `./dev.sh check`: the parts of `check.parts.json` (unit tests, the program's tests, hook tests, required files, the inputs against `SHA256SUMS`, the copies at mode 0444 (`sealed`: a marker, not a guard; after a clone, `./dev.sh seal`), the leak audit, `setup plans .`, `checks run .`), run by the shared runner `devtools/parts.py` (setup's rendered copy of tools/checks' runner); a gate whose sibling tool is missing exits 3, an `UNCHK` part: never ok, not red, named in the summary line. Iterate with `./dev.sh test <part>`, then `./dev.sh check --resume`; run the whole check once before the commit. `--json` prints the one schema, one check per part; `tests/test_parts.py` holds the wiring |
 | copies against their originals | `./dev.sh drift`; `./dev.sh refresh` re-copies them (leak audit first) at mode 0444 and rewrites `SHA256SUMS` |
 | what is open | `TODO.md`, rendered from the todo store (`todo.json`, ids `hb-N`, since 2026-10-19): read it, change it only through `tools/todo/todo -C tools/hub add/edit/done`; other repos file reports here with `todo report --to hub`. `todo check` runs in `./dev.sh check` (`checks`, todo-valid) and `files` requires the store |
 

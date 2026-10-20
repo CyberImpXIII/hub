@@ -55,6 +55,10 @@ class Fixture:
             (r / name).write_text("# x\n")
         (r / "dev.sh").write_text("#!/bin/sh\n")
         (r / "dev.sh").chmod(0o755)
+        (r / "bin").mkdir()
+        (r / "bin/hub").write_text("#!/bin/sh\n")
+        (r / "bin/hub").chmod(0o755)
+        (r / "docs/API.md").write_text("# api\n")
         (r / "PLAN-hub-brief.md").write_text(BRIEF)
         (r / "docs/inputs/claudeTest-CLAUDE.md").write_text(originals["CLAUDE.md"])
         (r / "docs/inputs/PLAN-a.md").write_text(originals["PLAN-a.md"])
@@ -275,6 +279,16 @@ class TestFiles(Base):
         f = hc.gate_files(self.r)
         self.assertFinding(f, "TODO.md: missing")
         self.assertFinding(f, "dev.sh: not executable")
+
+    def test_the_program_entry_and_its_api_doc_are_required(self):
+        self.assertEqual(hc.gate_files(self.r), [])
+        (self.r / "bin/hub").chmod(0o644)
+        self.assertEqual(hc.gate_files(self.r), ["bin/hub: not executable"])
+        (self.r / "bin/hub").unlink()
+        (self.r / "docs/API.md").unlink()
+        f = hc.gate_files(self.r)
+        self.assertFinding(f, "bin/hub: missing")
+        self.assertFinding(f, "docs/API.md: missing")
 
     def test_the_todo_store_is_required(self):
         """todo-valid passes a repo with no todo.json, so its loss is caught here."""
