@@ -483,7 +483,59 @@
       "done": "2026-10-20",
       "resolution": "Built 2026-10-20 (tl-432): bin/hub up|down|status|check|hook gate; src/ gate, server, classify, registry, ledger, client; docs/API.md. ./dev.sh hubtests: 38 node tests pass (every §8 write-gate clause, kill the server first part, help == implemented, direction and no-names audits, classifier parity with the shared parser, known gaps listed). Hook not registered (harness, after setup plans edit|add). Open: hb-63..hb-69.",
       "imported": null
+    },
+    {
+      "id": "hb-69",
+      "title": "Where HUB_TOKEN comes from: the environment (built) or .claude/local.env (plan §3 step 1)",
+      "kind": "decision",
+      "status": "done",
+      "evidence": null,
+      "probe": null,
+      "reported_to": null,
+      "parent": null,
+      "blocked_by": null,
+      "waits_on": "approval",
+      "pointer": "PLAN-hub.md §3",
+      "hinges_on": "§3 step 1 has the hub read .claude/local.env; §8's direction audit forbids the program reading .claude/. H1a-0 reads HUB_TOKEN from the environment only, so whoever registers the hook must put it there",
+      "recommend": "env",
+      "options": [
+        {
+          "name": "env",
+          "text": "the environment only (as built); the harness sets it when it registers the hook; amend §3 step 1"
+        },
+        {
+          "name": "file",
+          "text": "a token file outside .claude/ named in hub.json"
+        }
+      ],
+      "chosen": "env",
+      "jacob_words": null,
+      "repo": "hub",
+      "work": null,
+      "size": null,
+      "files": [
+        "src/cli.js"
+      ],
+      "research": null,
+      "done_when": null,
+      "done_check": null,
+      "handoff": null,
+      "approved": {
+        "by": "jacob",
+        "date": "2026-10-20",
+        "source": "answer 2026-10-20 (dt-33 row 20)"
+      },
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-20",
+      "done": "2026-10-20",
+      "resolution": "option-chosen",
+      "imported": null
     }
   ],
-  "seal": "6c1305503eb412d5"
+  "seal": "65ebef235db871c1"
 }

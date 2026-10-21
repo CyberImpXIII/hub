@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (57 open, 12 closed in todo-history.json; seal 10e48cf1edc3): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (59 open, 13 closed in todo-history.json; seal e3a087e28c6b): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -19,6 +19,15 @@
 - **hb-34 · devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report t...**
   reported from tools/todo to tools/hub in dispatch toolu_01XngPqWP4Abzbj63Ght5hjp, filed from the dispatch ledger by the delegation layer's report filer: devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report them missing once the store moves to todo.db -- input: `todo --root <workspace> migrate --readers` lines 94-102 -- expected: check through `todo -C . check` or accept the exports; there is no tl item for this yet
   · parent: tl-471
+  · added: 2026-10-20
+
+- **hb-70 · PLAN-hub.md still says HUB_TOKEN lives in .claude/local.env after hb-69 answered env**
+  hb-69 was answered env by Jacob 2026-10-20 (HUB_TOKEN from the environment only, as H1a-0 built it; routing-tree §15 now says so). PLAN-hub.md still names .claude/local.env as the token's home: grep -n local.env PLAN-hub.md hits §2 (line ~107), §3 step 1 (~297), §5 (~587), §10 (~854), §15 P-RS1 (reads .claude/local.env, where routing-tree §15 says an inherited variable, env in Bash, or a store read), Setup component (~1276-1277) and Risks (~1358). Seen by tl-454, which did not touch them (outside its done-when).
+  · repo: tools/hub
+  · work: docs
+  · size: S
+  · files: PLAN-hub.md
+  · done when: PLAN-hub.md names the environment as HUB_TOKEN's only source in §3 step 1 and every other hit, P-RS1 tries the three reads routing-tree §15 names, and grep -n local.env PLAN-hub.md shows only lines about other keys or the history
   · added: 2026-10-20
 
 ## Open decisions
@@ -43,14 +52,18 @@
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
   · added: 2026-10-19
 
-- **hb-69 · Where HUB_TOKEN comes from: the environment (built) or .claude/local.env (plan §3 step 1)**
+- **hb-72 · Brief §5's output contract (branch plan/hub, nothing else changed) does not fit the plan-then-build cloud pass on main**
+  seen by tl-454 (2026-10-20) while recording §20's answer; not changed, since the pass's scope is the planner's call (routing-tree §10.3 'What is not a question')
   · status: waiting-jacob
   · waits on: approval
-  · pointer: PLAN-hub.md §3
-  · hinges on: §3 step 1 has the hub read .claude/local.env; §8's direction audit forbids the program reading .claude/. H1a-0 reads HUB_TOKEN from the environment only, so whoever registers the hook must put it there
-  · recommend: env
-  · options: env = the environment only (as built); the harness sets it when it registers the hook; amend §3 step 1; file = a token file outside .claude/ named in hub.json
-  · files: src/cli.js
+  · pointer: PLAN-hub-brief.md §5
+  · hinges on: routing-tree §10.3 makes the next cloud pass one pass, plan then build, on main (the merge is done, tl-432), and calls its scope the planner's; the brief's §5 'Done when' still says the file exists on a branch named plan/hub and 'Nothing else in the repo is changed', which a build pass breaks
+  · recommend: restate
+  · options: restate = the planner restates §5 for the plan-then-build pass on main before Jacob starts it; keep = §5 stays as the first pass's contract and the cloud prompt overrides it
+  · repo: tools/hub
+  · work: docs
+  · size: S
+  · files: PLAN-hub-brief.md
   · added: 2026-10-20
 
 ## Unconfirmed suspicions
@@ -108,6 +121,16 @@
 - **hb-68 · Reported to hooks: write-targets.sh drops a -* operand after -- (touch -- -odd gives no target)**
   bash tests/hub/write-targets-oracle.sh <lib> /w/node 'touch -- -odd' prints nothing; expected /w/node/-odd. Held in classify.test.js KNOWN
   · reported to: hooks on 2026-10-20 (no counterpart yet)
+  · added: 2026-10-20
+
+- **hb-71 · Reported to planner: routing-tree §24 and §20's opening still say lifetime is not a design axis, against §20's hybrid answer**
+  report to planner (via tl-454's report): PLAN-routing-tree.md §24 'The replacement' (line ~1794) still says a role is 'started by the hub in its folder for each request (§20). How long it lives is not a design axis' and that 'A sentence that distinguishes roles by lifetime ... is deleted'; §20 (line ~1403 '(... no role is kept between tasks ...)', ~1427) says the same, while §20 'Answered hybrid' makes lifetime one declared column of the roles table (per-task, or kept for a repo's coding role). The brief (tl-454) follows §20's answer. Expected: §24 and §20's earlier paragraphs restated to the hybrid answer, or marked superseded by it.
+  · reported to: claudeTest on 2026-10-20 as tl-528
+  · repo: tools/hub
+  · work: docs
+  · size: S
+  · files: PLAN-routing-tree.md
+  · done when: routing-tree §20 and §24 no longer contradict the hybrid answer, or the planner says why they stand
   · added: 2026-10-20
 
 ## Notes

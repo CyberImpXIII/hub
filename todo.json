@@ -2,7 +2,7 @@
   "format": 2,
   "repo": "hub",
   "prefix": "hb",
-  "next": 70,
+  "next": 73,
   "render_gate_from": "2026-10-26",
   "hand_edits": [],
   "items": [
@@ -2181,36 +2181,118 @@
       "imported": null
     },
     {
-      "id": "hb-69",
-      "title": "Where HUB_TOKEN comes from: the environment (built) or .claude/local.env (plan §3 step 1)",
+      "id": "hb-70",
+      "title": "PLAN-hub.md still says HUB_TOKEN lives in .claude/local.env after hb-69 answered env",
+      "kind": "bug",
+      "status": "open",
+      "evidence": "hb-69 was answered env by Jacob 2026-10-20 (HUB_TOKEN from the environment only, as H1a-0 built it; routing-tree §15 now says so). PLAN-hub.md still names .claude/local.env as the token's home: grep -n local.env PLAN-hub.md hits §2 (line ~107), §3 step 1 (~297), §5 (~587), §10 (~854), §15 P-RS1 (reads .claude/local.env, where routing-tree §15 says an inherited variable, env in Bash, or a store read), Setup component (~1276-1277) and Risks (~1358). Seen by tl-454, which did not touch them (outside its done-when).",
+      "probe": null,
+      "reported_to": null,
+      "parent": null,
+      "blocked_by": null,
+      "waits_on": null,
+      "pointer": null,
+      "hinges_on": null,
+      "recommend": null,
+      "options": null,
+      "chosen": null,
+      "jacob_words": null,
+      "repo": "tools/hub",
+      "work": "docs",
+      "size": "S",
+      "files": [
+        "PLAN-hub.md"
+      ],
+      "research": null,
+      "done_when": "PLAN-hub.md names the environment as HUB_TOKEN's only source in §3 step 1 and every other hit, P-RS1 tries the three reads routing-tree §15 names, and grep -n local.env PLAN-hub.md shows only lines about other keys or the history",
+      "done_check": null,
+      "handoff": null,
+      "approved": null,
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-20",
+      "done": null,
+      "resolution": null,
+      "imported": null
+    },
+    {
+      "id": "hb-71",
+      "title": "Reported to planner: routing-tree §24 and §20's opening still say lifetime is not a design axis, against §20's hybrid answer",
+      "kind": "report",
+      "status": "open",
+      "evidence": "report to planner (via tl-454's report): PLAN-routing-tree.md §24 'The replacement' (line ~1794) still says a role is 'started by the hub in its folder for each request (§20). How long it lives is not a design axis' and that 'A sentence that distinguishes roles by lifetime ... is deleted'; §20 (line ~1403 '(... no role is kept between tasks ...)', ~1427) says the same, while §20 'Answered hybrid' makes lifetime one declared column of the roles table (per-task, or kept for a repo's coding role). The brief (tl-454) follows §20's answer. Expected: §24 and §20's earlier paragraphs restated to the hybrid answer, or marked superseded by it.",
+      "probe": null,
+      "reported_to": {
+        "repo": "claudeTest",
+        "date": "2026-10-20",
+        "their_id": "tl-528"
+      },
+      "parent": null,
+      "blocked_by": null,
+      "waits_on": null,
+      "pointer": null,
+      "hinges_on": null,
+      "recommend": null,
+      "options": null,
+      "chosen": null,
+      "jacob_words": null,
+      "repo": "tools/hub",
+      "work": "docs",
+      "size": "S",
+      "files": [
+        "PLAN-routing-tree.md"
+      ],
+      "research": null,
+      "done_when": "routing-tree §20 and §24 no longer contradict the hybrid answer, or the planner says why they stand",
+      "done_check": null,
+      "handoff": null,
+      "approved": null,
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-20",
+      "done": null,
+      "resolution": null,
+      "imported": null
+    },
+    {
+      "id": "hb-72",
+      "title": "Brief §5's output contract (branch plan/hub, nothing else changed) does not fit the plan-then-build cloud pass on main",
       "kind": "decision",
       "status": "waiting-jacob",
-      "evidence": null,
+      "evidence": "seen by tl-454 (2026-10-20) while recording §20's answer; not changed, since the pass's scope is the planner's call (routing-tree §10.3 'What is not a question')",
       "probe": null,
       "reported_to": null,
       "parent": null,
       "blocked_by": null,
       "waits_on": "approval",
-      "pointer": "PLAN-hub.md §3",
-      "hinges_on": "§3 step 1 has the hub read .claude/local.env; §8's direction audit forbids the program reading .claude/. H1a-0 reads HUB_TOKEN from the environment only, so whoever registers the hook must put it there",
-      "recommend": "env",
+      "pointer": "PLAN-hub-brief.md §5",
+      "hinges_on": "routing-tree §10.3 makes the next cloud pass one pass, plan then build, on main (the merge is done, tl-432), and calls its scope the planner's; the brief's §5 'Done when' still says the file exists on a branch named plan/hub and 'Nothing else in the repo is changed', which a build pass breaks",
+      "recommend": "restate",
       "options": [
         {
-          "name": "env",
-          "text": "the environment only (as built); the harness sets it when it registers the hook; amend §3 step 1"
+          "name": "restate",
+          "text": "the planner restates §5 for the plan-then-build pass on main before Jacob starts it"
         },
         {
-          "name": "file",
-          "text": "a token file outside .claude/ named in hub.json"
+          "name": "keep",
+          "text": "§5 stays as the first pass's contract and the cloud prompt overrides it"
         }
       ],
       "chosen": null,
       "jacob_words": null,
-      "repo": "hub",
-      "work": null,
-      "size": null,
+      "repo": "tools/hub",
+      "work": "docs",
+      "size": "S",
       "files": [
-        "src/cli.js"
+        "PLAN-hub-brief.md"
       ],
       "research": null,
       "done_when": null,
@@ -2229,5 +2311,5 @@
       "imported": null
     }
   ],
-  "seal": "da655024aee0e0ce"
+  "seal": "3c3086745dd09a84"
 }
