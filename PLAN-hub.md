@@ -762,7 +762,7 @@ says so in this table.
 | **H3** | hierarchy | cloud (default) | `/register`, the heartbeat from `limits.heartbeat_s` and `heartbeat_misses` (in the export), advertisement, down-child routing, `hub up --tree`, `status --tree`, the standalone case, S3 (`vocab`, classes) and S4 (`--propose`); the fixture tree three levels deep. Making site-scrapers the first live child node is the local follow-up (one `deep-work` job, ~1–2u). Roles inside a repo beyond `coder` stay gated on agent-groups (routing-tree §11 decision 4) | — | 160–200k (6–7u) + 1–2u local |
 | **S2** | sync, blocks | local | marked blocks in the nine CLAUDE.md copies: one dispatch per owner, each ~0.5–1u, through the dispatcher | the three `dev.sh sync`, `test_doc_claims.py`'s rule half, `cmd_plan`'s copy half, after the same-verdict test | 9 × 15–30k (5–9u total) |
 | **V1–V3** | the view | local | PLAN-hub-view.md, built after H3 | — | there |
-| **RS** | the roster settings panel (§15) | local (its panel is a view panel, and its verb reaches `.claude/` through harness; its gates run on fixtures) | **read half, with V1:** the panel from a declared `settings.list` verb, the `settings` entry in the `services.json` schema, the rows-both-ways gate. **Write half, after H1b, P-RS1 and Decision 18:** the `write-request` for the `settings.set` verb, one at a time per repo, the refused and unreachable displays, the cost line, the other three gates. P-RS1 is a script in `tools/hub/probes/` like H0's. **Harness job beside it, local** (~1–2u): `list --json`, a `models` list, `tokens --agents --json`, the all-or-nothing settings verb, and its `cli.json` entry if Decision 18 says yes | — | 60–110k (2–4u) + ~1–2u local; an analogy with H1a-0b (one route, one rule, one panel), not a derivation |
+| **RS** | the roster settings panel (§15) | local (its panel is a view panel, and its verb reaches `.claude/` through harness; its gates run on fixtures) | **read half, with V1:** the panel from a declared `settings.list` verb, the `settings` entry in the `services.json` schema, the rows-both-ways gate. **Write half, after H1b and P-RS1 (Decision 18: yes, Jacob 2026-10-19):** the `write-request` for the `settings.set` verb, one at a time per repo, the refused and unreachable displays, the cost line, the other three gates. P-RS1 is a script in `tools/hub/probes/` like H0's. **Harness job beside it, local** (~1–2u): `list --json`, a `models` list, `tokens --agents --json`, the all-or-nothing settings verb, and its `cli.json` entry (Decision 18: yes) | — | 60–110k (2–4u) + ~1–2u local; an analogy with H1a-0b (one route, one rule, one panel), not a derivation |
 | **H4** | relegate the dispatcher | local | its hook (§4) allows only Read, Grep, `hub send`, `hub get`, `SendMessage` and denies the rest (its tool list a default only, Decisions 12 and 15 dissolved); the `operator` role; the dispatch ledger and `agent-watch` merge into `hub log`; `quote-words.sh` injects the `origin_id` stub through `hub origin`; window-to-window `SendMessage` goes through `hub send`. **Dispatcher job**: rewrite "How work is split here" after Jacob approves the text | `held-not-lost` (cap half), `stale-spawn`, `report-shape` once roles exist | 150–200k (5–7u) + the dispatcher's edit |
 | **R2** | the other stores declare their ids | local | one dispatch per owner (knowledge-base for `kb:` section ids, research for `rs-<n>`, data-bridge for its records), each adding an `ids` entry to its `services.json` and checking its `get <id>` prints one record and one line; the hub changes nothing, `stores` picks them up at `hub reload`. After R1, and only once each owner's `get` exists (PLAN-services.md §3, not an input here) | — | 3 × 15–30k (2–3u total) |
 | **D0** | the driven-session probe | local | §11's probe: the three rebuild mechanisms, the idle point with a background subagent, each clause pass or fail with `claude --version`, in `tools/hub/probes/`; the result picks the mechanism and sets D1's scope | — | 20–40k (1u) |
@@ -1173,7 +1173,7 @@ the manifest's hash unchanged") holds today only for a refusal by the schema.
 
 `set` is also a `not_verb` in harness's `cli.json`: "a server caller would carry no
 agent identity for it to check -- whether the hub may run it is an open decision". That
-is Decision 18. The page sends `model` and `model_reason` in one request, since `set`
+is Decision 18, answered yes once P-RS1 passes (below). The page sends `model` and `model_reason` in one request, since `set`
 moves them only together.
 
 **While it runs and when it fails.** While the verb runs, the row shows `changing:
@@ -1190,7 +1190,9 @@ at a time, the lease's rule applied to one verb. When it ends:
 Every outcome is one ledger row (§3).
 
 **Who may change it.** Only Jacob, from the page (routing-tree §15; fixed point 9). How
-the server tells Jacob's click from a role is not yet settled; it is Decision 18:
+the server tells Jacob's click from a role is Decision 18, answered yes once P-RS1
+passes, with the read-only page and its `!` line until then (Jacob's words and their
+sources: "Jacob's answers" below):
 - **What is solid.** A role's call reaches the server through `hub hook gate` (§3
   H1a-0), which stamps the role. The server refuses a `settings.set` verb from any
   stamped role, whatever the verb's declaration says.
@@ -1219,7 +1221,25 @@ from harness`; the page does not parse the text table.
 
 RS comes after V1, which brings the view, and H1b, which brings the `write` service.
 **The read half is useful alone.** A read-only panel needs only harness's `list --json`.
-It can ship once V1 does, before the write half and before Decision 18.
+It can ship once V1 does, before the write half and before P-RS1.
+
+**Jacob's answers to Decisions 18 and 19: both yes** (hb-28, dt-20 row 2; recorded
+from routing-tree §15, "The two hub decisions behind that row, with Jacob's words",
+tl-454):
+- **Decision 19**, the four steps as one all-or-nothing harness verb: "2)Yes", typed in
+  the planner window at 22:29 on 2026-10-19, and "Take the decision 19 answer as mine"
+  in the dispatcher window (relayed by the dispatcher at 22:40; the words typed there
+  are the dispatcher's to hold).
+- **Decision 18**, the hub may run that verb for a request from the view and refuses it
+  for every role: "3) Yes", in the dispatcher window at about 22:47 on 2026-10-19,
+  answering the dispatcher's third open item (its relay, held by the peer cap until
+  22:50).
+
+So the read half ships with V1; P-RS1 runs from a role in its sandbox before the write
+half is built; the hub calls harness's one verb once P-RS1 passes, and until then the
+page is read-only and shows each row's `agents.sh set` line for Jacob to run with `!`.
+The verb is harness's to build (top-level tl-442). Order: the merge (tl-432, done), then
+the page (tl-310).
 
 → RS; gates in §8 "roster settings"; harness's part in Risks "Reports owed"; Decisions
 18 and 19.
@@ -1390,7 +1410,8 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
   manifest's list of known models", which does not exist); `tokens --agents --since D
   --json`; one settings verb that runs set, gen, check and the `.claude/` commit
   all-or-nothing, rolling back a `check` refusal, with its test; and that verb's
-  `cli.json` entry only if Decision 18 says yes.
+  `cli.json` entry, which Decision 18's yes (Jacob 2026-10-19) allows; the hub calls it
+  only once P-RS1 passes.
 - **The settings page's write rests on a probe** (§15, P-RS1). If a role can read
   `HUB_TOKEN`, it can pose as the view, and the server's role stamp does not help. In
   that case the page stays read-only and the write is Jacob's `!` line. The plan
@@ -1420,5 +1441,5 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
 | 15 | §12: `Bash(hub get *)` joins the read-only tool list beside `Bash(hub send *)`, widening Decision 12 by one read verb that runs only a store's `get` | the alternative is each store's own CLI on the list, one entry per store, which D3's `hygiene get` wording implied; one verb keeps the list short and the stores' CLIs off every role | **Dissolved with Decision 12: Jacob 2026-10-13** (PLAN-services.md §3 step 3 "Widened"): there is no list to widen; `hub get` stays as the server's read route, and the hook sends a role's store read to it as a `read-request` whatever tool the role used (§4, §12) |
 | 16 | §12: the first-phase stores are `ctx:` (H1a-2, for `origin_id`) and `todo:` (R1); kb section ids, research `rs-<n>` and data-bridge records join in R2 by their owners' `ids` declarations, each when its `get` exists | which stores answer `get <id>` today (todo does, PLAN-todo-tool.md §3; the others are PLAN-services.md §3's, not an input) | yes. **Approved: Jacob 2026-10-13** |
 | 17 | §3 H1a-0: the write gate is a slice of its own before H1a-1, run locally; a role's writable repos are derived from `owners` at render time, and there is no per-role `writes` list (§2); its hook **fails closed for writes** when the server is down, the one exception to "every hook fails open" (§8); the hook stays unregistered until `setup plans edit|add` and todo's import exist | whether a planner with the server down may be unable to write at all (the answer is `hub up`, named in the deny line); whether writable repos are a declared list or derived from `owners` (answered: derived) | yes. The gate itself: **Jacob 2026-10-13** (PLAN-services.md §3). **Its shape approved: Jacob 2026-10-13** ("Derived from owners"), which drops the per-role `writes` list the 6d2b3f6 draft had. The planner's and the dispatcher's set is the `owners` row `workspace` and nothing else (PLAN-services.md §3 step 3, "The hub owner's four questions" 1, approved: Jacob 2026-10-13; §2) |
-| 18 | §15: the hub may run harness's settings write verb for a request from the view, and refuses it for every role; today `set` is a `not_verb` in harness's `cli.json` ("a server caller would carry no agent identity for it to check -- whether the hub may run it is an open decision") | whether the server can tell Jacob's click from a role's direct POST: probe P-RS1 (a sandboxed role cannot read `HUB_TOKEN` by Read, Bash or a store read); if it fails, the page stays read-only and shows each row's `agents.sh set` line for Jacob to run with `!` | yes, once P-RS1 passes; read-only with the `!` line until then. Open: Jacob's, through the planner (harness's TODO.md names the planner) |
-| 19 | §15, §9: the four steps (set, gen, check, the `.claude/` commit) are one harness verb, all-or-nothing, not a sequence the hub runs; RS adds 60–110k (2–4u) plus ~1–2u of harness to Decision 9's total, after its yes | fixed point 10 (the server holds no tool's command); today `set` stops after `gen`, so a `check` refusal leaves the manifest changed and routing-tree §15's third gate would fail on it | yes |
+| 18 | §15: the hub may run harness's settings write verb for a request from the view, and refuses it for every role; today `set` is a `not_verb` in harness's `cli.json` ("a server caller would carry no agent identity for it to check -- whether the hub may run it is an open decision") | whether the server can tell Jacob's click from a role's direct POST: probe P-RS1 (a sandboxed role cannot read `HUB_TOKEN` by Read, Bash or a store read); if it fails, the page stays read-only and shows each row's `agents.sh set` line for Jacob to run with `!` | yes, once P-RS1 passes; read-only with the `!` line until then. **Approved: Jacob 2026-10-19** ("3) Yes", dispatcher window, about 22:47, its relay held by the peer cap until 22:50; hb-28, dt-20 row 2; routing-tree §15; §15 "Jacob's answers") |
+| 19 | §15, §9: the four steps (set, gen, check, the `.claude/` commit) are one harness verb, all-or-nothing, not a sequence the hub runs; RS adds 60–110k (2–4u) plus ~1–2u of harness to Decision 9's total, after its yes | fixed point 10 (the server holds no tool's command); today `set` stops after `gen`, so a `check` refusal leaves the manifest changed and routing-tree §15's third gate would fail on it | yes. **Approved: Jacob 2026-10-19** ("2)Yes", planner window, 22:29; "Take the decision 19 answer as mine", dispatcher window, relayed 22:40; hb-28, dt-20 row 2; routing-tree §15; §15 "Jacob's answers"). The verb is harness's (tl-442) |
