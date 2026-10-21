@@ -102,6 +102,14 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   it, leaving the mechanism and the rest of the item to settle. Edited at the
   top-level original; done with `./dev.sh refresh PLAN-hub-brief.md`, which rewrote
   only its `SHA256SUMS` line.
+- **`PLAN-routing-tree.md` and the brief re-copied 2026-10-20** for tl-454
+  (routing-tree §10.4 step 4): the brief, edited at the top-level original, records
+  §20's answer, `hybrid` (Jacob 2026-10-19, tl-384, dt-20 row 4), in its line 30 mark,
+  fixed point 9 and question 4, and question 15's Decisions 18-19 as answered yes.
+  The routing-tree copy brings in §20's "Answered `hybrid`" and §15's answers to
+  Decisions 18-19 with Jacob's words, which the brief now points at. Done with
+  `./dev.sh refresh PLAN-routing-tree.md PLAN-hub-brief.md`; the other copies keep
+  their sums and their drift (seven: `./dev.sh drift`).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

@@ -94,8 +94,9 @@ to `from`, recorded in the ledger (PLAN-auto-relay §7, generalised to every nod
 
 ## 5. How a message reaches an agent
 
-The server owns the agent processes. One kind of role (§20): each request starts the
-owner in its folder, and how long the process lives is not a design axis (§24).
+The server owns the agent processes. Two lifetimes by kind (§20, answered `hybrid`): a
+repo's coding role stays up between requests and takes them in turn; research, audit and
+recipe roles start per request in their folder. Neither is described by temperature (§24).
 
 - **Each request starts the role:** `claude -p --agent <role>` in the node's repo,
   in `--permission-mode dontAsk` with the role's allowed tools
@@ -228,8 +229,9 @@ nothing about becomes a node with a dispatcher and a coder role.
      approves the text).
 
 After phase 4, the other repos join through setup (§8). The phase that once followed,
-choosing between role lifetimes by `tokens --agents`, is gone: there is one kind of
-role (§20, §24).
+choosing between role lifetimes by `tokens --agents`, is gone as a phase: the lifetimes
+are set by kind (§20, answered `hybrid`), and `tokens --agents --roles` reports tokens per
+task by lifetime from the first week of roles, a reading, not a phase (§20 step 2).
 
 ### 10.1 The five decisions of the cloud plan (Jacob, 2026-10-19)
 
@@ -303,7 +305,7 @@ restart count says so. PLAN-hub.md §7 takes this in the cloud pass (§10.3).
 
 | | question | frees |
 |---|---|---|
-| 1 | §20 one kind of role (tl-384) | the brief's §20 mark; PLAN-hub.md §4; the full inputs refresh hb-21 waits for |
+| 1 | §20 role lifetimes (tl-384; answered `hybrid` 2026-10-19) | the brief's §20 mark (tl-454); PLAN-hub.md §4; the full inputs refresh hb-21 waits for |
 | 2 | §17 fan-out by declaration (tl-364) | the brief's §17 mark; the hub's run and read sharing; §17.2 |
 | 3 | D5 keep-alive, §10.2 (tl-327) | PLAN-hub.md §7 |
 | 4 | Decision 9's delta: H1a-0b on the credits, the total at 1.7-2.6M | H1a-0b's cloud run; the §9 order as costed |
@@ -360,6 +362,12 @@ by hand, so `plan/hub`'s entries (one per phase, written on 10-13) come in throu
 check`, then builds H1a-0 on `main`. `hold`: the two branches stay, and H1a-0, hb-19's
 requests and §10.4's path wait. The cloud pass is unaffected either way.
 
+**Answered `merge-now` on 2026-10-19 (tl-443, dt-20 row 1).** Hub runs step 2 as
+written: `main`'s side for the nine files, a per-file report of anything on
+`plan/hub`'s side that `main` lacks (any such line stops the merge), `plan/hub`'s TODO
+entries through `todo add`, `./dev.sh check`, then H1a-0 on `main` (todo:tl-432). The
+settings page (tl-310) follows the merge.
+
 ### Steps
 
 1. **`hub`:** with 118: PLAN-services.md and PLAN-context-hygiene.md added to the
@@ -408,7 +416,7 @@ and the view (V1) is not needed for it.
 | 1 | the merge (tl-443) | Jacob: one answer | none | Decisions row 1 |
 | 2 | the merge, then H0 (the probes) and H1a-0 (the write gate) on `main`; harness's hook half (tl-234) after H1a-0 | `hub`, local; then `harness` | H0 40-90k; H1a-0 80-130k; harness ~1u | tl-432, blocked by step 1 |
 | 3 | the brief carries the evening's answers: line 30's marks (§17 `declare`, §20 asked again, §22-§23 pending), question 7 (`session-start`, §10.2), question 15 (PLAN-hub.md §15's Decisions 18-19), and its five warm/cold hits rewritten (§24 step 6, line 121 folded in); the copy refreshed | `hub`, local | 15-30k | Dispatch 204 |
-| 4 | §20, one kind of role (tl-384) | Jacob: one answer | none | Decisions row 4; PLAN-hub.md §4 waits on it |
+| 4 | §20, role lifetimes (tl-384) | Jacob: answered `hybrid` on 2026-10-19 | none | the brief records it (tl-454); PLAN-hub.md §4 reads the brief |
 | 5 | the cloud pass: PLAN-hub.md §4, §7 and the re-cost from the answers; then H1a-0b, H1a-1, H1a-2, S1 and H1b in §9's order, as far as the credits go (Decision 9's rule) | Jacob starts it (D2: Fable 5.1 at max) once step 3 reports and step 4 is answered; it runs on the $150 | 50-90k, 80-130k, 140-200k, 120-180k, 150-200k: 540-800k together | waits on steps 3 and 4 |
 | 6 | beside it: H1a-2's harness and setup halves; §17 step 1 (tl-445, the modes and classes the hub's `route` reads in §17 step 4) | `harness`, `setup`, local | 1-2u each | tl-445 is line 189 of the queue |
 
@@ -429,8 +437,9 @@ every non-hub line of the queue; the merge's `hold` answer slows step 2 only.
 1. **One server program per node, doing both checks (group-servers) and routing.**
    Not two servers. *Recommended: yes.*
 2. **One kind of role.** Superseded: by PLAN-hub-review.md §5 D1 on 2026-10-09 (no
-   role is kept between tasks) and by §20 (each request starts the owner in its folder;
-   how long it lives is not a design axis, §24).
+   role is kept between tasks), then by §20 as answered on 2026-10-19 (`hybrid`: a repo's
+   coding role stays up between requests; research, audit and recipe roles start per
+   request); temperature is not a design axis (§24).
 3. **The dispatcher gets routing tools only, and running existing tools moves to an
    `operator` role.** *Recommended: yes.* The alternative is to let it keep read-only
    tool runs (scrape, count).
@@ -900,8 +909,9 @@ agent's model or effort by running harness's own command, `agents.sh set`, then 
 server may not run, because a request arriving at the server carries no proof of who
 sent it. **Decision 18** asks whether the hub may run it at all for a click on the
 page, while refusing it for every role. The catch is the local-trust gap: the page
-proves itself with `HUB_TOKEN`, a secret in the hub's `local.env`. If a role the hub
-started can read that file (through the Read tool, `cat` in Bash, or a store read), it
+proves itself with `HUB_TOKEN`, a secret in the hub's process environment (hb-69,
+answered `env` by Jacob 2026-10-20; this plan said `local.env` before). If a role the hub
+started can read it (an inherited variable, `env` in Bash, or a store read), it
 can send the same request the page sends, and the server cannot tell Jacob's click from
 a role's POST. The probe **P-RS1** tries exactly that from a role in its sandbox,
 before the write half is built. If the role cannot read the token, the page may write;
@@ -915,6 +925,26 @@ harness to Decision 9's total. The read half of the page (the rows, from harness
 `list --json`) needs neither decision and ships with V1. **`yes`** answers both: the
 hub may write once P-RS1 passes, through one all-or-nothing harness verb; until the
 probe passes, the read-only page.
+
+**Answered `yes` on 2026-10-19 (hb-28, dt-20 row 2).** The read half ships with V1.
+P-RS1 runs from a role in its sandbox before the write half is built. The write half is
+one verb in harness (`set`, `gen`, `check`, commit, rolled back when `check` refuses),
+which hb-30's report to harness asks for; the hub calls it once P-RS1 passes, and until
+then the page shows each row's `agents.sh set` line for Jacob to run with `!`. Order:
+the merge (tl-432), then the page (tl-310).
+
+**The two hub decisions behind that row, with Jacob's words.** PLAN-hub.md §15 (on
+`plan/hub` until tl-432 merges it) holds them as Decisions 18 and 19. Decision 19, the
+four steps (`set`, `gen`, `check`, the `.claude/` commit) as one all-or-nothing harness
+verb: Jacob answered it as dt-20 row 2 in the planner window at 22:29 on 2026-10-19,
+"2)Yes", and in the dispatcher window, "Take the decision 19 answer as mine" (relayed by
+the dispatcher at 22:40; the words typed there are the dispatcher's to hold). Decision
+18, the hub may run that verb for a request from the view and refuses it for every role,
+hinging on P-RS1: Jacob answered "3) Yes" in the dispatcher window at about 22:47,
+answering the dispatcher's third open item (its relay, held by the peer cap until 22:50).
+So: yes, once P-RS1 passes; read-only with the `!` line until then, as the row's
+recommendation said. The hub writes both answers and these sources into PLAN-hub.md
+§15 after the merge (tl-454); the verb itself is harness's (tl-442).
 
 **The model allowlist** is read from the manifest's list of known models, never typed
 into the page.
@@ -1040,6 +1070,15 @@ the second one does (its line 384). So two scrape runs, or two research question
 one after the other. `deep-work` has no folder and is not held (unverified: from the
 guard's folder rule -- settle: `bash .claude/hooks/test-dispatch-guard.sh`). Inside one
 run, `site-scrapers` already loads many pages at once; the serial part is the dispatch.
+
+**The lock while a dispatch waits (tl-444). Answered `probe-and-fix` by Jacob,
+2026-10-20, in the planner window (dt-33 row 9, tl-450; his words "probe and fix").**
+On 2026-10-19 two harness agents stood in `.claude/` at once: the guard frees a folder
+when the Agent call returns, even when that dispatch only ended waiting on its own work.
+harness runs tl-444's probe (`dispatches --open` against the guard's lock state with one
+dispatch waiting) and, if it confirms, a waiting dispatch holds its folder until its item
+closes or the dispatch is marked lost, with a test for a second spawn into a waiting
+folder. The modes below keep that: a waiting `write` holds; `run` and `read` never held.
 
 **Three modes, declared on the brief** (`mode: write|run|read`; the default is
 `write`, today's behaviour):
@@ -1381,7 +1420,8 @@ hub routes to the `todo` owner (§10 phase 1); until then it stays, and the plan
 reads no `-h`: the commands
 it needs, verified, are in `PLANNER-HANDOFF.md`.
 
-**One kind of role.** Which agent a request goes to is decided by the knowledge: the
+**One kind of role (the recommendation; Jacob answered `hybrid` below, which keeps all
+of this but the lifetime).** Which agent a request goes to is decided by the knowledge: the
 service's owner for its CLI and store (`todo`, `research`, the `checks` ledger,
 `usage`), the folder's owner for its code, `audit` with a brief cut to one plan or one
 store (§21.1). How long the process lives is not a design axis (§24): each request
@@ -1423,6 +1463,49 @@ process per service stays up and takes requests in turn: one start per service,
 growing requests, compaction losses, and a health check and a restart rule per role
 still to write.
 
+**Asked a third time, with a refinement (tl-384; Jacob, 2026-10-19, 20:05):** "wouldn't
+this be the sort of thing that context cleaner would work well in conjunction with?
+Ideally the "coding" agent would be long lived, and other tasks "research, audit, create
+new recipes" could be one per task." The two are linked, and PLAN-context-hygiene.md's
+own design is the answer. Its first tool is "keep it out altogether: the bulky work runs
+in a subagent and only its report enters"; its rebuild is "clear, then load a filtered
+context", done by relaunching the window with a digest file. So a long-lived role under
+hygiene is a sequence of starts that read a digest, and a per-request role is a sequence
+of starts that read the item's handoff, the plan section and the folder's CLAUDE.md.
+Both are files; in neither is the process where the knowledge lives. Today's ledger
+(`tokens --agents --since 2026-10-19`): a start is 31k tokens (the median over thirteen
+agent types; harness and deep-work 50k), and a dispatch adds 64k-1.1M of new material
+over 7-190 turns. Keeping the process saves that 31k once per task and carries the
+previous task's un-aged tail into every request of the next one, which is larger than
+31k unless ageing is set so short that it is a restart by another name; and the process
+can hang, die, hit a rate limit mid-wait or hold a stale view of files. What Jacob wants
+from a long-lived coder, that it knows the repo, lives in the folder's orientation files,
+which every start reads inside those 31k, so the lever is the quality of those files,
+not the lifetime of the process. Two things his split gets under one kind of role
+anyway: a coding item that spans several steps in one repo runs as one process for its
+whole length (the item is the unit; L is split before it starts, by content, not by
+process), and a run of tasks each smaller than a start is a sign to merge them into one
+item, not to keep a process waiting. Hygiene's digests (E1) apply inside every role's
+task alike, so they do not tip the choice; and hygiene is not wired today
+(`.claude/settings.json` names none of its hooks). Recommendation unchanged: `one-kind`.
+
+**Answered `hybrid` on 2026-10-19 (tl-384, dt-20 row 4).** His reason, verbatim:
+
+> as discussed the "startup cost" is reincorporated as context costs each time no matter what, for the same reason we are scrubbing "hot and cold" roles, this is a recurring theme that I think is based on some faulty information? unless I am wrong, which we should be able to prove numerically once it is running.
+
+So the shape is decided, and the cost argument above is retired from this plan: a
+role's start, restart or carried context is not raised again as a reason for or
+against a lifetime, here or in any role design; the number replaces it. What `hybrid`
+means: a repo's coding role stays up between requests and takes them in turn, with a
+health check and a restart rule (a dead, hung or rate-limited process is restarted and
+the request re-sent, and its page line says so), a request budget, and hygiene's digests
+ageing its past tasks (PLAN-context-hygiene.md E3a, ch-49) once hygiene is wired;
+research, audit and recipe roles start per task. Both kinds are visible while they run
+and reachable, as above. **The number:** `tokens --agents --roles` (step 2) reports
+tokens per task by role lifetime and item size, from the ledger, so after the first week
+of roles the two lifetimes are compared on the same work, and the comparison is read
+from that table, never argued.
+
 **What moves.** The folder lock stays where it is until the hub's write lease (§6)
 exists, so the first roles routed this way are the ones that write only records
 (`mode: run`, §17): `todo`, `research`, the `checks` ledger. Folder writers follow the
@@ -1439,19 +1522,29 @@ shows one line per role: name, state, the request it is on, its last reply's key
 **Gates:** a request appears in the ledger with mode and class before its role starts;
 the role's reply is a record (§19) and reaches the sender; a role never spawns a roster
 agent (test: it has none to spawn); `tokens --agents --roles` reports tokens and lines
-per request by role; no field, flag, column or sentence names a role's lifetime (the
-`banned-terms` gate, §24).
+per request by role, and tokens per task by role lifetime and item size; a role's
+lifetime is one declared column of the roles table (`per-task`, or `kept` for a repo's
+coding role), set by its kind and shown on its page line; a kept role that stops
+answering is restarted and its request re-sent (test: a killed coding role's request
+completes on the restarted one); no field, flag, column or sentence describes a role by
+temperature (the `banned-terms` gate, §24).
 
 ### Steps
 
-1. **`hub`:** PLAN-hub.md: one kind of role, started per request in its folder (D1),
+1. **`hub`:** PLAN-hub.md: two lifetimes by kind (D1, answered `hybrid`): a repo's
+   coding role stays up between requests and takes them in turn, with a health check, a
+   restart rule and a request budget, hygiene's digests ageing its past tasks once
+   hygiene is wired; research, audit and recipe roles start per task; every role
    visible while it runs (its page line, a transcript tab) and reachable while it runs
    (the stream-json input §5 names); the order of services: record services (`todo`,
-   `research`, `checks`), then `audit`, then folder writers after the lease (§6).
-   track: needs-yes PLAN-routing-tree.md §20
+   `research`, `checks`), then `audit`, then folder writers after the lease (§6). The
+   brief carries this first (tl-454); the cloud pass writes it (§10.4 step 5).
+   track: TODO.md "the brief records §20's answer"
 2. **`harness`:** `tokens --agents --roles`: tokens, and lines printed for Jacob, per
-   request by role, from `dispatches` and the reply ledger (§19).
-   track: needs-yes PLAN-routing-tree.md §20
+   request by role, from `dispatches` and the reply ledger (§19), and tokens per task
+   by role lifetime and item size, the number that settles the question above after
+   the first week of roles.
+   track: TODO.md "tokens per task by role lifetime"
 
 ## 21. The objective, and what it changes (Jacob, 2026-10-19)
 
@@ -1691,7 +1784,8 @@ cache multipliers in cost models. Jacob has answered it four times (memory: neve
 it again); it leaves. The second is role temperature: a "cold role" started per message
 against a "warm role" kept alive, with probes and token comparisons to choose between
 them (§5, §10 phases 1 and 5, §13, the hub brief, PLAN-agent-groups.md §7, and §20 as
-first written). That leaves too: one kind of role (§20). It had left once before:
+first written). That leaves too; what stays is the lifetime by kind of §20 (answered
+`hybrid` on 2026-10-19), named without temperature. It had left once before:
 Jacob dropped kept-alive roles on 2026-10-09 (PLAN-hub-review.md §5 D1; `warm-roles`
 retired in checks' `gates.json` that day) and the cold-cache guard on 2026-10-13. The
 gate entry retired, the plan text did not, so on 2026-10-19 the planner re-derived the
@@ -1755,6 +1849,11 @@ else. `records-too`: the records are rewritten as well, which needs a research v
 that edits a rendered document, a hub re-pin of its inputs, and a history that no
 longer says what was found. Recommended `live-only`: a record that is edited stops
 being a record.
+
+**Answered `live-only` on 2026-10-19 (tl-381, dt-20 row 3).** The records keep their
+words: `RESEARCH-*.md`, PLAN-hub-review.md and the hub's `docs/inputs/` copies are named
+by file in the `banned-terms` gate's allowlist (step 5), and nothing rewrites them. The
+live documents' scrub (steps 1-9, tl-382) stands as it was.
 
 ### Steps
 
@@ -1822,26 +1921,62 @@ no approval and needs none: `todo dispatchable` lists only items already approve
 ready and not yet dispatched (`todo ready` ignores approval: it lists every item with a
 repo, a kind of work and a done-when; td-81, found by the dispatcher 2026-10-19).
 
-**Cadence.** Hourly. The 5h window resets at a time `usage status` prints, so an
-hourly tick releases within the hour of a reset and costs no tokens while it holds; a
-five-minute line was called extreme (§10.2). A one-shot line at the reset minute is
-chron.py's to add if an hour proves slow.
+**Queued, pending and stalled (Jacob, 2026-10-20: "Make sure queued and pending and
+stalled todos are started when the usage limit resets").** Step 1 counts three kinds,
+not one, each from a ledger and never from a session's memory:
+- *queued*: `todo dispatchable`, approved and never spawned;
+- *pending*: approved items a relayed line carried (`.claude/state/relay-ledger.tsv`)
+  that no row of `.claude/state/dispatches.jsonl` names: the lines the dispatcher held
+  and had not spawned when its session ended or its limit hit;
+- *stalled*: dispatches `agents.sh dispatches --json` shows `interrupted` (a rate-limit
+  hit), `lost`, or `waiting` past `spawn_watch.stale_minutes`, each by key.
+The prompt (step 3) names them: "release: continue every waiting dispatch listed by
+`SendMessage` to its agent, respawn every lost or interrupted one from `agents.sh
+rebrief <key>`, then dispatch every pending and queued item in order, within `usage
+gate`, and report what you started", followed by the job's list, one line per key or
+item, never prose. An item stays open through all of it, and a folder with a dispatch
+still running is skipped, so nothing runs twice. The release row (step 4) carries the
+three counts. The night this was asked is the case: at 00:10 on 2026-10-20 the 5h
+window stood at 97% (hold 90) resetting 00:30, four dispatches started at 22:14 and
+23:32 showed no end, and nothing but a hand would have started any of them at 00:30.
+Lines the planner's own Stop hook failed to relay (243-251 that night) are in no
+ledger the job reads; they are the planner's to re-offer, which §26's rule, every
+reply carries the whole queue, does on its next reply.
 
-**Gates:** `--dry-run` prints the three answers and starts nothing (test); N = 0
-starts nothing (test); a hold starts nothing (test); the release row is written on
-every exit (test); the prompt in a release spawn is the manifest's text (test);
-`quote-words.sh` shows a relay note for it (test); the cron line is installed through
-chron.py only, under `usage gate`, as §18 step 4.
+**Cadence: an hourly net, and one line at the reset minute.** The hourly tick costs no
+tokens while it holds, and a five-minute line was called extreme (§10.2). "When the
+limit resets" is a minute `usage gate` already prints ("hold until <time>"), so on a
+hold the job adds, through chron.py, one line at that minute (minute, hour, day and
+month of the reset, so it fires once), named `release-at-reset`, and the run it fires
+removes it first; the hourly line stays as the net for a reset the one-shot missed.
+The hold time is also written to `.claude/state/release-hold.json`, and a tick before
+it exits after one read. chron.py's `add` takes `--name`, `--schedule` and `--command`
+on the command line, with `--dry-run` (checked 2026-10-20); `remove` by name is step
+3's to confirm.
+
+**Gates:** `--dry-run` prints the three counts and the gate's answer and starts
+nothing (test); N = 0 starts nothing (test); a hold starts nothing, writes the hold
+file and adds the one-shot line, under `./dev.sh try` (test); a tick before the hold
+time exits after one read (test); each of the three kinds is counted from a fixture
+ledger, and an item or key appears once per release (test); the release row is
+written on every exit (test); the prompt in a release spawn is the manifest's text
+plus the list (test); `quote-words.sh` shows a relay note for it (test); the cron
+lines are installed through chron.py only, under `usage gate`, as §18 step 4.
 
 ### Steps
 
-1. **`harness`:** `agents.sh release` and `releases`, the manifest's prompt text, the
-   Apple-event probe with its result written into this section, the fallback without a
-   window, the tests above. track: TODO.md "The release job"
+1. **`harness`:** `agents.sh release` and `releases`: the three kinds from the
+   ledgers, the manifest's prompt text, the hold file and the one-shot line through
+   chron.py, the Apple-event probe with its result written into this section, the
+   fallback without a window, the tests above. track: TODO.md "The release job"
 2. **`todo`:** `ready --json` and the workspace form, if missing; reported from here.
    track: TODO.md "The release job"
-3. **`cron-scheduler`:** the hourly line after `./dev.sh try`, after step 1.
-   track: TODO.md "The release job"
+3. **`cron-scheduler`:** `remove` by name on the command line if it is menu-only
+   today, then the hourly line after `./dev.sh try`, after step 1. track: TODO.md
+   "The release job"
+4. **`usage`:** `gate --json` and `status --json`: each window's reset time as an epoch
+   and an ISO string, and the gate's verdict as a field, so the job parses a record,
+   never a sentence. track: TODO.md "The release job"
 
 ## 26. The queue: everything ready runs, in this order (Jacob, 2026-10-19)
 
@@ -1967,6 +2102,10 @@ needed: it is a reading, not a rule.
 | # | decision | hinges on | recommend |
 |---|---|---|---|
 | 1 | §27: where the bars sit | `strip`: a thin strip at the top of every hub page, always visible, the three bars and a `+` that opens the full list; `panel`: a panel of its own in the inbox view, opened on demand, the full list; `both`: the strip shows the first three rows, the panel the rest | strip |
+
+**Answered by Jacob, 2026-10-20, in the planner window (dt-30 row 9, tl-425): `strip`.**
+Step 1 (`usage`) is unchanged by it; the hub's widget is the strip on every page, its
+`+` opening the full list.
 
 **Gates.**
 
