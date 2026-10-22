@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (58 open, 16 closed in todo-history.json; seal b68dcd8b6289): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (59 open, 16 closed in todo-history.json; seal 8de9b15f52cb): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -34,6 +34,14 @@
   2026-10-22: todo -C tools/hub get hb-29 shows status open, blocked_by [hb-28] (closed), approved by Jacob 2026-10-22, title 'Phase RS: build the roster settings panel (PLAN-hub.md §15) once V1, H1b, P-RS1 and Decision 18 allow'; the hub has H1a-0 only (PLAN-hub.md §9: RS's read half ships with V1, the write half after P-RS1). The planner held it out of Dispatch 335-365. Expected: hb-29 blocked_by the items that build V1, H1b and P-RS1, and Decision 18's item
   · probe: todo -C tools/hub get hb-29 | jq .record.blocked_by
   · parent: tl-553
+  · added: 2026-10-22
+
+- **hb-75 · hub commits af51519 and e88b4d0 not pushed: the git funnel refuses git push and funnel.push is unset for hub**
+  2026-10-22 (hb-74): .claude/bin/commit.sh -C tools/hub committed both and printed 'not pushed (no push record: git config funnel.push is not true)'; a plain git push origin HEAD is BLOCKED by .claude/hooks/git-funnel.sh. Setting funnel.push is the funnel owner's or Jacob's record, not hub's to set
+  · probe: git -C tools/hub status -sb (ahead of origin) and git -C tools/hub config funnel.push
+  · work: tooling
+  · size: S
+  · done when: funnel.push is recorded for hub (or the funnel offers a push path) and both commits are on origin
   · added: 2026-10-22
 
 ## Open decisions
