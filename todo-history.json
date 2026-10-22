@@ -535,7 +535,100 @@
       "done": "2026-10-20",
       "resolution": "option-chosen",
       "imported": null
+    },
+    {
+      "id": "hb-72",
+      "title": "Brief §5's output contract (branch plan/hub, nothing else changed) does not fit the plan-then-build cloud pass on main",
+      "kind": "decision",
+      "status": "done",
+      "evidence": "seen by tl-454 (2026-10-20) while recording §20's answer; not changed, since the pass's scope is the planner's call (routing-tree §10.3 'What is not a question')",
+      "probe": null,
+      "reported_to": null,
+      "parent": null,
+      "blocked_by": null,
+      "waits_on": "approval",
+      "pointer": "PLAN-hub-brief.md §5",
+      "hinges_on": "routing-tree §10.3 makes the next cloud pass one pass, plan then build, on main (the merge is done, tl-432), and calls its scope the planner's; the brief's §5 'Done when' still says the file exists on a branch named plan/hub and 'Nothing else in the repo is changed', which a build pass breaks",
+      "recommend": "restate",
+      "options": [
+        {
+          "name": "restate",
+          "text": "the planner restates §5 for the plan-then-build pass on main before Jacob starts it"
+        },
+        {
+          "name": "keep",
+          "text": "§5 stays as the first pass's contract and the cloud prompt overrides it"
+        }
+      ],
+      "chosen": "restate",
+      "jacob_words": null,
+      "repo": "tools/hub",
+      "work": "docs",
+      "size": "S",
+      "files": [
+        "PLAN-hub-brief.md"
+      ],
+      "research": null,
+      "done_when": null,
+      "done_check": null,
+      "handoff": null,
+      "approved": {
+        "by": "jacob",
+        "date": "2026-10-22",
+        "source": "answer 2026-10-22 (dt-40 row 29)"
+      },
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-20",
+      "done": "2026-10-22",
+      "resolution": "option-chosen",
+      "imported": null
+    },
+    {
+      "id": "hb-33",
+      "title": "Routing-tree copy drifted again; brief line 30 lacks §25-§27 marks",
+      "kind": "note",
+      "status": "done",
+      "evidence": "2026-10-19 (hb-32): after ./dev.sh refresh PLAN-hub-brief.md, ./dev.sh drift printed 'DIFF docs/inputs/PLAN-routing-tree.md' (the original moved on after tl-453's refresh); left as it was, outside hb-32. Also from hb-32: brief line 30 still gives no per-section marks for routing-tree §25-§27 (it points at each section's own status).",
+      "probe": "cd tools/hub && ./dev.sh drift",
+      "reported_to": null,
+      "parent": null,
+      "blocked_by": null,
+      "waits_on": null,
+      "pointer": null,
+      "hinges_on": null,
+      "recommend": null,
+      "options": null,
+      "chosen": null,
+      "jacob_words": null,
+      "repo": "hub",
+      "work": "docs",
+      "size": "S",
+      "files": null,
+      "research": null,
+      "done_when": "the routing-tree copy matches its original (./dev.sh refresh PLAN-routing-tree.md) and the brief's line 30 marks §25-§27, or a recorded decision says neither is needed",
+      "done_check": null,
+      "handoff": null,
+      "approved": {
+        "by": "jacob",
+        "date": "2026-10-22",
+        "source": "Jacob, planner window, 2026-10-22: 'Please dispatch anything that is awaiting my yes for the hub, harness, or context cleaner.'"
+      },
+      "dispatched": null,
+      "retire": null,
+      "tags": null,
+      "plan_pins": null,
+      "detector": null,
+      "plan_step": null,
+      "added": "2026-10-19",
+      "done": "2026-10-22",
+      "resolution": "2026-10-22: ./dev.sh refresh PLAN-routing-tree.md PLAN-hub-brief.md; ./dev.sh drift no longer lists either (8 others still differ). The brief's routing-tree row (line 31 since hb-72's restated header) now marks §25 and §26 (no decision row, no needs-yes step), §27 (answered strip, dt-30 row 9; hub step 3 needs-yes), and corrects §21 (rows 1-4 approved, dt-40 rows 18-19), §22 (steps 1-2 approved, dt-40 row 20) and §24's records question (live-only). Fixed point 11 and question 16 left for the planner: hb-74",
+      "imported": null
     }
   ],
-  "seal": "65ebef235db871c1"
+  "seal": "9ebcee9f73abbd3d"
 }

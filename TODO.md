@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (59 open, 13 closed in todo-history.json; seal e3a087e28c6b): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (59 open, 15 closed in todo-history.json; seal 73053c9ff27f): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -30,6 +30,12 @@
   · done when: PLAN-hub.md names the environment as HUB_TOKEN's only source in §3 step 1 and every other hit, P-RS1 tries the three reads routing-tree §15 names, and grep -n local.env PLAN-hub.md shows only lines about other keys or the history
   · added: 2026-10-20
 
+- **hb-73 · hb-29's blocked_by lacks the phases its title waits on (V1, H1b, P-RS1, Decision 18), so todo ready lists it ready and approved though nothing it builds on exists**
+  2026-10-22: todo -C tools/hub get hb-29 shows status open, blocked_by [hb-28] (closed), approved by Jacob 2026-10-22, title 'Phase RS: build the roster settings panel (PLAN-hub.md §15) once V1, H1b, P-RS1 and Decision 18 allow'; the hub has H1a-0 only (PLAN-hub.md §9: RS's read half ships with V1, the write half after P-RS1). The planner held it out of Dispatch 335-365. Expected: hb-29 blocked_by the items that build V1, H1b and P-RS1, and Decision 18's item
+  · probe: todo -C tools/hub get hb-29 | jq .record.blocked_by
+  · parent: tl-553
+  · added: 2026-10-22
+
 ## Open decisions
 
 - **hb-2 · The git-side gates are off**
@@ -51,20 +57,6 @@
   most likely Jacob applying setup's proposal for the 790d4bd render (Own limits,
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
   · added: 2026-10-19
-
-- **hb-72 · Brief §5's output contract (branch plan/hub, nothing else changed) does not fit the plan-then-build cloud pass on main**
-  seen by tl-454 (2026-10-20) while recording §20's answer; not changed, since the pass's scope is the planner's call (routing-tree §10.3 'What is not a question')
-  · status: waiting-jacob
-  · waits on: approval
-  · pointer: PLAN-hub-brief.md §5
-  · hinges on: routing-tree §10.3 makes the next cloud pass one pass, plan then build, on main (the merge is done, tl-432), and calls its scope the planner's; the brief's §5 'Done when' still says the file exists on a branch named plan/hub and 'Nothing else in the repo is changed', which a build pass breaks
-  · recommend: restate
-  · options: restate = the planner restates §5 for the plan-then-build pass on main before Jacob starts it; keep = §5 stays as the first pass's contract and the cloud prompt overrides it
-  · repo: tools/hub
-  · work: docs
-  · size: S
-  · files: PLAN-hub-brief.md
-  · added: 2026-10-20
 
 ## Unconfirmed suspicions
 
@@ -246,6 +238,7 @@
   · work: code
   · size: M
   · done when: phase RS built: the panel lists every row harness's list --json prints and changes them only through the declared settings verb, with the §8 'roster settings' gates green
+  · approved: jacob 2026-10-22: Jacob, planner window, 2026-10-22: 'Please dispatch anything that is awaiting my yes for the hub, harness, or context cleaner.'
   · added: 2026-10-19
 
 - **hb-30 · Reported to harness: list --json, a models list, tokens --json and an all-or-nothing settings verb, for the settings page (PLAN-hub.md §15)**
@@ -260,14 +253,6 @@
   · done when: harness has list --json in PLAN-hub.md §15's shape (coders row, from per key, settable, models), tokens --agents --json, and one all-or-nothing settings verb (set, gen, check, .claude/ commit; rollback on a check refusal) with tests; or harness answered no with a reason
   · handoff: done: re-verified 2026-10-19, nothing built, harness store has no counterpart of tl-442; re-reported through the dispatcher. next: harness builds list --json / tokens --agents --json / the settings verb (after Decision 19) or answers no. verify: ./.claude/agents.sh list --json | jq -e '.rows and .models' ; ./.claude/agents.sh tokens --agents --json | jq -e . ; ./.claude/agents.sh list --bogus exits non-zero (2026-10-19, at 7ba74e7)
   · approved: jacob 2026-10-19: Jacob 2026-10-19 via auto-relay line 228 (origin jacob)
-  · added: 2026-10-19
-
-- **hb-33 · Routing-tree copy drifted again; brief line 30 lacks §25-§27 marks**
-  2026-10-19 (hb-32): after ./dev.sh refresh PLAN-hub-brief.md, ./dev.sh drift printed 'DIFF docs/inputs/PLAN-routing-tree.md' (the original moved on after tl-453's refresh); left as it was, outside hb-32. Also from hb-32: brief line 30 still gives no per-section marks for routing-tree §25-§27 (it points at each section's own status).
-  · probe: cd tools/hub && ./dev.sh drift
-  · work: docs
-  · size: S
-  · done when: the routing-tree copy matches its original (./dev.sh refresh PLAN-routing-tree.md) and the brief's line 30 marks §25-§27, or a recorded decision says neither is needed
   · added: 2026-10-19
 
 - **hb-36 · Phase H1a-0b, the read route (cloud, after H1a-0)**
@@ -399,3 +384,12 @@
 - **hb-67 · The classifier sees less than the shared write-target parser: git checkout/restore, patch, vim/ex/ed, sqlite3 pass as reads; listed in classify.test.js KNOWN. Decide: run the shared parser, or port its reach**
   · files: src/classify.js, tests/hub/classify.test.js
   · added: 2026-10-20
+
+- **hb-74 · Brief fixed point 11 and question 16 still call §21 row 4 needs-yes; approved 2026-10-22**
+  2026-10-22 (hb-33): after the routing-tree refresh, §21 steps 2-3 record Jacob's approval of improvement rows 1-4 (dt-40 rows 18-19; row 4 into tl-351); the brief's fixed point 11 still says 'its rows 1-6 are needs-yes in §21' and question 16 still asks how unread stays apart from awaiting-your-answer 'if routing-tree §21 row 4 ... (needs-yes) is approved'. hb-33 changed only line 30's row; the other two restate a requirement, which is the planner's call
+  · probe: grep -n 'rows 1-6\|row 4' PLAN-hub-brief.md (the copy, after ./dev.sh refresh PLAN-hub-brief.md)
+  · work: docs
+  · size: S
+  · files: PLAN-hub-brief.md
+  · done when: fixed point 11 and question 16 state §21 rows 1-4 as approved (dt-40 rows 18-19) and row 5 as needs-yes, edited at the top-level original and re-copied with ./dev.sh refresh PLAN-hub-brief.md, or the planner records that they stand
+  · added: 2026-10-22
