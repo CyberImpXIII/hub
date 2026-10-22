@@ -2265,46 +2265,7 @@
       "done": null,
       "resolution": null,
       "imported": null
-    },
-    {
-      "id": "hb-74",
-      "title": "Brief fixed point 11 and question 16 still call §21 row 4 needs-yes; approved 2026-10-22",
-      "kind": "note",
-      "status": "open",
-      "evidence": "2026-10-22 (hb-33): after the routing-tree refresh, §21 steps 2-3 record Jacob's approval of improvement rows 1-4 (dt-40 rows 18-19; row 4 into tl-351); the brief's fixed point 11 still says 'its rows 1-6 are needs-yes in §21' and question 16 still asks how unread stays apart from awaiting-your-answer 'if routing-tree §21 row 4 ... (needs-yes) is approved'. hb-33 changed only line 30's row; the other two restate a requirement, which is the planner's call",
-      "probe": "grep -n 'rows 1-6\\|row 4' PLAN-hub-brief.md (the copy, after ./dev.sh refresh PLAN-hub-brief.md)",
-      "reported_to": null,
-      "parent": null,
-      "blocked_by": null,
-      "waits_on": null,
-      "pointer": null,
-      "hinges_on": null,
-      "recommend": null,
-      "options": null,
-      "chosen": null,
-      "jacob_words": null,
-      "repo": "hub",
-      "work": "docs",
-      "size": "S",
-      "files": [
-        "PLAN-hub-brief.md"
-      ],
-      "research": null,
-      "done_when": "fixed point 11 and question 16 state §21 rows 1-4 as approved (dt-40 rows 18-19) and row 5 as needs-yes, edited at the top-level original and re-copied with ./dev.sh refresh PLAN-hub-brief.md, or the planner records that they stand",
-      "done_check": null,
-      "handoff": null,
-      "approved": null,
-      "dispatched": null,
-      "retire": null,
-      "tags": null,
-      "plan_pins": null,
-      "detector": null,
-      "plan_step": null,
-      "added": "2026-10-22",
-      "done": null,
-      "resolution": null,
-      "imported": null
     }
   ],
-  "seal": "3775507eac1efe40"
+  "seal": "64ef74401c1bafe6"
 }

@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (59 open, 15 closed in todo-history.json; seal 73053c9ff27f): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (58 open, 16 closed in todo-history.json; seal b68dcd8b6289): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -384,12 +384,3 @@
 - **hb-67 · The classifier sees less than the shared write-target parser: git checkout/restore, patch, vim/ex/ed, sqlite3 pass as reads; listed in classify.test.js KNOWN. Decide: run the shared parser, or port its reach**
   · files: src/classify.js, tests/hub/classify.test.js
   · added: 2026-10-20
-
-- **hb-74 · Brief fixed point 11 and question 16 still call §21 row 4 needs-yes; approved 2026-10-22**
-  2026-10-22 (hb-33): after the routing-tree refresh, §21 steps 2-3 record Jacob's approval of improvement rows 1-4 (dt-40 rows 18-19; row 4 into tl-351); the brief's fixed point 11 still says 'its rows 1-6 are needs-yes in §21' and question 16 still asks how unread stays apart from awaiting-your-answer 'if routing-tree §21 row 4 ... (needs-yes) is approved'. hb-33 changed only line 30's row; the other two restate a requirement, which is the planner's call
-  · probe: grep -n 'rows 1-6\|row 4' PLAN-hub-brief.md (the copy, after ./dev.sh refresh PLAN-hub-brief.md)
-  · work: docs
-  · size: S
-  · files: PLAN-hub-brief.md
-  · done when: fixed point 11 and question 16 state §21 rows 1-4 as approved (dt-40 rows 18-19) and row 5 as needs-yes, edited at the top-level original and re-copied with ./dev.sh refresh PLAN-hub-brief.md, or the planner records that they stand
-  · added: 2026-10-22
