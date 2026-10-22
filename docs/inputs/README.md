@@ -110,6 +110,16 @@ snapshots: the originals keep changing, these do not until someone refreshes the
   Decisions 18-19 with Jacob's words, which the brief now points at. Done with
   `./dev.sh refresh PLAN-routing-tree.md PLAN-hub-brief.md`; the other copies keep
   their sums and their drift (seven: `./dev.sh drift`).
+- **`PLAN-routing-tree.md` and the brief re-copied 2026-10-22** for hb-33: the
+  routing-tree copy brings in Jacob's approvals of 2026-10-22 for §21 steps 2-3 and
+  §22 steps 1-2 (dt-40 rows 18-20). The brief carries the planner's restated §5
+  (hb-72, `restate`: one pass, plan then build, on `main`), and its line 30 row,
+  edited at the top-level original for hb-33, now marks §21-§27 one by one: §21 rows
+  1-4 approved and row 5 needs-yes, §22 steps 1-2 approved, §24's records question
+  answered `live-only`, §25 and §26 with no decision row and no needs-yes step, §27
+  answered `strip` with its hub step needs-yes. Done with `./dev.sh refresh
+  PLAN-routing-tree.md PLAN-hub-brief.md`; the other copies keep their sums and their
+  drift (eight: `./dev.sh drift`).
 
 **One rename.** The brief's row "`CLAUDE.md` (top level)" means claudeTest's own
 `CLAUDE.md`, copied here as `claudeTest-CLAUDE.md`. It is not this repo's

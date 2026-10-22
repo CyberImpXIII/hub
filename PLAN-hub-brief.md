@@ -3,7 +3,8 @@
 > **Status: brief, written by the planner 2026-10-04 at Jacob's request** ("I am going
 > to have a cloud agent make a plan for the hub project. Please do what may be
 > necessary for it to do so"). The cloud session reads this file and the inputs in §2,
-> and writes `PLAN-hub.md`. It builds nothing.
+> and writes `PLAN-hub.md`. The first pass (2026-10-04) built nothing; the next pass
+> plans, then builds on `main` (§5, restated 2026-10-22).
 >
 > **Owner of the output:** the planner reviews `PLAN-hub.md` with Jacob; `deep-work`
 > builds from it once approved (PLAN-tools-folder.md §4 step 7).
@@ -27,7 +28,7 @@ be dispatchable as a `deep-work` job with a cost estimate in tokens.
 |---|---|---|
 | this file | all | the task, the fixed points, the output contract |
 | `CLAUDE.md` (top level) | "How work is split here", "Gate the seams", "Make the wrong thing impossible", "Constraints that don't bend" | the house rules every plan here obeys |
-| `PLAN-routing-tree.md` | all; §11-§16, §18, §19 and §21 are decided (§21's improvement rows are needs-yes in §21); §17 is answered `declare` (tl-364), its §17.2 answered `table` (tl-387); §20 is answered `hybrid` (Jacob 2026-10-19, tl-384, dt-20 row 4; question 4); §22-§23 are pending (needs-yes in each section); §24 is decided, its records question pending (dt-17 row 3, tl-381); §25-§27 carry their status in each section (none of them the plan's to settle) | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), how a message reaches an agent: each request starts its owner in its folder (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub; question 15), Fable 5.1 at max where the account allows it (§16), read and run dispatches sharing a folder, and fan-out (§17, answered `declare`), the audit agent (§18), replies as records, with the hub's inbox view (§19; question 16), service roles: the agent that owns the knowledge, visible and addressable, with two lifetimes by kind: a repo's coding role stays up between requests, research, audit and recipe roles start per task (§20, answered `hybrid`; its step 1 is the hub's; question 4), the objective every view and reply is measured against (§21, fixed point 11; its improvement rows are needs-yes), the temperature axis gone from every project: costs at list price, and a role's lifetime is set by its kind and never argued from a token comparison between lifetimes (§24; question 4) |
+| `PLAN-routing-tree.md` | all; §11-§16, §18, §19 and §21 are decided (§21's improvement rows 1-4 approved by Jacob 2026-10-22 as its steps 2-3, dt-40 rows 18-19; row 5, its step 1, needs-yes; row 6 is §17 step 7); §17 is answered `declare` (tl-364), its §17.2 answered `table` (tl-387); §20 is answered `hybrid` (Jacob 2026-10-19, tl-384, dt-20 row 4; question 4); §22's steps 1-2 are approved (Jacob 2026-10-22, dt-40 row 20) and its steps 3-4 needs-yes; §23 is pending (needs-yes in the section); §24 is decided, its records question answered `live-only` (tl-381, dt-20 row 3); §25 (the release job, steps for harness, todo, cron-scheduler and usage) and §26 (the queue's rules; its row 7 is the hub's order) carry no decision row and no needs-yes step; §27's placement is answered `strip` (Jacob 2026-10-20, dt-30 row 9, tl-425), its hub step 3 marked needs-yes in §27 | **the approved design**: envelope (§2), deterministic routing (§3), the dispatcher as call center (§4), how a message reaches an agent: each request starts its owner in its folder (§5), invariants (§6), the one command (§7), gates (§9), phases (§10), declared sync (§12), read-only roles and failures as messages (§13), one server with four services, an owner per seam kind and services declared as data (§14, fixed point 10), the roster settings page: each agent's model and effort, changed only through `agents.sh set`, with its four gates (§15, Jacob 2026-10-19; owner hub; question 15), Fable 5.1 at max where the account allows it (§16), read and run dispatches sharing a folder, and fan-out (§17, answered `declare`), the audit agent (§18), replies as records, with the hub's inbox view (§19; question 16), service roles: the agent that owns the knowledge, visible and addressable, with two lifetimes by kind: a repo's coding role stays up between requests, research, audit and recipe roles start per task (§20, answered `hybrid`; its step 1 is the hub's; question 4), the objective every view and reply is measured against (§21, fixed point 11; its improvement rows are needs-yes), the temperature axis gone from every project: costs at list price, and a role's lifetime is set by its kind and never argued from a token comparison between lifetimes (§24; question 4) |
 | `PLAN-tools-folder.md` | §1, §3 (hub row), §4, §7, §8 | the criterion, the order, what harness irreducibly is (§7), the `applies_to` declaration shared by hooks and checks |
 | `PLAN-auto-relay.md` | §3–§4, §7, §9 | what the first node's inbox already does; the hub must keep every behaviour there |
 | `PLAN-question-routing.md` | §2, §4, §9 | the question kinds and the two arbiters; the hub routes these |
@@ -432,7 +433,29 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 
 ## 5. Output contract
 
-`PLAN-hub.md`, at the top of this repo, in the house shape:
+**Restated 2026-10-22 for the next pass: one pass, plan then build, on `main`** (hb-72
+answered `restate`, dt-40 row 29; PLAN-routing-tree.md §10.3 "What is not a question"
+and §10.4 step 5). The first pass's contract, a new `PLAN-hub.md` on a branch named
+`plan/hub` with nothing else changed, was met on 2026-10-04; `plan/hub` was merged into
+`main` with tl-432, and PLAN-hub.md is on `main` since. The next pass runs in two halves,
+in this order, both on `main`:
+
+1. **Plan.** PLAN-hub.md, updated in place: the answers this brief carries (line 30's
+   marks, §4's questions) and PLAN-routing-tree.md §22-§24 go into its §4 "Roles and
+   modes", §7 "Keep-alive and control" and the re-cost in §9. It keeps the shape below.
+2. **Build.** Then the phases in PLAN-hub.md §9's order, H1a-0b, H1a-1, H1a-2, S1 and
+   H1b, as far as the credits go, stopping when they run short (Decision 9's rule).
+   Each phase is committed on `main` with the gates PLAN-hub.md §8 names for it, in the
+   same change, and its tests and `./dev.sh check` green before the next phase starts.
+   A step of the check the cloud session cannot run is named in its report as not run,
+   never counted as passed. A phase it does not reach stays open in the hub's store and
+   runs locally later, one dispatch per phase, in the same order.
+
+A change another owner must make (harness's hook half, setup's component; §10.4 step 6)
+is written in the pass's report as a request, never made: nothing outside `tools/hub`
+is changed.
+
+The shape PLAN-hub.md keeps, at the top of this repo:
 
 - a `> **Status:**` header with the date, "plan, written in the cloud from
   PLAN-hub-brief.md", the owners, and a "Builds on" list;
@@ -449,9 +472,11 @@ Answer each with a section, and where it is Jacob's call, a row in the Decisions
 - token costs per phase as ranges, with the measured starting context of a roster
   agent (about 29k, 2026-10-02) as the unit.
 
-**Done when:** the file exists on a branch named `plan/hub`, answers every §4 question,
-has the four closing sections, and every platform claim has a URL. Nothing else in the
-repo is changed.
+**Done when:** PLAN-hub.md on `main` answers every §4 question, has the four closing
+sections, and every platform claim has a URL; each phase the pass ran is committed on
+`main` with its gates and a green `./dev.sh check` (or the steps not run, named); the
+pass's report says which phases ran, which remain, and every request for another
+owner. Nothing outside `tools/hub` is changed.
 
 ## 6. Setup component
 

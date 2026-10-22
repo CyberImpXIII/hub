@@ -1610,9 +1610,11 @@ the dispatcher's table for the rest.
 2. **`harness`:** `omitClaudeMd` and `maxTurns` for `audit` with the start-context line
    in `check`; `lib/notice.sh` and the cap in every hook that prints for Jacob (row 2);
    the reply budget notice (row 3); `table:` in the reply ledger (row 4, into §19 step
-   1 if it has not landed). track: needs-yes PLAN-routing-tree.md §21
-3. **`context-hygiene`:** the four counts in the status line (row 1).
-   track: needs-yes PLAN-routing-tree.md §21
+   1 if it has not landed). Approved by Jacob 2026-10-22 (dt-40 row 18): the audit
+   knobs are in tl-350's done-when, row 4 in tl-351's, rows 2-3 here.
+   track: todo:.#tl-543
+3. **`context-hygiene`:** the four counts in the status line (row 1). Approved by
+   Jacob 2026-10-22 (dt-40 row 19). track: todo:.#tl-547
 4. **`hub`:** the objective as a §3 fixed point of the brief, and the two numbers as
    the page's first line (Jacob's words of 2026-10-19 are the approval).
    track: TODO.md "The objective in the hub"
@@ -1667,11 +1669,12 @@ history`); `agents.sh questions` counts answers by channel (tag, wizard, reply).
 
 1. **`harness`:** the probe: a tagged line typed while the planner is mid-turn;
    `todo history` timestamps against the turn's end; the transcript checked for the
-   text; one line in this section with the result.
-   track: needs-yes PLAN-routing-tree.md §22
+   text; one line in this section with the result. Approved by Jacob 2026-10-22
+   (dt-40 row 20), with step 2; the hook is built first, since the probe needs it
+   wired. track: todo:.#tl-544
 2. **`harness`:** `answer-tag.sh` on both windows (`wiring.json`; Jacob applies), the
    one-line notice in `record-session.sh`, the channel column in `agents.sh questions`,
-   tests as the gates above. track: needs-yes PLAN-routing-tree.md §22
+   tests as the gates above. track: todo:.#tl-544
 3. **`wizard`:** a definition over the top-level store's waiting-jacob decisions that
    writes through `todo answer`; confirm it exists, else add it.
    track: needs-yes PLAN-routing-tree.md §22
