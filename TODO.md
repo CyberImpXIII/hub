@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (59 open, 18 closed in todo-history.json; seal 82bfa9798ef6): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (60 open, 19 closed in todo-history.json; seal 79387cc5f7ac): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -19,15 +19,6 @@
 - **hb-34 · devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report t...**
   reported from tools/todo to tools/hub in dispatch toolu_01XngPqWP4Abzbj63Ght5hjp, filed from the dispatch ledger by the delegation layer's report filer: devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report them missing once the store moves to todo.db -- input: `todo --root <workspace> migrate --readers` lines 94-102 -- expected: check through `todo -C . check` or accept the exports; there is no tl item for this yet
   · parent: tl-471
-  · added: 2026-10-20
-
-- **hb-70 · PLAN-hub.md still says HUB_TOKEN lives in .claude/local.env after hb-69 answered env**
-  hb-69 was answered env by Jacob 2026-10-20 (HUB_TOKEN from the environment only, as H1a-0 built it; routing-tree §15 now says so). PLAN-hub.md still names .claude/local.env as the token's home: grep -n local.env PLAN-hub.md hits §2 (line ~107), §3 step 1 (~297), §5 (~587), §10 (~854), §15 P-RS1 (reads .claude/local.env, where routing-tree §15 says an inherited variable, env in Bash, or a store read), Setup component (~1276-1277) and Risks (~1358). Seen by tl-454, which did not touch them (outside its done-when).
-  · repo: tools/hub
-  · work: docs
-  · size: S
-  · files: PLAN-hub.md
-  · done when: PLAN-hub.md names the environment as HUB_TOKEN's only source in §3 step 1 and every other hit, P-RS1 tries the three reads routing-tree §15 names, and grep -n local.env PLAN-hub.md shows only lines about other keys or the history
   · added: 2026-10-20
 
 ## Open decisions
@@ -51,6 +42,17 @@
   most likely Jacob applying setup's proposal for the 790d4bd render (Own limits,
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
   · added: 2026-10-19
+
+- **hb-78 · How a child node gets its parent's HUB_TOKEN once tokens live only in the environment (hb-69)**
+  2026-10-22 (hb-70): PLAN-hub.md §5 Registration said 'the parent's token that setup placed in the child's local.env'; hb-70 rewrote it to name the environment and point here
+  · status: waiting-jacob
+  · waits on: approval
+  · pointer: PLAN-hub.md §5
+  · hinges on: hb-69 put HUB_TOKEN in the environment only, but §5 had setup place the parent's token in the child's local.env; setup cannot read a token that lives only in the parent's process environment, so a child has no stated way to get it
+  · recommend: tree-env
+  · options: tree-env = the parent passes its token in the environment of the child's hub up when hub up --tree starts it; a child started by hand needs the same variable set by its starter; harness = the harness sets the parent token in the child's environment when it registers the child's hook, as hb-69 has it set HUB_TOKEN
+  · files: PLAN-hub.md
+  · added: 2026-10-22
 
 ## Unconfirmed suspicions
 
@@ -101,6 +103,12 @@
   · probe: with the gate registered, try a planner Write to a scratch file, then setup plans edit --from it
   · files: src/gate.js
   · added: 2026-10-20
+
+- **hb-79 · unverified: PLAN-hub.md §2's hub check reads .claude/local.env, which §8's direction audit forbids**
+  2026-10-22 (hb-70): §2's hub check gate list says hub check verifies local.env holds its keys and no credential-shaped value; §8's direction audit forbids the program opening .claude/, where local.env lives. hb-70 narrowed the clause to HUB_PARENT_URL and left the conflict; also unstated: how HUB_PARENT_URL reaches the program (the environment, by portable-env's loader, like HUB_TOKEN?)
+  · probe: grep -n 'local.env' PLAN-hub.md (the §2 hub check clause) against §8's direction audit row (nothing under tools/hub/ reads .claude/); grep -rn local.env src/ shows the built hub check reads no local.env
+  · files: PLAN-hub.md
+  · added: 2026-10-22
 
 ## Reported to other owners
 

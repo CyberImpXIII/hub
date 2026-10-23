@@ -40,8 +40,8 @@
 > last and name the verbs the brief names, no others.
 
 **The hub in one paragraph.** `tools/hub/` is one Node program, `hub`, the same at every
-node, configured only by a data file at that node, the registry (§2), and by
-`local.env`. Its server (`hub up`) is **one process with four services declared as
+node, configured only by a data file at that node, the registry (§2), and by its
+environment (`HUB_TOKEN`, `HUB_PARENT_URL`: §2). Its server (`hub up`) is **one process with four services declared as
 data** (routing-tree §14.6, fixed point 10): `route` carries tagged envelopes between
 roles and nodes with no model involved, stamps origin and keeps the ledger; `write`
 runs a tool's gated CLI on behalf of a **read-only role** (routing-tree §13, fixed point
@@ -103,9 +103,11 @@ spawns), H4 (the two "until H4" rows).
 ## 2. The registry file
 
 **One committed file per node, `hub.json` at the repo root: the registry, the server's
-one input** (routing-tree §14.6). Beside it, two keys in the gitignored
-`.claude/local.env` (portable-env §3.1): `HUB_TOKEN` and `HUB_PARENT_URL` (empty at a
-root). The port and keep-alive are node facts in the registry, rendered by harness into
+one input** (routing-tree §14.6). Beside it, one key in the gitignored
+`.claude/local.env` (portable-env §3.1): `HUB_PARENT_URL` (empty at a root).
+**`HUB_TOKEN` comes from the environment only** (hb-69, answered `env` by Jacob
+2026-10-20; this plan said `local.env` before): the program reads it from its process
+environment and from no file, and the harness sets it when it registers the hook. The port and keep-alive are node facts in the registry, rendered by harness into
 the role list from the manifest's `servers.<group>` entry where harness exists (§14.6,
 settled by the planner 2026-10-05) and written into `hub.json` by `setup` from there, as
 the manifest commits them today; a port clash on a machine is a `hub check` finding, not
@@ -269,8 +271,10 @@ exist** are split across the seam, each side checking what it can read:
   `owners` row or the explicit `unowned` default, and every row's key is a kind or
   `workspace` (both ways); `workspace`'s `roles` are `roles` keys and none of its
   `paths` falls under a `repos` row's directory; every `repos` row names an executable `cli` and a `check`; `rendered_from.source`,
-  if present, is a path that exists; `local.env` holds the two keys and no key or value
-  shaped like a credential (portable-env §5).
+  if present, is a path that exists; `local.env` holds `HUB_PARENT_URL` and no key or
+  value shaped like a credential (portable-env §5); `HUB_TOKEN` is set in the
+  environment (hb-69). Whether the program may read `local.env` at all under §8's
+  direction audit is hb-79.
 - `agents.sh check` (harness side): re-renders `.claude/hub-roles.json` from the
   manifest and diffs; a difference is "stale, run `gen`", the same message as for a
   stale agent definition; and `gen` writes no `hub.json` (a test over its own output
@@ -294,8 +298,10 @@ role-list rendering as a `harness` job and the component's role-list reading as 
 
 **`hub up` at the top level, day one.**
 
-1. Reads `hub.json` and `local.env`; refuses with one line if either is missing or
-   invalid (`hub check` runs first).
+1. Reads `hub.json`, and `HUB_TOKEN` from its environment only (hb-69, answered `env`
+   by Jacob 2026-10-20; the harness sets it when it registers the hook; no file is
+   read for it); refuses with one line if `hub.json` is missing or invalid (`hub check`
+   runs first) or `HUB_TOKEN` is unset.
 2. Binds `127.0.0.1:<server.port>`; every request carries `Authorization: Bearer
    $HUB_TOKEN` or is refused. Writes `.hub/server.json` (pid, port, started, registry
    hash).
@@ -583,8 +589,9 @@ Jacob 2026-10-09, "by setup").
 
 - **Registration.** On `hub up`, a node with `HUB_PARENT_URL` set POSTs `/register`
   to its parent: `{name, path, port, token, roles: [...], tags: [...]}`,
-  authenticated with the parent's token that `setup` placed in the child's
-  `local.env`. The parent stores it under `.hub/children/<name>.json`, polls the child's
+  authenticated with the parent's `HUB_TOKEN`, which the child reads from its
+  environment like its own (hb-69: no token is read from a file); how the parent's
+  token reaches the child's environment is open (hb-78). The parent stores it under `.hub/children/<name>.json`, polls the child's
   `/health` every `limits.heartbeat_s` seconds (30), and marks it `down` after
   `limits.heartbeat_misses` (2); the heartbeat runs between servers over HTTP and costs
   no model and no tokens. `hub down` DELETEs the registration. The parent stores nothing about grandchildren: a child advertises its
@@ -851,9 +858,10 @@ one item.
   from any session is that session's message.
 - **No spawning from the view.** The view sends envelopes and opens tabs; the server
   spawns. A view that could spawn would be a second dispatcher.
-- **No credentials in data.** `HUB_TOKEN` and the parent token live in `local.env`,
-  generated by `init`, never committed; `hub check` refuses credential-shaped keys in
-  `hub.json` or `hub-view.json`.
+- **No credentials in data.** `HUB_TOKEN` and the parent's token come from the
+  environment only (hb-69; the harness sets `HUB_TOKEN` when it registers the hook, the
+  parent's token is hb-78), never from a file the program reads and never committed;
+  `hub check` refuses credential-shaped keys in `hub.json` or `hub-view.json`.
 - **No bot-detection concerns**: the hub carries pointers and one-line bodies between
   local processes; it never fetches a page.
 - **No reimplementation of a repo's checks.** A group's `dev.sh check --json`
@@ -1199,9 +1207,11 @@ sources: "Jacob's answers" below):
 - **The gap is the local-trust risk (Risks).** Any local process holding `HUB_TOKEN`
   can POST directly. Unless a role cannot read the token, a role could pose as the
   view.
-- **Probe P-RS1, local, before the write half is built.** A cold role in its sandbox
-  tries to read `.claude/local.env` with Read, with Bash `cat`, and through a store
-  read. Pass: all three fail. The probe records the result with `claude --version`.
+- **Probe P-RS1, local, before the write half is built.** A cold role the hub started,
+  in its sandbox, tries to read `HUB_TOKEN` the three ways routing-tree §15 names: as a
+  variable it inherited, with `env` in Bash, and through a store read (the token lives
+  in the hub's process environment, hb-69; this probe read `.claude/local.env`
+  before). Pass: all three fail. The probe records the result with `claude --version`.
   This plan does not claim the sandbox can deny a read: no docs are quoted here for it.
 - **If the probe fails,** the page stays read-only. Each row then offers the exact
   `agents.sh set` line for Jacob to run with `!` in a prompt box, where
@@ -1293,7 +1303,7 @@ owned by `tools/setup`:
 | `registry.proposed.json` | a proposed `repos` row for the node this repo belongs to, as `settings.proposed.json` is today; the copy into the node's registry is the node owner's step (`setup <path> --node` run again) | row present → `unchanged` |
 | `hub.json` (a node only, `setup <path> --node`, repo-setup §7.5) | **the one writer at every node** (Decision 2). Where `.claude/hub-roles.json` exists (harness rendered it), `hub.json` from it: `roles`, `tags`, `children`, `server`, `owners`, `limits` as the list carries them, `rendered_from` with the list's path and hash. Where it does not, the starter (dispatcher window + coder cold, the default tools, `services` route and write on, `owners` with only `unowned`, `limits` at the defaults, a free port, empty tags, `parent` from the invoking node). `hub init` is this step by another name. Setup reads the list as a generic declaration, never the manifest | from a list: the file matches what the list renders → `unchanged`, else `drift` naming the keys; a starter: the keys setup wrote are unchanged → `unchanged`, a hand edit to one of them → `drift`; `tags`, `children` and `sync` are the owner's and not compared |
 | `stores.json` (the node, re-rendered whenever setup runs at any repo; PLAN-services.md §3 step 3, "Two more from the hub owner" 1) | the node's store paths from every owner's `cli.json` `store` field, the `workspace` stores among them, read-only (0444) beside `hub.json`; the hook and the server read it to tell a store path from a non-store one (§3 H1a-0b) | the file matches what the `cli.json` files render → `unchanged`, else `drift` naming the paths; missing → `missing` (and `hub status` reports it) |
-| `local.env` keys | `HUB_TOKEN` (generated), `HUB_PARENT_URL` (the invoking node's URL, or empty) through portable-env's loader; declared in `local.vars.json` | keys present → `unchanged`; never printed |
+| `local.env` keys | `HUB_PARENT_URL` (the invoking node's URL, or empty) through portable-env's loader; declared in `local.vars.json`. No `HUB_TOKEN`: it comes from the environment only, set by the harness when it registers the hook (hb-69), and setup writes it nowhere | key present → `unchanged`; never printed |
 | `.gitignore` | `.hub/`, `hub-view.json`, `.claude/local.env` | lines present → `unchanged` |
 | registration | `hub register` with the parent, when `HUB_PARENT_URL` is set and the parent is up; otherwise prints `register later: hub register` | registered → `unchanged` |
 | hooks | the hub's role hooks (`planner-stop`, `dispatcher-stop`, `session-start`, `notification`) through the existing `hooks` component, from declarations `applies_to: roles:<list>`, into `settings.proposed.json`; never into `settings.json` | the `hooks` component's own check |
@@ -1375,8 +1385,8 @@ hub's own gate; the two-level fixture tree of repo-setup §7.5 is H3's.
   makes every stub a cut at `stub_chars`; PLAN-services.md §3's contract (one short
   line per record) is depended on and not built here, and `hub check` can hold only
   that `get` answers, not that its line is short.
-- **Local trust.** Any local process can POST to 127.0.0.1. The token in `local.env`
-  gates every request; the server runs only `claude` with registry arguments and the
+- **Local trust.** Any local process can POST to 127.0.0.1. `HUB_TOKEN`, from the
+  server's environment only (hb-69), gates every request; the server runs only `claude` with registry arguments and the
   commands `hub.json` names; a spoofed envelope cannot be `origin: jacob` because the
   server stamps that itself.
 - **`hub routes accept` and `grant` are Jacob-only by harness's guard, not by the

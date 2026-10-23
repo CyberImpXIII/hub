@@ -114,7 +114,7 @@ async function cmdUp(argv) {
   const root = rootFrom(o);
   const c = checkLines(root);
   if (!c.ok) { err(`hub up refused: ${c.lines[0].replace(/^FAIL\s+/, '')}${c.lines.length > 1 ? ` (+${c.lines.length - 1} more: hub check)` : ''}`); return 1; }
-  if (!token()) { err('hub up refused: HUB_TOKEN is not set (the node\'s local.env holds it; portable-env\'s loader exports it)'); return 1; }
+  if (!token()) { err('hub up refused: HUB_TOKEN is not set (read from the environment only; the harness sets it when it registers the hook)'); return 1; }
   const d = c.registry.data;
   if (o['--foreground']) {
     try {

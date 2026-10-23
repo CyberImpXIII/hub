@@ -9,9 +9,10 @@ ways. The server binds `127.0.0.1:<server.port>` from `hub.json`.
 `401 {"error": "token refused"}` and nothing else happens. An unknown path is `404`,
 a known path with the wrong method `405`. Bodies are JSON both ways.
 
-The program reads `HUB_TOKEN` from its environment; the node's `local.env` holds it and
-portable-env's loader exports it. The program never opens the folder that file lives
-in (PLAN-hub.md §8, "direction audit").
+The program reads `HUB_TOKEN` from its environment only and from no file (hb-69,
+answered `env` 2026-10-20; PLAN-hub.md §2, §3 step 1): the harness sets it when it
+registers the hook. The program never opens `.claude/` (PLAN-hub.md §8, "direction
+audit").
 
 ### GET /health
 
