@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (60 open, 19 closed in todo-history.json; seal 79387cc5f7ac): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (61 open, 19 closed in todo-history.json; seal d6cf1bb9f45f): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -20,6 +20,13 @@
   reported from tools/todo to tools/hub in dispatch toolu_01XngPqWP4Abzbj63Ght5hjp, filed from the dispatch ledger by the delegation layer's report filer: devtools/hubcheck.py:48 REQUIRED lists todo.json and todo-history.json, so hubcheck will report them missing once the store moves to todo.db -- input: `todo --root <workspace> migrate --readers` lines 94-102 -- expected: check through `todo -C . check` or accept the exports; there is no tl item for this yet
   · parent: tl-471
   · added: 2026-10-20
+
+- **hb-80 · hooks-installed goes red on tools/hooks' uncommitted new lib file**
+  2026-10-23 15:0x (tl-596): commit.sh's ./dev.sh check failed only the checks part: hooks-installed said 'lib/browser-drivers.sh: no test' and 'the source is not well-formed'. tools/hooks then held an untracked source/lib/browser-drivers.sh (14:55) whose test source/tests/test-browser-drivers.sh appeared at 15:05, after the part ran. Nothing in hub changed; ./dev.sh test checks passed at 15:10 and the retry committed 26aaa4b. Same class as hb-22: another owner's uncommitted work in the hooks source turns every hub commit red.
+  · parent: hb-22
+  · work: test
+  · size: S
+  · added: 2026-10-23
 
 ## Open decisions
 
