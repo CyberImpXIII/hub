@@ -2238,47 +2238,6 @@
       "imported": null
     },
     {
-      "id": "hb-75",
-      "title": "hub commits af51519 and e88b4d0 not pushed: the git funnel refuses git push and funnel.push is unset for hub",
-      "kind": "bug",
-      "status": "open",
-      "evidence": "2026-10-22 (hb-74): .claude/bin/commit.sh -C tools/hub committed both and printed 'not pushed (no push record: git config funnel.push is not true)'; a plain git push origin HEAD is BLOCKED by .claude/hooks/git-funnel.sh. Setting funnel.push is the funnel owner's or Jacob's record, not hub's to set\n2026-10-22 (hb-29 dispatch): still so; hub is now ahead of origin by 7 (e13432e and this edit's commit added); commit.sh printed the same 'not pushed (no push record)'.",
-      "probe": "git -C tools/hub status -sb (ahead of origin) and git -C tools/hub config funnel.push",
-      "reported_to": null,
-      "parent": null,
-      "blocked_by": null,
-      "waits_on": null,
-      "pointer": null,
-      "hinges_on": null,
-      "recommend": null,
-      "options": null,
-      "chosen": null,
-      "jacob_words": null,
-      "repo": "hub",
-      "work": "tooling",
-      "size": "S",
-      "files": null,
-      "research": null,
-      "done_when": "funnel.push is recorded for hub (or the funnel offers a push path) and both commits are on origin",
-      "done_check": null,
-      "handoff": {
-        "date": "2026-10-22",
-        "text": "2026-10-22: git config funnel.push is now true in tools/hub/.git/config (not set by hub); origin not ahead after fetch; next: this handoff commit goes through .claude/bin/commit.sh, which pushes all 8; verify: git -C tools/hub status -sb shows no 'ahead'",
-        "commit": "598437e"
-      },
-      "approved": null,
-      "dispatched": null,
-      "retire": null,
-      "tags": null,
-      "plan_pins": null,
-      "detector": null,
-      "plan_step": null,
-      "added": "2026-10-22",
-      "done": null,
-      "resolution": null,
-      "imported": null
-    },
-    {
       "id": "hb-76",
       "title": "Phase V1, the view: agents and folders panels (PLAN-hub-view.md §5), after H3 and V0",
       "kind": "note",
@@ -2357,5 +2316,5 @@
       "imported": null
     }
   ],
-  "seal": "12236ad8df0a4625"
+  "seal": "c1e80b0f762e6f6a"
 }

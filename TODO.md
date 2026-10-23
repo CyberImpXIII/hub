@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (60 open, 17 closed in todo-history.json; seal 92bfc8054da5): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (59 open, 18 closed in todo-history.json; seal 82bfa9798ef6): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -29,16 +29,6 @@
   · files: PLAN-hub.md
   · done when: PLAN-hub.md names the environment as HUB_TOKEN's only source in §3 step 1 and every other hit, P-RS1 tries the three reads routing-tree §15 names, and grep -n local.env PLAN-hub.md shows only lines about other keys or the history
   · added: 2026-10-20
-
-- **hb-75 · hub commits af51519 and e88b4d0 not pushed: the git funnel refuses git push and funnel.push is unset for hub**
-  2026-10-22 (hb-74): .claude/bin/commit.sh -C tools/hub committed both and printed 'not pushed (no push record: git config funnel.push is not true)'; a plain git push origin HEAD is BLOCKED by .claude/hooks/git-funnel.sh. Setting funnel.push is the funnel owner's or Jacob's record, not hub's to set
-  2026-10-22 (hb-29 dispatch): still so; hub is now ahead of origin by 7 (e13432e and this edit's commit added); commit.sh printed the same 'not pushed (no push record)'.
-  · probe: git -C tools/hub status -sb (ahead of origin) and git -C tools/hub config funnel.push
-  · work: tooling
-  · size: S
-  · done when: funnel.push is recorded for hub (or the funnel offers a push path) and both commits are on origin
-  · handoff: 2026-10-22: git config funnel.push is now true in tools/hub/.git/config (not set by hub); origin not ahead after fetch; next: this handoff commit goes through .claude/bin/commit.sh, which pushes all 8; verify: git -C tools/hub status -sb shows no 'ahead' (2026-10-22, at 598437e)
-  · added: 2026-10-22
 
 ## Open decisions
 
