@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (60 open, 17 closed in todo-history.json; seal 22c76e9af06e): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (60 open, 17 closed in todo-history.json; seal 92bfc8054da5): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -37,6 +37,7 @@
   · work: tooling
   · size: S
   · done when: funnel.push is recorded for hub (or the funnel offers a push path) and both commits are on origin
+  · handoff: 2026-10-22: git config funnel.push is now true in tools/hub/.git/config (not set by hub); origin not ahead after fetch; next: this handoff commit goes through .claude/bin/commit.sh, which pushes all 8; verify: git -C tools/hub status -sb shows no 'ahead' (2026-10-22, at 598437e)
   · added: 2026-10-22
 
 ## Open decisions

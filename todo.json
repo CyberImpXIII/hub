@@ -2261,7 +2261,11 @@
       "research": null,
       "done_when": "funnel.push is recorded for hub (or the funnel offers a push path) and both commits are on origin",
       "done_check": null,
-      "handoff": null,
+      "handoff": {
+        "date": "2026-10-22",
+        "text": "2026-10-22: git config funnel.push is now true in tools/hub/.git/config (not set by hub); origin not ahead after fetch; next: this handoff commit goes through .claude/bin/commit.sh, which pushes all 8; verify: git -C tools/hub status -sb shows no 'ahead'",
+        "commit": "598437e"
+      },
       "approved": null,
       "dispatched": null,
       "retire": null,
@@ -2353,5 +2357,5 @@
       "imported": null
     }
   ],
-  "seal": "a5ff3ddd9f171c82"
+  "seal": "12236ad8df0a4625"
 }
