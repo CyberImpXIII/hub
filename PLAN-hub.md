@@ -7,7 +7,8 @@
 > 2026-10-13 on `plan/hub`** from `docs/REVIEW-2026-10-09.md` §5.8–§5.12, Jacob's answers
 > to every Decision (warm roles dropped, `setup` the one writer of `hub.json`, his words
 > by id, every limit a registry value, the coder's lease-scoped Edit rule, cloud phases
-> as defaults) and from the brief's §4 questions 11 and 12 (§11, §12). Nothing is built.
+> as defaults) and from the brief's §4 questions 11 and 12 (§11, §12). Nothing was built then;
+> since 2026-10-20 H1a-0, the write gate, is (`git log -1 --format="%h %ad" --date=short faaf799` → `faaf799 2026-10-20`; `CLAUDE.md:3-7`).
 > Sections 1–12 answer the brief's §4 in order, and §15 its question 15 (written locally
 > 2026-10-19; questions 13, 14 and 16 are open); the terminal front end Jacob described on
 > 2026-10-04 is PLAN-hub-view.md (review finding 7). The planner reviews this file with

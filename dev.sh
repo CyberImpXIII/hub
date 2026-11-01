@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The one pre-commit command for this repo: ./dev.sh check
 #
-# The repo is a plan and its inputs today; nothing is built, so the gates are
-# about those (devtools/hubcheck.py) plus the shared ones from the sibling tools.
+# The repo is a plan, its inputs and H1a-0, the write gate (bin/hub, src/; faaf799,
+# 2026-10-20), so the gates are about those (devtools/hubcheck.py, the hubtests
+# part) plus the shared ones from the sibling tools.
 # A sibling tool that is not there (a lone clone, a cloud session) is UNCHECKED,
 # printed as such, never counted as ok. Each gate's REPORTED result is read, not
 # only its exit code.
