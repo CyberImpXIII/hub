@@ -562,7 +562,7 @@
       ],
       "chosen": "restate",
       "jacob_words": null,
-      "repo": "tools/hub",
+      "repo": "hub",
       "work": "docs",
       "size": "S",
       "files": [
@@ -767,7 +767,7 @@
       "options": null,
       "chosen": null,
       "jacob_words": null,
-      "repo": "tools/hub",
+      "repo": "hub",
       "work": "docs",
       "size": "S",
       "files": [
@@ -794,5 +794,5 @@
       "imported": null
     }
   ],
-  "seal": "848ff0c705423638"
+  "seal": "24f595bbf67ba080"
 }

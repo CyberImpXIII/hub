@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (61 open, 19 closed in todo-history.json; seal d6cf1bb9f45f): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (61 open, 19 closed in todo-history.json; seal a60861ccc42b): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -127,7 +127,6 @@
 - **hb-71 · Reported to planner: routing-tree §24 and §20's opening still say lifetime is not a design axis, against §20's hybrid answer**
   report to planner (via tl-454's report): PLAN-routing-tree.md §24 'The replacement' (line ~1794) still says a role is 'started by the hub in its folder for each request (§20). How long it lives is not a design axis' and that 'A sentence that distinguishes roles by lifetime ... is deleted'; §20 (line ~1403 '(... no role is kept between tasks ...)', ~1427) says the same, while §20 'Answered hybrid' makes lifetime one declared column of the roles table (per-task, or kept for a repo's coding role). The brief (tl-454) follows §20's answer. Expected: §24 and §20's earlier paragraphs restated to the hybrid answer, or marked superseded by it.
   · reported to: claudeTest on 2026-10-20 as tl-528
-  · repo: tools/hub
   · work: docs
   · size: S
   · files: PLAN-routing-tree.md
@@ -403,7 +402,6 @@
   Size left unset (was L, which todo-valid refuses unsplit): it is 150-200k per PLAN-hub-view.md §5, and splitting it waits on V0's host choice; split it (todo split) before dispatch.
   · parent: tl-310
   · blocked by: hb-44
-  · repo: tools/hub
   · work: code
   · done when: V0 has run and picked the host; V1 built per PLAN-hub-view.md §5 with its gates (endpoints documented, three states driven, the switch changes the output, expand walks never stores, idempotent host install) green in ./dev.sh check
   · added: 2026-10-22
@@ -412,7 +410,6 @@
   2026-10-22 (hb-29 dispatch): PLAN-hub.md §15 and §9 row RS: P-RS1 is a script in tools/hub/probes/, local, run before RS's write half; Decision 18's yes holds only once it passes. No store item tracked it (hb-73). Its reads follow routing-tree §15 (docs/inputs copy, line ~913: HUB_TOKEN from the environment, answered env by Jacob 2026-10-20), not PLAN-hub.md §15's .claude/local.env (hb-70). Needs a role the hub started in its sandbox, so after H1b (hb-40).
   · parent: tl-310
   · blocked by: hb-40
-  · repo: tools/hub
   · work: test
   · size: S
   · done when: tools/hub/probes/p-rs1 exists with its pass condition in the file; run from a cold role the hub spawned in its sandbox, it tries HUB_TOKEN as an inherited variable, by env in Bash, and by a store read; the result (pass only if all three fail) and claude --version are recorded on this item; a fixture run where the token is readable makes the probe report fail
