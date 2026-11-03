@@ -26,7 +26,8 @@
     "heartbeat_misses": 2,
     "stub_chars": 200,
     "role_silence_s": 600,
-    "role_daily_budget": 50
+    "role_daily_budget": 50,
+    "question_max_blocks": 1
   },
   "stores": {},
   "sync": [],

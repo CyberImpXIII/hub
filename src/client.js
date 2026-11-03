@@ -13,7 +13,9 @@ function call(port, method, route, { token, body, timeoutMs }) {
     if (data) { headers['Content-Type'] = 'application/json'; headers['Content-Length'] = data.length; }
     let done = false;
     const finish = (v) => { if (!done) { done = true; resolve(v); } };
-    const req = http.request({ host: '127.0.0.1', port, method, path: route, headers }, (res) => {
+    // one call, one connection: a pooled keep-alive socket the server has since closed
+    // (its idle timeout) answers the next call with ECONNRESET, which read as "down"
+    const req = http.request({ host: '127.0.0.1', port, method, path: route, headers, agent: false }, (res) => {
       const chunks = [];
       res.on('data', (c) => chunks.push(c));
       res.on('end', () => {

@@ -56,7 +56,7 @@
         "write": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
         "check": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
         "hook": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
-        "usage": { "type": "object", "required": ["cli"], "additionalProperties": false, "properties": { "cli": { "type": "string", "minLength": 1 } } }
+        "usage": { "type": "object", "required": ["cli", "unit_tokens"], "additionalProperties": false, "properties": { "cli": { "type": "string", "minLength": 1 }, "unit_tokens": { "type": "integer", "minimum": 1 } } }
       }
     },
     "repos": {
@@ -80,7 +80,8 @@
               "properties": {
                 "prefix": { "type": "string", "minLength": 1 },
                 "pattern": { "type": "string", "minLength": 1 },
-                "get": { "type": "string", "minLength": 1 }
+                "get": { "type": "string", "minLength": 1 },
+                "put": { "type": "string", "minLength": 1 }
               }
             }
           }
@@ -118,7 +119,7 @@
     "parent": { "type": ["string", "null"] },
     "limits": {
       "type": "object",
-      "required": ["hops", "budget_per_conversation", "pingpong_hold", "heartbeat_s", "heartbeat_misses", "stub_chars", "role_silence_s", "role_daily_budget"],
+      "required": ["hops", "budget_per_conversation", "pingpong_hold", "heartbeat_s", "heartbeat_misses", "stub_chars", "role_silence_s", "role_daily_budget", "question_max_blocks"],
       "additionalProperties": false,
       "properties": {
         "hops": { "type": "integer", "minimum": 1 },
@@ -128,13 +129,15 @@
         "heartbeat_misses": { "type": "integer", "minimum": 1 },
         "stub_chars": { "type": "integer", "minimum": 1 },
         "role_silence_s": { "type": "integer", "minimum": 1 },
-        "role_daily_budget": { "type": "integer", "minimum": 1 }
+        "role_daily_budget": { "type": "integer", "minimum": 1 },
+        "question_max_blocks": { "type": "integer", "minimum": 1 }
       }
     },
     "stores": {
       "type": "object",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
+    "prompts": { "type": "string", "minLength": 1 },
     "sync": { "type": "array" },
     "classes": { "type": "object" },
     "rendered_from": {

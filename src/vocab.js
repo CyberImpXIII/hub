@@ -37,6 +37,11 @@ const KEEP_ALIVE = ['session-start', 'launchd', 'none'];
 // export of what it enforces is diffed against this list both ways (§8 "limits
 // both ways"), so a key added here without an enforcer, or an enforcer without a
 // key, fails.
-const LIMITS = ['hops', 'budget_per_conversation', 'pingpong_hold', 'heartbeat_s', 'heartbeat_misses', 'stub_chars', 'role_silence_s', 'role_daily_budget'];
+const LIMITS = ['hops', 'budget_per_conversation', 'pingpong_hold', 'heartbeat_s', 'heartbeat_misses', 'stub_chars', 'role_silence_s', 'role_daily_budget', 'question_max_blocks'];
 
-module.exports = { MODES, LIFETIMES, SEAM_KINDS, UNOWNED, WORKSPACE, OWNER_KEYS, RESERVED_TARGETS, QUESTION_KINDS, SERVICES, USAGE_SERVICE, KEEP_ALIVE, LIMITS };
+// The relay kinds the hooks tag their envelopes with (PLAN-hub.md §1: the first
+// entries of a node's tag vocabulary); a node routes them in its `tags`, and a tag
+// with no row falls to the dispatcher by rule 4.
+const RELAY_TAGS = { dispatch: 'dispatch', malformed: 'dispatch-malformed', question: 'question', report: 'report' };
+
+module.exports = { MODES, LIFETIMES, SEAM_KINDS, UNOWNED, WORKSPACE, OWNER_KEYS, RESERVED_TARGETS, QUESTION_KINDS, SERVICES, USAGE_SERVICE, KEEP_ALIVE, LIMITS, RELAY_TAGS };

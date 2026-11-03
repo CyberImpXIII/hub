@@ -337,7 +337,7 @@ function loadIds(root, row) {
       if (typeof e.pattern !== 'string') return { ids: [], error: `${where}: ids[${i}].pattern must be a string` };
       try { pattern = new RegExp(`^(?:${e.pattern})$`); } catch { return { ids: [], error: `${where}: ids[${i}].pattern is not a regular expression` }; }
     }
-    ids.push({ prefix: e.prefix.replace(/:$/, ''), pattern, get: typeof e.get === 'string' && e.get ? e.get : null });
+    ids.push({ prefix: e.prefix.replace(/:$/, ''), pattern, get: typeof e.get === 'string' && e.get ? e.get : null, put: typeof e.put === 'string' && e.put ? e.put : null });
   }
   return { ids };
 }

@@ -115,7 +115,7 @@ test('hub check: the good fixture passes; each workspace rule fails on its own f
   try {
     const r = F.hub(good, ['check']);
     assert.equal(r.code, 0, r.stdout);
-    assert.match(r.stdout, /^ok {4}hub\.json: fixture-node, 5 roles, 3 repos, 0 routes; stores\.json 5 entries/);
+    assert.match(r.stdout, /^ok {4}hub\.json: fixture-node, 5 roles, 4 repos, 10 routes; stores\.json 5 entries/);
   } finally { F.cleanup(good); }
   const cases = [
     ['a workspace role that is not a roles key', (r) => { r.owners.workspace.roles.push('ghost'); }, /owners\.workspace\.roles: ghost is not a roles key/],

@@ -44,15 +44,58 @@ function registry(port) {
       'tools/plans': { cli: 'plans-cli', verbs: ['plans edit', 'plans add'] },
       'tools/items': { cli: 'items', verbs: ['add', 'done', 'list'] },
       site: { cli: './store.sh', verbs: ['import'] },
+      // the prompt store (PLAN-hub.md §12 ctx:): a fixture CLI with put and get
+      'tools/ctx': { cli: 'ctx', verbs: [], ids: [{ prefix: 'ctx:', pattern: 'ctx:[0-9a-f]{8}', get: 'get', put: 'put' }] },
     },
-    owners: { unowned: 'dispatcher', workspace: { paths: ['PLAN-*.md', 'TODO.md', 'todo.json'], roles: ['planner', 'dispatcher'] } },
+    tags: {
+      dispatch: 'dispatcher', 'dispatch-malformed': 'dispatcher',
+      question: { dispatch: 'dispatcher', plan: 'planner', settings: 'planner' },
+      report: '@from', task: '@dir', 'bug-report': '@owner', 'write-request': '@write', 'check-request': '@check',
+    },
+    services: { route: { on: true }, write: { on: true }, check: { on: false }, hook: { on: false }, usage: { cli: 'tools/usage/usage gate', unit_tokens: 29000 } },
+    owners: { unowned: 'dispatcher', delivery: 'planner', workspace: { paths: ['PLAN-*.md', 'TODO.md', 'todo.json'], roles: ['planner', 'dispatcher'] } },
     children: [{ name: 'kid', path: 'kid' }],
     parent: null,
+    limits: { hops: 8, budget_per_conversation: 10, pingpong_hold: 4, heartbeat_s: 30, heartbeat_misses: 2, stub_chars: 200, role_silence_s: 600, role_daily_budget: 50, question_max_blocks: 1 },
     // id prefix -> the repo whose `get` answers it (PLAN-hub.md §12); the pattern and
     // the get verb are the repo's own declaration (tools/items/services.json below)
-    stores: { items: 'tools/items' },
+    stores: { items: 'tools/items', ctx: 'tools/ctx' },
+    prompts: 'ctx',
   };
 }
+
+// The fixture usage gate: answers from tools/usage/answer (`go`, `warn ...`, `hold until ...`),
+// exit 0 only on go, and records the estimate it was asked in tools/usage/asked.
+const USAGE_CLI = `#!/bin/sh
+# usage gate <estimate>: a fixture (PLAN-usage-reporting.md §2's contract)
+here=$(dirname "$0")
+echo "$2" >> "$here/asked"
+answer=$(cat "$here/answer" 2>/dev/null || echo go)
+case "$answer" in
+  go*) exit 0 ;;
+  *) echo "$answer"; exit 1 ;;
+esac
+`;
+
+// The fixture ctx: store: put reads stdin, keeps it under store/<id>.txt and prints the
+// id; get prints the record's first line (its one readable line) then the whole text.
+const CTX_CLI = `#!/usr/bin/env node
+const fs = require('node:fs'); const path = require('node:path'); const crypto = require('node:crypto');
+const here = __dirname; const dir = path.join(here, 'store'); fs.mkdirSync(dir, { recursive: true });
+const [verb, arg] = process.argv.slice(2);
+if (verb === 'put') {
+  const text = fs.readFileSync(0, 'utf8');
+  const id = crypto.createHash('sha256').update(text).digest('hex').slice(0, 8);
+  fs.writeFileSync(path.join(dir, id + '.txt'), text);
+  process.stdout.write('ctx:' + id + '\\n');
+} else if (verb === 'get') {
+  const id = String(arg || '').replace(/^ctx:/, '');
+  const f = path.join(dir, id + '.txt');
+  if (!fs.existsSync(f)) { process.stderr.write('not found\\n'); process.exit(1); }
+  const text = fs.readFileSync(f, 'utf8');
+  process.stdout.write(text.split('\\n')[0].slice(0, 80) + '\\n' + text + (text.endsWith('\\n') ? '' : '\\n'));
+} else { process.stderr.write('verbs: put, get\\n'); process.exit(2); }
+`;
 
 // The items repo's services.json: its `ids` declaration (PLAN-hub.md §12).
 const ITEMS_SERVICES = {
@@ -94,8 +137,45 @@ async function makeNode(opts = {}) {
   write(root, 'site/store.sh', '#!/bin/sh\nexit 0\n', 0o755);
   write(root, 'site/data.db', '');
   write(root, 'site/src.txt', 'source\n');
+  write(root, 'tools/usage/usage', USAGE_CLI, 0o755);
+  write(root, 'tools/ctx/ctx', CTX_CLI, 0o755);
   const token = crypto.randomBytes(16).toString('hex');
   return { root, port, token, registry: reg };
+}
+
+// A window's inbox: a Unix socket server that keeps every line it receives.
+function listenSocket(root, name) {
+  const sockPath = path.join(root, '.hub', `${name}.sock`);
+  fs.mkdirSync(path.dirname(sockPath), { recursive: true });
+  const lines = [];
+  const server = net.createServer((c) => {
+    let buf = '';
+    c.on('data', (d) => { buf += d.toString('utf8'); });
+    c.on('end', () => { for (const l of buf.split('\n')) if (l.trim()) lines.push(JSON.parse(l)); });
+  });
+  return new Promise((resolve) => {
+    server.listen(sockPath, () => resolve({
+      path: sockPath,
+      lines: () => lines,
+      texts: () => lines.map((l) => l.message && l.message.content),
+      close: () => new Promise((r) => server.close(() => r())),
+    }));
+  });
+}
+
+// The usage gate's answer for the fixture.
+function usageAnswer(node, text) { write(node.root, 'tools/usage/answer', `${text}\n`); }
+function usageAsked(node) { try { return fs.readFileSync(path.join(node.root, 'tools/usage/asked'), 'utf8').trim().split('\n').filter(Boolean); } catch { return []; } }
+
+// A hook's input, as Claude Code sends it, and the hook's parsed output.
+function hook(node, name, input, opts = {}) {
+  const args = ['hook', name];
+  if (opts.role) args.push('--role', opts.role);
+  const r = hub(node, args, { input: typeof input === 'string' ? input : JSON.stringify({ session_id: 'fixture', cwd: node.root, hook_event_name: 'Stop', ...input }), extra: opts.extra });
+  const text = r.stdout.trim();
+  let j = null;
+  if (text) { try { j = JSON.parse(text); } catch { j = { unparsed: text }; } }
+  return { code: r.code, out: j, stderr: r.stderr, raw: r };
 }
 
 function env(node, extra = {}) {
@@ -151,7 +231,8 @@ function down(node) { return hub(node, ['down']); }
 function cleanup(node) {
   const info = pidfile(node);
   if (info) { try { process.kill(info.pid, 'SIGKILL'); } catch { /* gone */ } }
+  if (process.env.HUB_FIXTURE_LOG) { try { process.stderr.write(`--- ${node.root}/.hub/server.log\n${fs.readFileSync(path.join(node.root, '.hub', 'server.log'), 'utf8')}`); } catch { /* no log */ } }
   fs.rmSync(node.root, { recursive: true, force: true });
 }
 
-module.exports = { TOOL, BIN, makeNode, hub, gate, hookInput, ledgerRows, pidfile, up, down, cleanup, write, freePort, spawn };
+module.exports = { TOOL, BIN, makeNode, hub, gate, hook, hookInput, ledgerRows, pidfile, up, down, cleanup, write, freePort, spawn, listenSocket, usageAnswer, usageAsked, STORES };

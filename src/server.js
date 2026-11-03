@@ -1,8 +1,9 @@
 'use strict';
-// The node's server (PLAN-hub.md §3, H1a-0 skeleton and H1a-0b's read route):
-// 127.0.0.1:<server.port>, every request carrying `Authorization: Bearer
-// $HUB_TOKEN` or refused, the pidfile .hub/server.json, and the routes in ROUTES,
-// which docs/API.md documents both ways (tests/hub/help.test.js diffs them).
+// The node's server (PLAN-hub.md §3: H1a-0's skeleton and write gate, H1a-0b's
+// read route, H1a-2's relay): 127.0.0.1:<server.port>, every request carrying
+// `Authorization: Bearer $HUB_TOKEN` or refused, the pidfile .hub/server.json, and
+// the routes in ROUTES, which docs/API.md documents both ways (tests/hub/help.test.js
+// diffs them). A `:name` segment in a route's path is a parameter.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -11,10 +12,14 @@ const crypto = require('node:crypto');
 const reg = require('./registry');
 const gate = require('./gate');
 const read = require('./read');
+const relay = require('./relay');
+const D = require('./deliver');
+const V = require('./vocab');
 const ledger = require('./ledger');
 
-const MAX_BODY = 64 * 1024;
+const MAX_BODY = 256 * 1024;
 const PIDFILE = 'server.json';
+const LEDGER_PAGE = 200;
 
 function pidfilePath(root) { return path.join(root, reg.STATE_DIR, PIDFILE); }
 
@@ -47,6 +52,10 @@ function statusBody(st) {
     dead_letter: st.deadLetter.length,
     children: (Array.isArray(d.children) ? d.children : []).map((c) => ({ name: c && c.name, registered: false })),
     stores_json: storesState(reg.loadStores(st.root)),
+    sessions: st.sessions.size,
+    usage_gate: d.services && d.services[V.USAGE_SERVICE] ? 'on' : 'off',
+    turns: { ...st.turns },
+    registry_hash: st.hash,
   };
 }
 
@@ -85,14 +94,52 @@ function readRequest(st, req) {
   return { decision: ans.decision, kind: ans.kind, store: ans.store, get: ans.get, reason: ans.reason, ledger: id };
 }
 
-// The route table, exported for the help-equals-implemented gate.
+// The limits the server enforces, each with its value (§8 "limits both ways").
+function limitsExport(st) {
+  const limits = st.registry.limits || {};
+  return { limits: relay.LIMITS_EXPORT.map((l) => ({ ...l, value: Number.isInteger(limits[l.name]) ? limits[l.name] : null })) };
+}
+
+function ledgerPage(st, q) {
+  let rows = ledger.read(st.root);
+  if (q.since) rows = rows.filter((r) => r.ts >= q.since);
+  if (q.kind) rows = rows.filter((r) => r.kind === q.kind || r.route === q.kind || r.decision === q.kind);
+  const limit = Number.isInteger(Number(q.limit)) && Number(q.limit) > 0 ? Number(q.limit) : LEDGER_PAGE;
+  return { total: rows.length, rows: rows.slice(-limit) };
+}
+
+// The route table, exported for the help-equals-implemented gate. A handler may
+// be async; a GET handler gets the query, a POST handler the body; both get params.
 const ROUTES = [
   { method: 'GET', path: '/health', handle: (st) => ({ ok: true, name: st.registry.node, pid: process.pid }) },
   { method: 'GET', path: '/status', handle: (st) => statusBody(st) },
   { method: 'GET', path: '/routes', handle: (st) => ({ node: st.registry.node, routes: reg.routeTable(st.registry) }) },
+  { method: 'GET', path: '/limits', handle: (st) => limitsExport(st) },
+  { method: 'GET', path: '/ledger', handle: (st, q) => ledgerPage(st, q) },
+  { method: 'GET', path: '/held', handle: (st) => ({ held: st.held }) },
+  { method: 'GET', path: '/dead-letter', handle: (st) => ({ dead_letter: st.deadLetter }) },
+  { method: 'GET', path: '/sessions', handle: (st) => ({ sessions: [...st.sessions.values()] }) },
+  { method: 'POST', path: '/sessions', handle: (st, body) => relay.recordSession(st, body) },
+  { method: 'POST', path: '/sessions/:id/prompts', handle: (st, body, params) => relay.recordPrompt(st, params.id, body) },
+  { method: 'POST', path: '/route', handle: (st, body) => relay.route(st, body) },
   { method: 'POST', path: '/write-request', handle: (st, body) => writeRequest(st, body) },
   { method: 'POST', path: '/read-request', handle: (st, body) => readRequest(st, body) },
 ];
+
+function matchRoute(url) {
+  const segs = url.split('/');
+  for (const r of ROUTES) {
+    const want = r.path.split('/');
+    if (want.length !== segs.length) continue;
+    const params = {};
+    let ok = true;
+    for (let i = 0; i < want.length; i++) {
+      if (want[i].startsWith(':')) { if (!segs[i]) { ok = false; break; } params[want[i].slice(1)] = decodeURIComponent(segs[i]); } else if (want[i] !== segs[i]) { ok = false; break; }
+    }
+    if (ok) return { route: r, params };
+  }
+  return null;
+}
 
 function send(res, code, obj) {
   const data = Buffer.from(JSON.stringify(obj));
@@ -103,11 +150,18 @@ function send(res, code, obj) {
 function handler(st) {
   return (req, res) => {
     if (!tokenOk(req.headers.authorization, st.token)) return send(res, 401, { error: 'token refused' });
-    const url = (req.url || '').split('?')[0];
-    const route = ROUTES.find((r) => r.path === url);
-    if (!route) return send(res, 404, { error: `no route ${url}` });
-    if (route.method !== req.method) return send(res, 405, { error: `${url} takes ${route.method}` });
-    if (req.method === 'GET') return send(res, 200, route.handle(st));
+    const [url, queryText] = (req.url || '').split('?');
+    const query = Object.fromEntries(new URLSearchParams(queryText || ''));
+    const matches = ROUTES.filter((r) => matchRoute(url) && matchRoute(url).route.path === r.path);
+    const m = matchRoute(url);
+    if (!m) return send(res, 404, { error: `no route ${url}` });
+    const route = matches.find((r) => r.method === req.method);
+    if (!route) return send(res, 405, { error: `${url} takes ${matches.map((r) => r.method).join(' or ')}` });
+    const answer = (fn) => Promise.resolve().then(fn).then((body) => send(res, 200, body), (e) => {
+      ledger.append(st.root, { route: url, by: 'server', kind: 'error', decision: 'error', reason: `${e && e.message ? e.message : e}` });
+      send(res, 500, { error: `${e && e.message ? e.message : e}` });
+    });
+    if (req.method === 'GET') return answer(() => route.handle(st, query, m.params));
     const chunks = [];
     let size = 0;
     let over = false;
@@ -120,7 +174,7 @@ function handler(st) {
         const id = ledger.append(st.root, { route: url, by: 'server', role: null, tool: null, cli: null, verb: null, targets: [], decision: 'deny', reason: why });
         return send(res, 400, { decision: 'deny', reason: why, use: null, ledger: id });
       }
-      return send(res, 200, route.handle(st, body));
+      return answer(() => route.handle(st, body, m.params));
     });
     return undefined;
   };
@@ -129,30 +183,26 @@ function handler(st) {
 // The state a server restores from .hub/ at start (PLAN-hub.md §3 step 3; §8 "kill
 // the server": `hub up` after a kill restores held, dead-letter and ledger state):
 // held messages are .hub/held/<id>.json, dead letters .hub/dead-letter/<id>.json,
-// and the ledger is the append-only .hub/ledger.jsonl, which nothing truncates.
-const HELD_DIR = 'held';
-const DEAD_DIR = 'dead-letter';
-
-function readDir(root, sub) {
-  const dir = path.join(root, reg.STATE_DIR, sub);
-  let names = [];
-  try { names = fs.readdirSync(dir).filter((n) => n.endsWith('.json')).sort(); } catch { return []; }
-  const out = [];
-  for (const n of names) {
-    try { out.push(JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8'))); } catch { out.push({ id: n.replace(/\.json$/, ''), unreadable: true }); }
-  }
-  return out;
-}
+// sessions .hub/sessions/<id>.json, queues .hub/queue/<target>/<id>.json, and the
+// ledger is the append-only .hub/ledger.jsonl, which nothing truncates.
+const HELD_DIR = D.HELD_DIR;
+const DEAD_DIR = D.DEAD_DIR;
 
 function loadState(root) {
-  return { held: readDir(root, HELD_DIR), deadLetter: readDir(root, DEAD_DIR), ledgerRows: ledger.read(root).length };
+  return { held: D.listJson(root, HELD_DIR), deadLetter: D.listJson(root, DEAD_DIR), ledgerRows: ledger.read(root).length };
 }
 
 // Runs in the foreground until SIGTERM or SIGINT. Resolves when listening;
 // rejects with the listen error (a port in use, say).
 function start(root, registry, token) {
   const restored = loadState(root);
-  const st = { root, registry: registry.data, hash: registry.hash, token, port: registry.data.server.port, queued: [], held: restored.held, deadLetter: restored.deadLetter };
+  const st = {
+    root, registry: registry.data, hash: registry.hash, token, port: registry.data.server.port,
+    queued: [], held: restored.held, deadLetter: restored.deadLetter,
+    sessions: new Map(), prompts: new Map(), delivered: new Map(), counts: new Map(),
+    turns: { validate: 0, gate: 0, route: 0, model: 0 },
+  };
+  relay.restore(st);
   const server = http.createServer(handler(st));
   return new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -173,4 +223,4 @@ function start(root, registry, token) {
   });
 }
 
-module.exports = { start, ROUTES, readPidfile, pidfilePath, loadState, HELD_DIR, DEAD_DIR };
+module.exports = { start, ROUTES, matchRoute, readPidfile, pidfilePath, loadState, HELD_DIR, DEAD_DIR };

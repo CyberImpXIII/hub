@@ -1,14 +1,18 @@
 # hub
 
 The node server from PLAN-routing-tree.md, built as a portable tool. **Stage:
-H1a-0, H1a-0b and H1a-1 built** (the write gate, the read route and the program
-with no routing yet: PLAN-hub.md §3, §2, Decision 17; H1a-0b and H1a-1 in the
-cloud pass of 2026-11): `bin/hub` (Node, no packages) with `up`, `down`, `status`,
-`check`, `init`, `routes` and `hook gate`; `hub.json`'s shape is `hub.schema.json`
-(its enums `src/vocab.js`'s lists) and `hub init` writes `hub.starter.json`; the
-plan is `PLAN-hub.md`, from `PLAN-hub-brief.md`. The hook is **not registered**
-anywhere: registering it is harness's step, after `setup plans edit|add` and
-todo's import exist (§3).
+H1a-0, H1a-0b, H1a-1 and H1a-2 built** (the write gate, the read route, the program
+with no routing yet, and the relay through the server: PLAN-hub.md §3, §2, §1,
+Decision 17; the last three in the cloud pass of 2026-11): `bin/hub` (Node, no
+packages) with `up`, `down`, `status`, `check`, `init`, `routes`, `send`, `log`,
+`grammar`, `origin`, `get`, `limits` and the hooks `gate`, `planner-stop`,
+`dispatcher-stop`, `session-start`, `user-prompt`; `hub.json`'s shape is
+`hub.schema.json` (its enums `src/vocab.js`'s lists) and `hub init` writes
+`hub.starter.json`; the plan is `PLAN-hub.md`, from `PLAN-hub-brief.md`. **No hook
+is registered** anywhere: registering them is harness's step (the gate after `setup
+plans edit|add` and todo's import exist, §3; the four relay hooks as one-line callers
+beside H1a-2, §9), and no `hub.json` exists at a real node until setup's component
+writes it (§2, Decision 2). Every hook but `gate` fails open (`hub hook --help`).
 
 **This repo's exception to "every hook fails open": `hub hook gate` fails
 CLOSED for writes and for store reads.** With the server down, unreachable,
@@ -26,7 +30,7 @@ reads itself.
 |---|---|
 | the task, its fixed points and its output contract | `PLAN-hub-brief.md` |
 | the brief's inputs and the review's fix-pass inputs (copies, refreshed in full 2026-10-19) | `docs/inputs/`; start with its `README.md`. claudeTest's top-level `CLAUDE.md` is `docs/inputs/claudeTest-CLAUDE.md`, not this file |
-| the program | `bin/hub --help`; `src/` (cli, server, gate, read, classify, registry, schema, vocab, ledger, client); routes in `docs/API.md` (held equal to the server's table); state at a node in `.hub/` (pidfile, `ledger.jsonl`, log; gitignored); `HUB_TOKEN` from the environment, never stored |
+| the program | `bin/hub --help`; `src/` (cli, server, relay, route, envelope, section, origin, store, deliver, gate, read, classify, registry, schema, vocab, ledger, client); routes in `docs/API.md` (held equal to the server's table); state at a node in `.hub/` (pidfile, `ledger.jsonl`, log; gitignored); `HUB_TOKEN` from the environment, never stored |
 | the program's tests | `./dev.sh hubtests` (`tests/hub/*.test.js`, node:test, fixture nodes in temp git repos, never a repo of ours) |
 | before committing | `./dev.sh check`: the parts of `check.parts.json` (unit tests, the program's tests, hook tests, required files, the inputs against `SHA256SUMS`, the copies at mode 0444 (`sealed`: a marker, not a guard; after a clone, `./dev.sh seal`), the leak audit, `setup plans .`, `checks run .`), run by the shared runner `devtools/parts.py` (setup's rendered copy of tools/checks' runner); a gate whose sibling tool is missing exits 3, an `UNCHK` part: never ok, not red, named in the summary line. Iterate with `./dev.sh test <part>`, then `./dev.sh check --resume`; run the whole check once before the commit. `--json` prints the one schema, one check per part; `tests/test_parts.py` holds the wiring |
 | copies against their originals | `./dev.sh drift`; `./dev.sh refresh` re-copies them (leak audit first) at mode 0444 and rewrites `SHA256SUMS` |

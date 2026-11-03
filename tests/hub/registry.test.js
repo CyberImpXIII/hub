@@ -138,7 +138,7 @@ test('each rule the shape cannot say fails on its own fixture, and the counterfa
     ['a nested tag whose target is nothing declared', (r) => { r.tags = { question: { plan: 'ghost' } }; }, /tags\.question\.plan: ghost is neither a role/],
     ['a nested tag keyed by a word that is no question kind', (r) => { r.tags = { question: { riddle: 'planner' } }; }, /tags\.question\.riddle: "riddle" is not one of the allowed keys/],
     ['a repo tag with no route and no role or child of the repo\'s name', (r) => { r.repos['tools/items'].tags = ['items-request']; }, /repos\.tools\/items\.tags: items-request has no route/],
-    ['a seam kind with no row and no unowned default', (r) => { delete r.owners.unowned; }, /owners: seam kind delivery has no row and no `unowned` default/],
+    ['a seam kind with no row and no unowned default', (r) => { delete r.owners.unowned; }, /owners: seam kind lease has no row and no `unowned` default/],
     ['a stores prefix naming no repos key', (r) => { r.stores.ghost = 'nobody'; }, /stores\.ghost: nobody is not a repos key/],
     ['a role dir that does not exist', (r) => { r.roles.site.dir = 'elsewhere'; r.repos.elsewhere = { cli: 'x', verbs: [] }; }, /roles\.site\.dir: elsewhere\/ does not exist/],
     ['a repos cli that is not executable', (r) => { r.repos.site.cli = './cli.json'; }, /repos\.site\.cli: site\/\.\/cli\.json is not an executable file/],
@@ -165,7 +165,7 @@ test('each rule the shape cannot say fails on its own fixture, and the counterfa
     F.write(ok.root, 'kid/kid-cli', '#!/bin/sh\nexit 0\n', 0o755);
     const r = F.hub(ok, ['check']);
     assert.equal(r.code, 0, r.stdout);
-    assert.match(r.stdout, /5 roles, 4 repos, 5 routes/);
+    assert.match(r.stdout, /5 roles, 5 repos, 5 routes/);
     const table = reg.routeTable(ok.registry);
     assert.deepEqual(table.find((x) => x.tag === 'kid-request'), { tag: 'kid-request', kind: null, target: 'kid', via: 'child', by: 'tags' });
     assert.deepEqual(table.find((x) => x.tag === 'take-request'), { tag: 'take-request', kind: null, target: 'kid', via: 'child', by: 'repos' });
