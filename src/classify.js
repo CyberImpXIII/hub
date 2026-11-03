@@ -1,6 +1,13 @@
 'use strict';
-// `hub hook gate`'s classifier: a PreToolUse call is a read, a write, or
-// unparseable. HEURISTIC for Bash, and its reach is stated in HOOK_GATE_HELP.
+// `hub hook gate`'s classifier: a PreToolUse call is a read, a store read, a write,
+// or unparseable. HEURISTIC for Bash, and its reach is stated in HOOK_GATE_HELP.
+//
+// A STORE READ (PLAN-hub.md §3 H1a-0b) is a Read of a path stores.json lists, or a
+// Bash command that names such a path as an argument or an input redirection, a
+// word that is a declared store id (a prefix in hub.json `stores`, matching the
+// owner's declared pattern), or a declared CLI's own `get` verb. Store-ness is read
+// from disk here, never asked of the server, so the hook can tell a store from a
+// non-store path with the server down. Every other read is plain and never sent.
 //
 // Bash write targets follow a SUBSET of the shared write-target parser's reach
 // (named in tests/hub/classify.test.js, which compares the
@@ -16,6 +23,7 @@
 // backtick) is not emitted. A call to a CLI a `repos` row names is a write
 // request too, carried with its arguments; the server finds the verb.
 
+const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const reg = require('./registry');
@@ -137,18 +145,20 @@ function lex(s) {
   return toks;
 }
 
-// Segments: [{words: [..], outs: [..], heredocs: [..]}].
+// Segments: [{words: [..], outs: [..], ins: [..], heredocs: [..]}]; `ins` are the
+// files input redirections read (a store read when one is a store).
 function segments(toks) {
   const segs = [];
-  let cur = { words: [], outs: [], heredocs: [] };
+  const fresh = () => ({ words: [], outs: [], ins: [], heredocs: [] });
+  let cur = fresh();
   let next = null; // 'O' or 'I'
-  const end = () => { if (cur.words.length || cur.outs.length || cur.heredocs.length) segs.push(cur); cur = { words: [], outs: [], heredocs: [] }; next = null; };
+  const end = () => { if (cur.words.length || cur.outs.length || cur.ins.length || cur.heredocs.length) segs.push(cur); cur = fresh(); next = null; };
   for (const t of toks) {
     if (t.t === 'S') { end(); continue; }
     if (t.t === 'H') { cur.heredocs.push(t.v); continue; }
     if (t.t === 'O' || t.t === 'I') { next = t.t; continue; }
     if (next === 'O') { cur.outs.push(t.v); next = null; continue; }
-    if (next === 'I') { next = null; continue; }
+    if (next === 'I') { cur.ins.push(t.v); next = null; continue; }
     cur.words.push(t.v);
   }
   end();
@@ -227,15 +237,21 @@ function inPlaceFiles(name, args) {
 }
 
 // Every write target of a Bash command, absolute, in order; CLI calls are not
-// targets (see classify). `cwd` is the base of the first segment.
-function analyse(commandText, cwd, isCli) {
+// targets (see classify). `cwd` is the base of the first segment. `scan`, when
+// given, is asked about every argument and input file of a non-CLI segment and
+// returns a store read or null (see classify); its answers come back as `reads`.
+function analyse(commandText, cwd, isCli, scan) {
   const targets = [];
   const clis = [];
+  const reads = [];
   let base = cwd;
   for (const seg of segments(lex(commandText))) {
     for (const o of seg.outs) emit(targets, o, base);
     const c = command(seg.words);
-    if (!c) continue;
+    if (!c) {
+      if (scan) for (const w of seg.ins) { const r = scan(w, base); if (r) reads.push(r); }
+      continue;
+    }
     const name = path.basename(c.cmd);
     if (name === 'cd') {
       const to = c.args[0];
@@ -246,8 +262,8 @@ function analyse(commandText, cwd, isCli) {
     }
     if (SHELLS.has(name)) {
       for (const body of seg.heredocs) {
-        const inner = analyse(body, base, isCli);
-        targets.push(...inner.targets); clis.push(...inner.clis);
+        const inner = analyse(body, base, isCli, scan);
+        targets.push(...inner.targets); clis.push(...inner.clis); reads.push(...inner.reads);
       }
     }
     if (isCli && base !== UNKNOWN && isCli(c.cmd, base)) { clis.push({ cli: c.cmd, args: c.args, cwd: base }); continue; }
@@ -256,16 +272,41 @@ function analyse(commandText, cwd, isCli) {
     else if (LAST.has(name)) { const ops = operands(c.args); if (ops.length > 0) emit(targets, ops[ops.length - 1], base); }
     else if (name === 'sed' || name === 'perl') for (const a of inPlaceFiles(name, c.args)) emit(targets, a, base);
     else if (name === 'dd') for (const a of c.args) if (a.startsWith('of=')) emit(targets, a.slice(3), base);
+    if (scan) for (const w of [...c.args, ...seg.ins]) { const r = scan(w, base); if (r) reads.push(r); }
   }
-  return { targets, clis };
+  return { targets, clis, reads };
 }
 
-function bashWriteTargets(commandText, cwd) { return analyse(commandText, cwd, null).targets; }
+function bashWriteTargets(commandText, cwd) { return analyse(commandText, cwd, null, null).targets; }
+
+// The store reads of one Bash word: a declared store id (by prefix and pattern), or
+// an existing file that stores.json lists. Options and run-time words are neither.
+function storeReadOf(word, base, root, registry, stores, cwd) {
+  if (typeof word !== 'string' || !word || word.startsWith('-')) return null;
+  const s = reg.storeIdOf(registry, root, word);
+  if (s) return { tool: 'Bash', id: word, cwd };
+  if (!stores || !stores.entries) return null;
+  const abs = resolveWord(word, base);
+  if (!abs) return null;
+  const rel = reg.relTo(root, abs);
+  if (rel === null || !reg.storeOf(stores, rel)) return null;
+  let st;
+  try { st = fs.statSync(abs); } catch { return null; }
+  return st.isFile() ? { tool: 'Bash', path: abs, cwd } : null;
+}
+
+function dedupe(requests) {
+  const seen = new Set();
+  return requests.filter((r) => { const k = r.id ? `id:${r.id}` : r.path ? `path:${r.path}` : `store:${r.store}`; if (seen.has(k)) return false; seen.add(k); return true; });
+}
 
 // A PreToolUse input -> {kind: 'read'} | {kind: 'bad', why} |
-// {kind: 'write', requests: [{tool, file?, targets?, cli?, args?, cwd}]}.
-// `registry` (hub.json data, or null) is only used to recognise a declared CLI.
-function classify(input, root, registry) {
+// {kind: 'write', requests: [{tool, file?, targets?, cli?, args?, cwd}]} |
+// {kind: 'store-read', requests: [{tool, id?, path?, store?, cwd}]}.
+// `registry` (hub.json data, or null) is used to recognise a declared CLI and a
+// declared id prefix; `stores` (loadStores' answer, or null) to recognise a store
+// path. With neither, every call that is not a write is a plain read.
+function classify(input, root, registry, stores) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return { kind: 'bad', why: 'the hook input is not a JSON object' };
   const tool = input.tool_name;
   const ti = input.tool_input;
@@ -277,15 +318,38 @@ function classify(input, root, registry) {
     if (typeof file !== 'string' || !file) return { kind: 'bad', why: `${tool} names no file` };
     return { kind: 'write', requests: [{ tool, file: path.resolve(cwd || root || '/', file), cwd }] };
   }
+  if (tool === 'Read') {
+    const file = ti && ti.file_path;
+    if (typeof file === 'string' && file && root && stores && stores.entries) {
+      const abs = path.resolve(cwd || root, file);
+      const rel = reg.relTo(root, abs);
+      if (rel !== null && reg.storeOf(stores, rel)) return { kind: 'store-read', requests: [{ tool: 'Read', path: abs, cwd }] };
+    }
+    return { kind: 'read' };
+  }
   if (tool === 'Bash') {
     const cmd = ti && ti.command;
     if (typeof cmd !== 'string') return { kind: 'bad', why: 'Bash call has no command' };
     if (!cwd) return { kind: 'bad', why: 'Bash call has no cwd' };
     const isCli = registry && root ? (word, base) => reg.cliRow(registry, root, word, base) !== null : null;
-    const { targets, clis } = analyse(cmd, cwd, isCli);
-    const requests = clis.map((c) => ({ tool: 'Bash', cli: c.cli, args: c.args, cwd: c.cwd }));
-    if (targets.length) requests.push({ tool: 'Bash', file: targets[0], targets, cwd });
-    return requests.length ? { kind: 'write', requests } : { kind: 'read' };
+    const scan = registry && root ? (word, base) => storeReadOf(word, base, root, registry, stores, cwd) : null;
+    const { targets, clis, reads } = analyse(cmd, cwd, isCli, scan);
+    const writes = [];
+    const idReads = [];
+    for (const c of clis) {
+      // a declared CLI called with its own `get` verb reads one record: a store read, not a write
+      const row = reg.cliRow(registry, root, c.cli, c.cwd);
+      const gets = row ? reg.getVerbs(root, row) : [];
+      const pos = c.args.filter((a) => typeof a === 'string' && !a.startsWith('-'));
+      if (row && pos.length && gets.includes(pos[0])) {
+        const id = pos[1] && reg.storeIdOf(registry, root, pos[1]) ? pos[1] : null;
+        idReads.push(id ? { tool: 'Bash', id, cwd: c.cwd } : { tool: 'Bash', store: row.key, cwd: c.cwd });
+      } else writes.push({ tool: 'Bash', cli: c.cli, args: c.args, cwd: c.cwd });
+    }
+    if (targets.length) writes.push({ tool: 'Bash', file: targets[0], targets, cwd });
+    if (writes.length) return { kind: 'write', requests: writes };
+    const storeReads = dedupe([...idReads, ...reads]);
+    return storeReads.length ? { kind: 'store-read', requests: storeReads } : { kind: 'read' };
   }
   return { kind: 'read' };
 }
@@ -294,15 +358,26 @@ const HOOK_GATE_HELP = `hub hook gate [--role <role>] [--root <dir>]
 
 A PreToolUse hook: reads the call as JSON on stdin and answers as the tool
 decision. Nothing is decided here: every write goes to the server's
-/write-request and its answer is returned; every read passes with no server call.
+/write-request and every store read to its /read-request, and the answer is
+returned; every other read passes with no server call.
 
-  read     Read, Grep, Glob and every tool not named below; a Bash command whose
-           writes the classifier does not see. Passes: no output, exit 0.
+  read     Grep, Glob and every tool not named below; a Read of a path stores.json
+           does not list; a Bash command that neither writes nor names a store.
+           Passes: no output, exit 0, no server call, no ledger row.
+  store    a Read of a path stores.json lists; a Bash command naming such a path
+           as an argument or an input redirection (< file), a word that is a
+           declared store id (its prefix in hub.json \`stores\`, matching the owner's
+           declared pattern in its services.json \`ids\`), or a declared CLI's own
+           \`get\` verb. Sent to /read-request; the server names the store and its
+           \`get\`, and in H1a-0b never runs it: an allow passes and the role's own
+           call runs. Reads are never denied for being unowned: a path that is no
+           store is plain Read, whoever owns it.
   write    Edit, Write, NotebookEdit, MultiEdit (always); a Bash command calling a
            CLI that a hub.json repos row names (by path, or a bare word by
-           basename); a Bash command with a visible write target. Sent to the
-           server; an allow passes with no output, a deny is a PreToolUse deny
-           naming the verb to use.
+           basename) with any verb but its \`get\`; a Bash command with a visible
+           write target. Sent to the server; an allow passes with no output, a
+           deny is a PreToolUse deny naming the verb to use. A command that both
+           writes and reads a store is a write.
   bad      input that is not a JSON object, no tool_name, an Edit naming no file,
            a Bash call with no command or no cwd: denied.
 
@@ -320,11 +395,19 @@ does not yet), a path built at run time ($VAR
 other than HOME and CLAUDE_PROJECT_DIR, $(...), backticks), and every tool that
 is not one of the above (an MCP tool among them).
 
-Fails CLOSED for writes, the one exception to "every hook fails open": with the
-server down, unreachable, or HUB_TOKEN unset, a write is denied with one line
-naming \`hub status\`; a read still passes. Each deny the hook gives itself is one
-ledger row, as is each answer the server gives.
-The role is --role, else the input's agent_type; a write with neither is denied.
-The node is --root, else the nearest hub.json above the input's cwd.`;
+A store read is seen only where the id or the path is a literal word: an id or a
+path built at run time, or read by a script the command runs, passes as a read.
+With stores.json missing no path is a store (every Read of a path is plain, and
+\`hub status\` reports the file missing); a declared-prefix id is still a store read,
+since its prefix is in hub.json.
+
+Fails CLOSED for writes and for store reads, the one exception to "every hook
+fails open": with the server down, unreachable, or HUB_TOKEN unset, a write and a
+store read are each denied with one line naming \`hub status\`; every other read
+still passes, so a down server strands no session reading its own repo and no
+store is read past its \`get\`. Each deny the hook gives itself is one ledger row,
+as is each answer the server gives.
+The role is --role, else the input's agent_type; a write or a store read with
+neither is denied. The node is --root, else the nearest hub.json above the input's cwd.`;
 
 module.exports = { classify, bashWriteTargets, lex, segments, HOOK_GATE_HELP };

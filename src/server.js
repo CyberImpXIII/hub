@@ -1,8 +1,8 @@
 'use strict';
-// The node's server (PLAN-hub.md §3, H1a-0 skeleton): 127.0.0.1:<server.port>,
-// every request carrying `Authorization: Bearer $HUB_TOKEN` or refused, the
-// pidfile .hub/server.json, and the routes in ROUTES, which docs/API.md documents
-// both ways (tests/hub/help.test.js diffs them).
+// The node's server (PLAN-hub.md §3, H1a-0 skeleton and H1a-0b's read route):
+// 127.0.0.1:<server.port>, every request carrying `Authorization: Bearer
+// $HUB_TOKEN` or refused, the pidfile .hub/server.json, and the routes in ROUTES,
+// which docs/API.md documents both ways (tests/hub/help.test.js diffs them).
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,6 +10,7 @@ const http = require('node:http');
 const crypto = require('node:crypto');
 const reg = require('./registry');
 const gate = require('./gate');
+const read = require('./read');
 const ledger = require('./ledger');
 
 const MAX_BODY = 64 * 1024;
@@ -65,11 +66,31 @@ function writeRequest(st, req) {
   return { decision: ans.decision, reason: ans.reason, use: ans.use || null, ledger: id };
 }
 
+// The read route (PLAN-hub.md §3 H1a-0b): names the store and its `get`, never
+// runs it; every answer is one ledger row, with the id or the path it was judged on.
+function readRequest(st, req) {
+  const ctx = { root: st.root, registry: st.registry, stores: reg.loadStores(st.root) };
+  const ans = read.decide(ctx, req);
+  const row = {
+    route: '/read-request', by: 'server',
+    role: req && typeof req.role === 'string' ? req.role : null,
+    tool: req && typeof req.tool === 'string' ? req.tool : null,
+    cli: null,
+    verb: ans.get ? ans.get.verb : null,
+    targets: ans.targets || [],
+    id: ans.id, store: ans.store, kind: ans.kind,
+    decision: ans.decision, reason: ans.reason,
+  };
+  const id = ledger.append(st.root, row);
+  return { decision: ans.decision, kind: ans.kind, store: ans.store, get: ans.get, reason: ans.reason, ledger: id };
+}
+
 // The route table, exported for the help-equals-implemented gate.
 const ROUTES = [
   { method: 'GET', path: '/health', handle: (st) => ({ ok: true, name: st.registry.node, pid: process.pid }) },
   { method: 'GET', path: '/status', handle: (st) => statusBody(st) },
   { method: 'POST', path: '/write-request', handle: (st, body) => writeRequest(st, body) },
+  { method: 'POST', path: '/read-request', handle: (st, body) => readRequest(st, body) },
 ];
 
 function send(res, code, obj) {

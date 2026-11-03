@@ -48,8 +48,18 @@ function registry(port) {
     owners: { unowned: 'dispatcher', workspace: { paths: ['PLAN-*.md', 'TODO.md', 'todo.json'], roles: ['planner', 'dispatcher'] } },
     children: [{ name: 'kid', path: 'kid' }],
     parent: null,
+    // id prefix -> the repo whose `get` answers it (PLAN-hub.md §12); the pattern and
+    // the get verb are the repo's own declaration (tools/items/services.json below)
+    stores: { items: 'tools/items' },
   };
 }
+
+// The items repo's services.json: its `ids` declaration (PLAN-hub.md §12).
+const ITEMS_SERVICES = {
+  name: 'items',
+  services: [{ service: 'check', run: 'dev.sh', verbs: ['check'] }],
+  ids: [{ prefix: 'items:', pattern: 'items:it-\\d+', get: 'get' }],
+};
 
 const STORES = {
   stores: 1,
@@ -77,6 +87,7 @@ async function makeNode(opts = {}) {
   write(root, 'tools/plans/cli.json', { store: ['PLAN-*.md'], cli: 'plans-cli', verbs: ['plans edit', 'plans add'] });
   write(root, 'tools/plans/plans-cli', '#!/bin/sh\nexit 0\n', 0o755);
   write(root, 'tools/items/cli.json', { store: ['todo.json'], cli: 'items', verbs: ['add', 'done', 'list'] });
+  write(root, 'tools/items/services.json', opts.services === undefined ? ITEMS_SERVICES : opts.services);
   write(root, 'tools/items/items', '#!/bin/sh\nexit 0\n', 0o755);
   write(root, 'tools/items/todo.json', '{}\n');
   write(root, 'site/cli.json', { store: ['data.db'], cli: 'store.sh', verbs: ['import'] });

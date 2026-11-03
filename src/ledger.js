@@ -2,9 +2,9 @@
 // The ledger: one JSON row per answer, appended to <root>/.hub/ledger.jsonl.
 // The server writes a row for every answer it gives; the hook writes one for each
 // deny it gives itself (server down, no token, an unparseable call), so every
-// answer to a write is one row whoever gave it. A row never holds a command's
-// arguments, only the paths it was judged on, so a value typed on a command line
-// is never copied here.
+// answer to a write or a store read is one row whoever gave it. A row never holds
+// a command's arguments, only the paths and the store id it was judged on, so a
+// value typed on a command line is never copied here.
 
 const fs = require('node:fs');
 const path = require('node:path');

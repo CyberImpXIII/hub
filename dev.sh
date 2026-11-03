@@ -43,7 +43,7 @@ usage() {
              while their files are unchanged
   hooktests  the shared hook copies' own tests (.claude/hooks/test-*.sh); one ending
              `UNCHECKED: <why>` with exit 3 makes the gate unchecked, never ok
-  hubtests   the program's tests (tests/hub/*.test.js, node --test): the write gate on a
+  hubtests   the program's tests (tests/hub/*.test.js, node --test): the write gate and the read route on a
              fixture node, the server, the classifier and its parity with the shared
              write-target parser, help == implemented, the direction and no-names audits;
              read from the TAP summary; a test skipped UNCHECKED makes it unchecked

@@ -137,6 +137,20 @@ test('classify: reads, writes, bad input', () => {
   // the counterfactual: the same command with no registry is not a CLI call
   assert.deepEqual(classify({ tool_name: 'Bash', tool_input: { command: 'tools/items/items add x' }, cwd: CWD }, CWD, null), { kind: 'read' });
 
+  // store reads (H1a-0b): a declared-prefix id is one wherever the word stands; the
+  // path case needs the file on disk and is read-route.test.js's. A Read of a path
+  // stores.json lists is a store read, a Read of any other path a plain one.
+  const withStores = { ...reg, stores: { items: 'tools/items' } };
+  assert.deepEqual(classify({ tool_name: 'Bash', tool_input: { command: 'echo items:it-3' }, cwd: CWD }, CWD, withStores), { kind: 'store-read', requests: [{ tool: 'Bash', id: 'items:it-3', cwd: CWD }] });
+  assert.deepEqual(classify({ tool_name: 'Bash', tool_input: { command: 'echo items:it-3 items:it-3 other:x' }, cwd: CWD }, CWD, withStores).requests.length, 1, 'one request per distinct id; an undeclared prefix is prose');
+  assert.deepEqual(classify({ tool_name: 'Bash', tool_input: { command: 'echo items:it-3' }, cwd: CWD }, CWD, reg), { kind: 'read' }, 'no stores key: the word is prose');
+  assert.deepEqual(classify({ tool_name: 'Bash', tool_input: { command: 'echo items:it-3 > out' }, cwd: CWD }, CWD, withStores).kind, 'write', 'a write beside a store read is a write');
+  const stores = { entries: [{ path: 'todo.json', declared_by: 'tools/items' }] };
+  assert.deepEqual(classify({ tool_name: 'Read', tool_input: { file_path: 'todo.json' }, cwd: CWD }, CWD, withStores, stores), { kind: 'store-read', requests: [{ tool: 'Read', path: '/w/node/todo.json', cwd: CWD }] });
+  assert.deepEqual(classify({ tool_name: 'Read', tool_input: { file_path: 'notes.md' }, cwd: CWD }, CWD, withStores, stores), { kind: 'read' });
+  assert.deepEqual(classify({ tool_name: 'Read', tool_input: { file_path: '/elsewhere/todo.json' }, cwd: CWD }, CWD, withStores, stores), { kind: 'read' }, 'outside the node: plain');
+  assert.deepEqual(classify({ tool_name: 'Read', tool_input: { file_path: 'todo.json' }, cwd: CWD }, CWD, withStores, { missing: true }), { kind: 'read' }, 'stores.json missing: plain');
+
   for (const [input, why] of [
     [null, /not a JSON object/], [[], /not a JSON object/], [{}, /no tool_name/],
     [{ tool_name: 'Edit', tool_input: {} }, /names no file/],

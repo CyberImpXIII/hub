@@ -1,6 +1,6 @@
 # hub server API
 
-The routes a node's server serves (PLAN-hub.md §3, H1a-0). Each `### METHOD /path`
+The routes a node's server serves (PLAN-hub.md §3, H1a-0 and H1a-0b). Each `### METHOD /path`
 heading below is one served route, and every served route has one:
 `tests/hub/help.test.js` diffs these headings with `src/server.js`'s `ROUTES`, both
 ways. The server binds `127.0.0.1:<server.port>` from `hub.json`.
@@ -68,6 +68,42 @@ An unparseable body is `400` with the same shape and `decision: "deny"`.
 `{id, ts, route, by: "server", role, tool, cli, verb, targets, decision, reason}`. A
 row holds the store paths the call was judged on, never its arguments. The hook's own
 denies (server down, no token, an unparseable call) are rows with `by: "hook"`.
+
+### POST /read-request
+
+The read route (PLAN-hub.md §3 H1a-0b). Body: `{role, tool, id?, path?, store?, cwd?}`,
+one of `id`, `path` or `store`.
+
+- `role`: a `roles` key in `hub.json`; anything else is denied. Nothing else is: **reads
+  are never denied for being unowned** (PLAN-services.md §3 step 3, "The hub owner's
+  four questions" 3).
+- `id`: a word of the form `<prefix>:<rest>`. When `<prefix>` is a key of `hub.json`'s
+  `stores` (prefix → repos key, §12) and the owner's declared pattern, if any, matches
+  (its `services.json` `ids`: `[{prefix, pattern, get}]`), the answer is `kind:
+  "store"` with the store's repos key and its `get` (`{cli, verb}` from that `ids` entry
+  and the repo's `cli.json`, or `null` when none is declared). Any other word is prose:
+  `kind: "plain"`.
+- `path`: resolved against `cwd` (else the node root). A path `stores.json` lists is
+  `kind: "store"` with its `declared_by` repo and that repo's `get`; any other path,
+  owned or not, is `kind: "plain"`. With `stores.json` missing or invalid every path is
+  `plain`, the reason says so, and `hub status` reports the file.
+- `store`: a repos key, for a declared CLI's `get` verb called with no id; `kind:
+  "store"` with that repo's `get`.
+
+Answer: `{"decision": "allow"|"deny", "kind": "store"|"plain"|null, "store": <repos key>|null, "get": {"cli", "verb"}|null, "reason": <one line>, "ledger": <row id>}`.
+An unparseable body is `400` with `decision: "deny"`.
+
+**In H1a-0b the server names the `get` and never runs it:** `hub get <id>` is H1a-2's
+(`ctx:`) and R1's. An allowed store read runs as the caller's own tool call, and the
+ledger row says which store it read. The hook (`hub hook gate`) sends only store reads
+here, classified from disk (`stores.json`, `hub.json`'s `stores`, the owners' `ids`),
+so a plain read makes no server call and leaves no row; with the server down a store
+read is denied by the hook with the `hub status` line, as a write is, and a plain read
+still passes.
+
+**Every answer is one ledger row**, as for `/write-request`, plus `id`, `store` and
+`kind`; `verb` is the `get` verb when one is declared and `targets` the store path when
+the read named one.
 
 ## The pidfile
 

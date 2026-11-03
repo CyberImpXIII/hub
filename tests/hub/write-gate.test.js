@@ -96,13 +96,14 @@ test('a repo role writes its own repo\'s store through its verb, and not another
   assert.match(other.reason, /it may write: site/);
 });
 
-test('every read passes with no server call: no ledger row, server up or not', () => {
+test('every plain read passes with no server call: no ledger row (a store read is read-route.test.js\'s)', () => {
   const before = F.ledgerRows(node).length;
   const reads = [
-    ['Read', { file_path: P('PLAN-alpha.md') }],
+    ['Read', { file_path: P('notes.md') }],
+    ['Read', { file_path: P('site/src.txt') }],
     ['Grep', { pattern: 'x', path: node.root }],
     ['Glob', { pattern: '*.md' }],
-    ['Bash', { command: 'cat PLAN-alpha.md | grep alpha > /dev/null 2>&1' }],
+    ['Bash', { command: 'cat notes.md | grep store > /dev/null 2>&1' }],
     ['Bash', { command: 'ls -la && git status' }],
     ['WebSearch', { query: 'x' }],
   ];
@@ -110,7 +111,7 @@ test('every read passes with no server call: no ledger row, server up or not', (
     const g = F.gate(node, 'planner', tool, input);
     assert.equal(g.decision, 'pass', `${tool} ${JSON.stringify(input)}: ${g.reason}`);
   }
-  assert.equal(F.ledgerRows(node).length, before, 'a read made no server call and left no row');
+  assert.equal(F.ledgerRows(node).length, before, 'a plain read made no server call and left no row');
 });
 
 test('every answer is one ledger row', () => {

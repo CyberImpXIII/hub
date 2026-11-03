@@ -205,7 +205,10 @@ async function cmdHookGate(argv) {
   const root = rootFrom(o, cwd || undefined);
   const r = root ? reg.loadRegistry(root) : { error: `no ${reg.REGISTRY} at or above ${cwd || process.cwd()}` };
   const registry = r.error ? null : r.data;
-  const c = classify(input, root, registry);
+  // store-ness is read from disk here, so a store read is told from a plain one
+  // with the server down (PLAN-hub.md §3 H1a-0b)
+  const stores = root ? reg.loadStores(root) : null;
+  const c = classify(input, root, registry, stores);
   const role = o['--role'] || (input && typeof input.agent_type === 'string' ? input.agent_type : null);
   const base = { role, tool: input && typeof input.tool_name === 'string' ? input.tool_name : null, cli: null, verb: null, targets: [] };
   if (c.kind === 'read') return 0;
@@ -214,17 +217,24 @@ async function cmdHookGate(argv) {
     hookLedger(root, { ...base, decision: 'deny', reason: why });
     return hookDeny(why);
   }
+  // a write or a store read: the server decides; without it, both fail closed
+  const what = c.kind === 'write' ? 'write' : 'store read';
+  const route = c.kind === 'write' ? '/write-request' : '/read-request';
+  if (c.kind === 'store-read') {
+    base.targets = c.requests.map((q) => q.path).filter(Boolean);
+    base.id = c.requests.map((q) => q.id).find(Boolean) || null;
+  }
   const selfDeny = (why) => { hookLedger(root, { ...base, decision: 'deny', reason: why }); return hookDeny(why); };
-  if (!registry) return selfDeny(`hub hook gate: write denied, ${r.error}; run \`hub status\``);
-  if (!role) return selfDeny('hub hook gate: write denied, no role (--role, or the input\'s agent_type)');
-  if (!token()) return selfDeny('hub hook gate: write denied, HUB_TOKEN is not set; run `hub status`');
+  if (!registry) return selfDeny(`hub hook gate: ${what} denied, ${r.error}; run \`hub status\``);
+  if (!role) return selfDeny(`hub hook gate: ${what} denied, no role (--role, or the input's agent_type)`);
+  if (!token()) return selfDeny(`hub hook gate: ${what} denied, HUB_TOKEN is not set; run \`hub status\``);
   const port = registry.server && registry.server.port;
   const reasons = [];
   for (const req of c.requests) {
-    const a = await client.call(port, 'POST', '/write-request', { token: token(), body: { role, ...req }, timeoutMs: GATE_TIMEOUT_MS });
-    if (a.down) return selfDeny(`hub hook gate: write denied, the hub server is down (:${port}, ${a.down}); run \`hub status\`, then \`hub up\``);
-    if (a.status === 401) return selfDeny('hub hook gate: write denied, the server refused HUB_TOKEN; run `hub status`');
-    if (!a.body || (a.body.decision !== 'allow' && a.body.decision !== 'deny')) return selfDeny(`hub hook gate: write denied, the server's answer was not a decision (HTTP ${a.status}); run \`hub status\``);
+    const a = await client.call(port, 'POST', route, { token: token(), body: { role, ...req }, timeoutMs: GATE_TIMEOUT_MS });
+    if (a.down) return selfDeny(`hub hook gate: ${what} denied, the hub server is down (:${port}, ${a.down}); run \`hub status\`, then \`hub up\``);
+    if (a.status === 401) return selfDeny(`hub hook gate: ${what} denied, the server refused HUB_TOKEN; run \`hub status\``);
+    if (!a.body || (a.body.decision !== 'allow' && a.body.decision !== 'deny')) return selfDeny(`hub hook gate: ${what} denied, the server's answer was not a decision (HTTP ${a.status}); run \`hub status\``);
     if (a.body.decision === 'deny') reasons.push(a.body.reason);
   }
   if (reasons.length) return hookDeny(`hub: ${reasons.join(' | ')}`);

@@ -62,8 +62,8 @@ test('with the server killed, the hook denies a write with the hub status line',
   assert.ok(rows.every((r) => r.by === 'hook' && r.decision === 'deny'));
 });
 
-test('with the server killed, a read still passes', () => {
-  for (const [tool, input] of [['Read', { file_path: P('PLAN-alpha.md') }], ['Bash', { command: 'cat todo.json' }], ['Grep', { pattern: 'a' }]]) {
+test('with the server killed, a plain read still passes (a store read is denied: read-route.test.js)', () => {
+  for (const [tool, input] of [['Read', { file_path: P('notes.md') }], ['Bash', { command: 'cat site/src.txt' }], ['Grep', { pattern: 'a' }]]) {
     assert.equal(F.gate(node, 'planner', tool, input).decision, 'pass', tool);
   }
 });

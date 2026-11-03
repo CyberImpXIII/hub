@@ -14,6 +14,7 @@ const crypto = require('node:crypto');
 const REGISTRY = 'hub.json';
 const STORES = 'stores.json';
 const DECLARATION = 'cli.json';
+const SERVICES = 'services.json';   // a repo's `ids` declarations live here (PLAN-hub.md §12)
 const STATE_DIR = '.hub';
 // A role's mode is what the server does with it; a `process` role's lifetime is how
 // long its process lives, set by the role's kind (PLAN-hub.md §4). No other words.
@@ -107,6 +108,10 @@ function shapeFindings(d) {
       }
     }
   }
+  if (d.stores !== undefined) {
+    if (!isObj(d.stores)) f.push(`${REGISTRY}: "stores" must be an object: id prefix -> repos key`);
+    else for (const [k, v] of Object.entries(d.stores)) if (typeof v !== 'string' || !v) f.push(`stores.${k}: must name a repos key`);
+  }
   if (d.owners !== undefined && !isObj(d.owners)) f.push(`${REGISTRY}: "owners" must be an object`);
   const ws = isObj(d.owners) ? d.owners[WORKSPACE] : undefined;
   if (ws !== undefined) {
@@ -175,6 +180,9 @@ function checkFindings(d) {
       if (name !== WORKSPACE && !keys.has(name)) f.push(`roles.${role}: derives ${name}, which is neither a repos key nor ${WORKSPACE}`);
     }
   }
+  for (const [prefix, key] of Object.entries(storesMap(d))) {
+    if (!keys.has(key)) f.push(`stores.${prefix}: ${key} is not a repos key`);
+  }
   return f;
 }
 
@@ -240,6 +248,73 @@ function loadDeclaration(root, row) {
   return { cli: s.cli, verbs: s.verbs, store: s.store };
 }
 
+// hub.json `stores`: id prefix -> the repos key whose declared `get` answers it (§12).
+// Prefixes are kept without their colon ("todo" for "todo:").
+function storesMap(d) {
+  if (!isObj(d) || !isObj(d.stores)) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(d.stores)) if (typeof v === 'string' && v) out[k.replace(/:$/, '')] = v;
+  return out;
+}
+
+// A repo's id declarations, from its services.json `ids` (§12):
+// {ids: [{prefix, pattern: RegExp|null, get: string|null}]} with the prefix kept without
+// its colon; {ids: []} when the file or the key is absent; {error} when malformed.
+function loadIds(root, row) {
+  const file = path.join(root, row.dir, SERVICES);
+  let s;
+  try { s = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {
+    return e.code === 'ENOENT' ? { ids: [] } : { ids: [], error: `${row.dir}/${SERVICES} ${e.name === 'SyntaxError' ? 'is not JSON' : 'unreadable'}` };
+  }
+  if (!isObj(s) || s.ids === undefined) return { ids: [] };
+  if (!Array.isArray(s.ids)) return { ids: [], error: `${row.dir}/${SERVICES}: "ids" must be a list` };
+  const ids = [];
+  for (const [i, e] of s.ids.entries()) {
+    if (!isObj(e) || typeof e.prefix !== 'string' || !e.prefix) return { ids: [], error: `${row.dir}/${SERVICES}: ids[${i}] needs a "prefix"` };
+    let pattern = null;
+    if (e.pattern !== undefined) {
+      if (typeof e.pattern !== 'string') return { ids: [], error: `${row.dir}/${SERVICES}: ids[${i}].pattern must be a string` };
+      try { pattern = new RegExp(`^(?:${e.pattern})$`); } catch { return { ids: [], error: `${row.dir}/${SERVICES}: ids[${i}].pattern is not a regular expression` }; }
+    }
+    ids.push({ prefix: e.prefix.replace(/:$/, ''), pattern, get: typeof e.get === 'string' && e.get ? e.get : null });
+  }
+  return { ids };
+}
+
+// The `get` a store's repo declares, as {cli, verb}: the first `ids` entry's `get`
+// (one CLI answers every prefix a repo hands out), or null when none is declared.
+function storeGet(root, row, prefix) {
+  const ids = loadIds(root, row).ids;
+  const decl = (prefix === undefined ? ids.find((x) => x.get) : ids.find((x) => x.prefix === prefix)) || null;
+  if (!decl || !decl.get) return null;
+  const cli = loadDeclaration(root, row);
+  if (cli.error) return null;
+  return { cli: path.posix.join(row.dir, cli.cli), verb: decl.get };
+}
+
+// The `get` verbs a repo declares, so a CLI call `<cli> get <id>` is read as a read.
+function getVerbs(root, row) {
+  return [...new Set(loadIds(root, row).ids.map((x) => x.get).filter(Boolean))];
+}
+
+const ID_RX = /^([A-Za-z][A-Za-z0-9_-]*):([A-Za-z0-9][A-Za-z0-9._/-]*)$/;
+
+// A word that is a declared store id -> {id, prefix, store: <repos key>, get}, else
+// null: the prefix must be in `stores`, and the repo's declared pattern, if any, must
+// match. A word no declared prefix claims is prose (§12).
+function storeIdOf(d, root, word) {
+  if (typeof word !== 'string') return null;
+  const m = ID_RX.exec(word);
+  if (!m) return null;
+  const key = storesMap(d)[m[1]];
+  if (!key) return null;
+  const row = repoRows(d).find((r) => r.key === key);
+  if (!row) return null;
+  const decl = loadIds(root, row).ids.find((x) => x.prefix === m[1]) || null;
+  if (decl && decl.pattern && !decl.pattern.test(word)) return null;
+  return { id: word, prefix: m[1], store: key, get: storeGet(root, row, m[1]) };
+}
+
 // The repos row whose CLI a command word names, from `cwd`: a word with a slash
 // is resolved and compared with <root>/<dir>/<cli>; a bare word is compared by
 // basename (a PATH lookup this cannot see; stated in `hub hook gate --help`).
@@ -254,8 +329,8 @@ function cliRow(d, root, word, cwd) {
 }
 
 module.exports = {
-  REGISTRY, STORES, DECLARATION, STATE_DIR, MODES, LIFETIMES, WORKSPACE,
+  REGISTRY, STORES, DECLARATION, SERVICES, STATE_DIR, MODES, LIFETIMES, WORKSPACE,
   findRoot, loadRegistry, shapeFindings, checkFindings, derivedNames, repoRows, workspaceRow,
   ownerOf, relTo, cleanRel, globMatch, globUnder, loadStores, storesFindings, storeOf,
-  loadDeclaration, cliRow,
+  loadDeclaration, cliRow, storesMap, loadIds, storeGet, getVerbs, storeIdOf,
 };
