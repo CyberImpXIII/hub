@@ -7,8 +7,9 @@
 > phase opens a terminal on Jacob's machine, so none is cloud-eligible under
 > PLAN-cloud-offload.md §3). **Revised in the cloud 2026-10-13:** Decisions 3–6 are
 > answered (`docs/REVIEW-2026-10-09.md` §5.10), V0 runs locally by an agent, and the
-> `warm` mode it showed is gone with PLAN-hub.md Decision 1 (a `driven` session, §11
-> there, takes its place in the panel).
+> kept-role mode it showed is gone with PLAN-hub.md Decision 1 (a `driven` session, §11
+> there, takes its place in the panel; since 2026-11-03 a hub-started role is `process`
+> there, with a `lifetime` column, PLAN-hub.md §4).
 >
 > **Owners:** `deep-work` for `tools/hub/view/` (the pages, the TUI fallback, `hub view`,
 > the gates); the `cron-scheduler` agent for `chron.py list --json` (§2); Jacob for the
@@ -82,7 +83,7 @@ recorded in `/sessions`:
 
 | glyph | state | source |
 |---|---|---|
-| green circle | working | `cold`/`driven`: the server's own process state (running, and for `driven` a turn open: no `result` yet for the last message); `window`: `claude agents --json` `status: busy` for the recorded session. The JSON's `pid`, `status` are present "While the process is alive" as "Process ID and one of `busy`, `waiting`, or `idle`" (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>) |
+| green circle | working | `process`/`driven`: the server's own process state (running, and for `driven` a turn open: no `result` yet for the last message); `window`: `claude agents --json` `status: busy` for the recorded session. The JSON's `pid`, `status` are present "While the process is alive" as "Process ID and one of `busy`, `waiting`, or `idle`" (<https://code.claude.com/docs/en/agent-view#list-sessions-as-json>) |
 | yellow circle | awaiting commands | `driven`: the hub's idle point (PLAN-hub.md §11); `window`: `status: idle` or `waiting`, with `waitingFor` as the tooltip: "`permission prompt` for an approval, `input needed` for a question from Claude or an MCP server's input request" (same anchor) |
 | red circle | in the registry, not spawned | the role exists in `hub.json` and no process or session is known. Jacob said "in the manifest.json"; `hub.json` is rendered from the manifest at the top node, so the set is the same, and the view never opens the manifest (Decision 4) |
 
@@ -95,8 +96,8 @@ Jacob to confirm this reading of "what I am seeing in the single terminal view")
 Clicking an agent's name opens its tab: `claude attach <id>`, "Attach to a background
 session in this terminal" (<https://code.claude.com/docs/en/cli-reference#cli-commands>),
 for a window session; `hub session history <id>` (PLAN-hub.md §11) for a `driven`
-session, which has no terminal; `hub log --role <name>` for a cold role, which has no
-session to attach to between messages.
+session, which has no terminal; `hub log --role <name>` for a `per-task` role, which has
+no session to attach to between messages.
 
 **Folders panel (middle third).** One row per direct subfolder of the node root, from
 `/folders`, which joins the parent's children state with a one-level filesystem scan:

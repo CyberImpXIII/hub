@@ -119,8 +119,9 @@ test('hub check: the good fixture passes; each workspace rule fails on its own f
     ['a workspace role that is not a roles key', (r) => { r.owners.workspace.roles.push('ghost'); }, /owners\.workspace\.roles: ghost is not a roles key/],
     ['a workspace path under a repos row\'s directory', (r) => { r.owners.workspace.paths.push('site/*.md'); }, /owners\.workspace\.paths: site\/\*\.md falls under repos\.site \(site\/\)/],
     ['a workspace path a ** glob carries under a repo', (r) => { r.owners.workspace.paths.push('**/notes.md'); }, /owners\.workspace\.paths: \*\*\/notes\.md falls under repos\./],
-    ['a derived name that is neither a repos key nor workspace', (r) => { r.roles.lost = { mode: 'cold', dir: 'nowhere' }; }, /roles\.lost: derives nowhere, which is neither a repos key nor workspace/],
-    ['a warm mode', (r) => { r.roles.operator.mode = 'warm'; }, /roles\.operator\.mode: "warm" is not one of/],
+    ['a derived name that is neither a repos key nor workspace', (r) => { r.roles.lost = { mode: 'process', lifetime: 'per-task', dir: 'nowhere' }; }, /roles\.lost: derives nowhere, which is neither a repos key nor workspace/],
+    ['a mode that is not a declared word', (r) => { r.roles.operator.mode = 'kept'; }, /roles\.operator\.mode: "kept" is not one of window, process, driven/],
+    ['a lifetime that is not a declared word', (r) => { r.roles.operator.lifetime = 'process'; }, /roles\.operator\.lifetime: "process" is not one of per-task, kept/],
     ['a repos row with no verbs', (r) => { delete r.repos.site.verbs; }, /repos\.site\.verbs: must be a list of strings/],
   ];
   for (const [what, mutate, re] of cases) {

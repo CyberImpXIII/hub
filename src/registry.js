@@ -15,7 +15,10 @@ const REGISTRY = 'hub.json';
 const STORES = 'stores.json';
 const DECLARATION = 'cli.json';
 const STATE_DIR = '.hub';
-const MODES = ['window', 'cold', 'driven'];
+// A role's mode is what the server does with it; a `process` role's lifetime is how
+// long its process lives, set by the role's kind (PLAN-hub.md §4). No other words.
+const MODES = ['window', 'process', 'driven'];
+const LIFETIMES = ['per-task', 'kept'];
 const WORKSPACE = 'workspace';
 
 // The nearest directory at or above `start` holding hub.json, or null.
@@ -87,6 +90,7 @@ function shapeFindings(d) {
     for (const [name, r] of Object.entries(d.roles)) {
       if (!isObj(r)) { f.push(`roles.${name}: not an object`); continue; }
       if (!MODES.includes(r.mode)) f.push(`roles.${name}.mode: ${JSON.stringify(r.mode)} is not one of ${MODES.join(', ')}`);
+      if (r.lifetime !== undefined && !LIFETIMES.includes(r.lifetime)) f.push(`roles.${name}.lifetime: ${JSON.stringify(r.lifetime)} is not one of ${LIFETIMES.join(', ')}`);
       if (r.dir !== undefined && (typeof r.dir !== 'string' || cleanRel(r.dir) === null)) f.push(`roles.${name}.dir: must be a path inside the node`);
       if (r.tools !== undefined && !isStrList(r.tools)) f.push(`roles.${name}.tools: must be a list of strings`);
     }
@@ -250,7 +254,7 @@ function cliRow(d, root, word, cwd) {
 }
 
 module.exports = {
-  REGISTRY, STORES, DECLARATION, STATE_DIR, MODES, WORKSPACE,
+  REGISTRY, STORES, DECLARATION, STATE_DIR, MODES, LIFETIMES, WORKSPACE,
   findRoot, loadRegistry, shapeFindings, checkFindings, derivedNames, repoRows, workspaceRow,
   ownerOf, relTo, cleanRel, globMatch, globUnder, loadStores, storesFindings, storeOf,
   loadDeclaration, cliRow,

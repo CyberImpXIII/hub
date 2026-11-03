@@ -36,9 +36,9 @@ function registry(port) {
     roles: {
       planner: { mode: 'window', agent: 'planner' },
       dispatcher: { mode: 'window', agent: 'dispatcher', fallback: true },
-      operator: { mode: 'cold', tools: ['Read', 'Grep', 'Glob'] },
-      editor: { mode: 'cold', tools: ['Read', 'Edit', 'Write', 'Bash'] },
-      site: { mode: 'cold', dir: 'site' },
+      operator: { mode: 'process', lifetime: 'per-task', tools: ['Read', 'Grep', 'Glob'] },
+      editor: { mode: 'process', lifetime: 'per-task', tools: ['Read', 'Edit', 'Write', 'Bash'] },
+      site: { mode: 'process', lifetime: 'kept', dir: 'site' },
     },
     repos: {
       'tools/plans': { cli: 'plans-cli', verbs: ['plans edit', 'plans add'] },
