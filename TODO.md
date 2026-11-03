@@ -1,4 +1,4 @@
-<!-- rendered by todo from todo.json (61 open, 19 closed in todo-history.json; seal a60861ccc42b): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
+<!-- rendered by todo from todo.json (61 open, 20 closed in todo-history.json; seal fce3d18b0657): do not edit by hand, `todo check` fails on a hand edit. Change items with the todo CLI; a hand edit is recovered with `todo import`. -->
 # hub TODO
 
 ## Own bugs
@@ -50,16 +50,20 @@
   "checks is red"). Left unstaged by tl-316; Jacob's to commit.
   · added: 2026-10-19
 
-- **hb-78 · How a child node gets its parent's HUB_TOKEN once tokens live only in the environment (hb-69)**
-  2026-10-22 (hb-70): PLAN-hub.md §5 Registration said 'the parent's token that setup placed in the child's local.env'; hb-70 rewrote it to name the environment and point here
+- **hb-81 · Which environment variable carries the parent's token to a child under tree-env (hb-78)**
+  2026-11-03 (tl-664): hb-78 answered tree-env, but §5 has the child read both its own token and the parent's from the environment, and the only token variable the plan names is HUB_TOKEN (the child's own, hb-69); the registration body also carries the child's own token, so the two differ and cannot share one name
   · status: waiting-jacob
   · waits on: approval
   · pointer: PLAN-hub.md §5
-  · hinges on: hb-69 put HUB_TOKEN in the environment only, but §5 had setup place the parent's token in the child's local.env; setup cannot read a token that lives only in the parent's process environment, so a child has no stated way to get it
-  · recommend: tree-env
-  · options: tree-env = the parent passes its token in the environment of the child's hub up when hub up --tree starts it; a child started by hand needs the same variable set by its starter; harness = the harness sets the parent token in the child's environment when it registers the child's hook, as hb-69 has it set HUB_TOKEN
+  · hinges on: Jacob's tree-env words say 'the parent passes its HUB_TOKEN'; they do not name the variable the child reads it under
+  · recommend: parent-var
+  · today: PLAN-hub.md §5 says hub up --tree passes the parent's token in the child's environment (tree-env, hb-78) but names no variable for it; HUB_TOKEN in a child's environment is the child's own token
+  · problem: whoever builds H3 has to pick a name, and a child started by hand cannot be told what to set
+  · options: parent-var = the parent's token travels as HUB_PARENT_TOKEN, beside HUB_PARENT_URL; environment only, like HUB_TOKEN; shared = a child uses its parent's HUB_TOKEN as its own, so one variable serves both (every node in a tree then shares one token)
+  · work: decision
+  · size: S
   · files: PLAN-hub.md
-  · added: 2026-10-22
+  · added: 2026-11-03
 
 ## Unconfirmed suspicions
 

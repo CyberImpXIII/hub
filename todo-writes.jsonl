@@ -1,1 +1,4 @@
 {"at": "2026-11-02T00:28:52Z", "verb": "rename-repo", "ids": ["hb-70", "hb-71", "hb-72", "hb-76", "hb-77"], "by": "external-audit", "why": "13.1-step-3:field-keys-to-names(ra-22.1)", "seal_before": "bad147cb707af0e1", "seal_after": "ebd7c87dd27fa2e0", "rename": {"old": "tools/hub", "new": "hub"}}
+{"at": "2026-11-03T13:33:42Z", "verb": "answer", "ids": ["hb-78"], "by": "unattributed", "why": null, "seal_before": "ebd7c87dd27fa2e0", "seal_after": "782a6bfd184a4681", "rename": null}
+{"at": "2026-11-03T13:33:48Z", "verb": "answer", "ids": ["hb-78"], "by": "unattributed", "why": null, "seal_before": "782a6bfd184a4681", "seal_after": "49163fef72b50d98", "rename": null}
+{"at": "2026-11-03T13:38:13Z", "verb": "add", "ids": ["hb-81"], "by": "unattributed", "why": null, "seal_before": "49163fef72b50d98", "seal_after": "5e58be2436eb9006", "rename": null}
