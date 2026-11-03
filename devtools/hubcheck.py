@@ -47,9 +47,12 @@ NOT_COPIES = {"README.md", "SHA256SUMS"}
 # without one, so a deleted store would go quiet there: required here instead.
 # bin/hub is the program's entry and docs/API.md its documented routes (H1a-0):
 # the hubtests part runs both, but a missing entry would fail there as a confusing
-# spawn error, so it is named here.
+# spawn error, so it is named here. hub.schema.json is hub.json's shape and
+# hub.starter.json what `hub init` writes (H1a-1): data the program reads at run
+# time, so a missing one is a program that looks installed and refuses every node.
 REQUIRED = ["CLAUDE.md", "PLAN-hub-brief.md", "TODO.md", "todo.json", "todo-history.json",
-            "dev.sh", ".gitignore", str(README), str(SUMS), "bin/hub", "docs/API.md"]
+            "dev.sh", ".gitignore", str(README), str(SUMS), "bin/hub", "docs/API.md",
+            "hub.schema.json", "hub.starter.json"]
 EXECUTABLE = ["dev.sh", "bin/hub"]
 
 # Public-safety terms. The repo is public; these are the shapes that identify a

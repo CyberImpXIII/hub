@@ -108,12 +108,14 @@ test('hub up refuses a port another process holds, naming it', async () => {
   } finally { blocker.close(); F.cleanup(node); }
 });
 
+const STARTER_LIMITS = JSON.parse(fs.readFileSync(path.join(F.TOOL, 'hub.starter.json'), 'utf8')).limits;
+
 test('hub check: the good fixture passes; each workspace rule fails on its own fixture', async () => {
   const good = await F.makeNode();
   try {
     const r = F.hub(good, ['check']);
     assert.equal(r.code, 0, r.stdout);
-    assert.match(r.stdout, /^ok {4}hub\.json: fixture-node, 5 roles, 3 repos; stores\.json 5 entries/);
+    assert.match(r.stdout, /^ok {4}hub\.json: fixture-node, 5 roles, 3 repos, 0 routes; stores\.json 5 entries/);
   } finally { F.cleanup(good); }
   const cases = [
     ['a workspace role that is not a roles key', (r) => { r.owners.workspace.roles.push('ghost'); }, /owners\.workspace\.roles: ghost is not a roles key/],
@@ -122,7 +124,12 @@ test('hub check: the good fixture passes; each workspace rule fails on its own f
     ['a derived name that is neither a repos key nor workspace', (r) => { r.roles.lost = { mode: 'process', lifetime: 'per-task', dir: 'nowhere' }; }, /roles\.lost: derives nowhere, which is neither a repos key nor workspace/],
     ['a mode that is not a declared word', (r) => { r.roles.operator.mode = 'kept'; }, /roles\.operator\.mode: "kept" is not one of window, process, driven/],
     ['a lifetime that is not a declared word', (r) => { r.roles.operator.lifetime = 'process'; }, /roles\.operator\.lifetime: "process" is not one of per-task, kept/],
-    ['a repos row with no verbs', (r) => { delete r.repos.site.verbs; }, /repos\.site\.verbs: must be a list of strings/],
+    ['a repos row with no verbs', (r) => { delete r.repos.site.verbs; }, /repos\.site: missing "verbs"/],
+    ['a process role with no lifetime', (r) => { delete r.roles.operator.lifetime; }, /roles\.operator: a process role declares its lifetime/],
+    ['a window role with a lifetime', (r) => { r.roles.planner.lifetime = 'kept'; }, /roles\.planner: lifetime is a process role's column/],
+    ['an unknown top-level key', (r) => { r.extra = 1; }, /extra: unknown key "extra"/],
+    ['a limits value below one', (r) => { r.limits = { ...STARTER_LIMITS, hops: 0 }; }, /limits\.hops: must be at least 1/],
+    ['an owners key that is no seam kind', (r) => { r.owners.typo = 'x'; }, /owners\.typo: "typo" is not one of the allowed keys/],
   ];
   for (const [what, mutate, re] of cases) {
     const node = await F.makeNode({ mutate });

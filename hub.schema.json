@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "hub.schema.json",
+  "title": "hub.json: a node's registry, the server's one input (PLAN-hub.md §2)",
+  "description": "Validated by src/schema.js (its draft-07 subset) in `hub check`; the enums are src/vocab.js's lists, held equal both ways by tests/hub/registry.test.js. Rules the shape cannot say (a workspace role is a roles key, a derived name is a repos key, a tag resolves, a process role has a lifetime, every seam kind has an owners row or the unowned default) are src/registry.js checkFindings.",
+  "type": "object",
+  "required": ["hub", "node", "server", "roles"],
+  "additionalProperties": false,
+  "properties": {
+    "hub": { "const": 1 },
+    "node": { "type": "string", "minLength": 1 },
+    "server": {
+      "type": "object",
+      "required": ["port", "keep_alive"],
+      "additionalProperties": false,
+      "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "keep_alive": { "enum": ["session-start", "launchd", "none"] }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["mode"],
+        "additionalProperties": false,
+        "properties": {
+          "mode": { "enum": ["window", "process", "driven"] },
+          "lifetime": { "enum": ["per-task", "kept"] },
+          "agent": { "type": "string", "minLength": 1 },
+          "dir": { "type": "string", "minLength": 1 },
+          "tools": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "fallback": { "type": "boolean" }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "propertyNames": { "enum": ["dispatch", "plan", "context", "settings"] },
+            "additionalProperties": { "type": "string", "minLength": 1 }
+          }
+        ]
+      }
+    },
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "propertyNames": { "enum": ["route", "write", "check", "hook", "usage"] },
+      "properties": {
+        "route": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
+        "write": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
+        "check": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
+        "hook": { "type": "object", "required": ["on"], "additionalProperties": false, "properties": { "on": { "type": "boolean" } } },
+        "usage": { "type": "object", "required": ["cli"], "additionalProperties": false, "properties": { "cli": { "type": "string", "minLength": 1 } } }
+      }
+    },
+    "repos": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cli", "verbs"],
+        "additionalProperties": false,
+        "properties": {
+          "dir": { "type": "string", "minLength": 1 },
+          "check": { "type": "string", "minLength": 1 },
+          "cli": { "type": "string", "minLength": 1 },
+          "verbs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["prefix"],
+              "additionalProperties": false,
+              "properties": {
+                "prefix": { "type": "string", "minLength": 1 },
+                "pattern": { "type": "string", "minLength": 1 },
+                "get": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "owners": {
+      "type": "object",
+      "propertyNames": { "enum": ["delivery", "lease", "check-broken", "check-red", "hook-broken", "hook-block", "tool-result", "unowned", "workspace"] },
+      "properties": {
+        "workspace": {
+          "type": "object",
+          "required": ["paths", "roles"],
+          "additionalProperties": false,
+          "properties": {
+            "paths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "roles": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          }
+        }
+      },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "children": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "parent": { "type": ["string", "null"] },
+    "limits": {
+      "type": "object",
+      "required": ["hops", "budget_per_conversation", "pingpong_hold", "heartbeat_s", "heartbeat_misses", "stub_chars", "role_silence_s", "role_daily_budget"],
+      "additionalProperties": false,
+      "properties": {
+        "hops": { "type": "integer", "minimum": 1 },
+        "budget_per_conversation": { "type": "integer", "minimum": 1 },
+        "pingpong_hold": { "type": "integer", "minimum": 1 },
+        "heartbeat_s": { "type": "integer", "minimum": 1 },
+        "heartbeat_misses": { "type": "integer", "minimum": 1 },
+        "stub_chars": { "type": "integer", "minimum": 1 },
+        "role_silence_s": { "type": "integer", "minimum": 1 },
+        "role_daily_budget": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "stores": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "sync": { "type": "array" },
+    "classes": { "type": "object" },
+    "rendered_from": {
+      "type": "object",
+      "required": ["source", "hash"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "hash": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

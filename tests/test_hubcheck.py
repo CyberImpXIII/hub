@@ -59,6 +59,8 @@ class Fixture:
         (r / "bin/hub").write_text("#!/bin/sh\n")
         (r / "bin/hub").chmod(0o755)
         (r / "docs/API.md").write_text("# api\n")
+        (r / "hub.schema.json").write_text("{}\n")
+        (r / "hub.starter.json").write_text("{}\n")
         (r / "PLAN-hub-brief.md").write_text(BRIEF)
         (r / "docs/inputs/claudeTest-CLAUDE.md").write_text(originals["CLAUDE.md"])
         (r / "docs/inputs/PLAN-a.md").write_text(originals["PLAN-a.md"])
@@ -286,9 +288,13 @@ class TestFiles(Base):
         self.assertEqual(hc.gate_files(self.r), ["bin/hub: not executable"])
         (self.r / "bin/hub").unlink()
         (self.r / "docs/API.md").unlink()
+        (self.r / "hub.schema.json").unlink()
+        (self.r / "hub.starter.json").unlink()
         f = hc.gate_files(self.r)
         self.assertFinding(f, "bin/hub: missing")
         self.assertFinding(f, "docs/API.md: missing")
+        self.assertFinding(f, "hub.schema.json: missing")
+        self.assertFinding(f, "hub.starter.json: missing")
 
     def test_the_todo_store_is_required(self):
         """todo-valid passes a repo with no todo.json, so its loss is caught here."""

@@ -51,12 +51,13 @@ function checkLines(root) {
   const r = reg.loadRegistry(root);
   if (r.error) return { ok: false, lines: [`FAIL  ${r.error}`] };
   const stores = reg.loadStores(root);
-  const f = [...reg.checkFindings(r.data), ...(reg.shapeFindings(r.data).length ? [] : reg.storesFindings(r.data, stores))];
+  const f = [...reg.checkFindings(r.data, root), ...(reg.shapeFindings(r.data).length ? [] : reg.storesFindings(r.data, stores))];
   if (f.length) return { ok: false, lines: f.map((x) => `FAIL  ${x}`), registry: r };
   const roles = Object.keys(r.data.roles).length;
   const repos = reg.repoRows(r.data).length;
+  const routes = reg.routeTable(r.data).length;
   const s = stores.missing ? `${reg.STORES} missing (every store write is denied until it exists)` : `${reg.STORES} ${stores.entries.length} entries`;
-  return { ok: true, lines: [`ok    ${reg.REGISTRY}: ${r.data.node}, ${roles} roles, ${repos} repos; ${s}`], registry: r };
+  return { ok: true, lines: [`ok    ${reg.REGISTRY}: ${r.data.node}, ${roles} roles, ${repos} repos, ${routes} routes; ${s}`], registry: r };
 }
 
 async function cmdCheck(argv) {
@@ -65,6 +66,57 @@ async function cmdCheck(argv) {
   const c = checkLines(rootFrom(o));
   c.lines.forEach((l) => out(l));
   return c.ok ? 0 : 1;
+}
+
+// ------------------------------------------------------------------- init --
+// The starter registry (PLAN-hub.md §2 "Who writes it"; the Setup component): what
+// `setup`'s hub component writes where no role list exists, by another name. Data
+// from hub.starter.json; this fills the node's name, a free port and the parent.
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const s = require('node:net').createServer();
+    s.once('error', reject);
+    s.listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => resolve(port)); });
+  });
+}
+
+async function cmdInit(argv) {
+  const o = parse(argv, ['--help'], ['--root', '--parent', '--port']);
+  if (o['--help']) { out(COMMANDS.init.help); return 0; }
+  const root = path.resolve(o['--root'] || process.cwd());
+  const file = path.join(root, reg.REGISTRY);
+  if (fs.existsSync(file)) { err(`hub init refused: ${reg.REGISTRY} exists at ${root} (hub check reads it; nothing is overwritten)`); return 1; }
+  if (!fs.existsSync(root)) { err(`hub init refused: ${root} does not exist`); return 1; }
+  const d = reg.loadStarter();
+  d.node = path.basename(root);
+  d.server.port = o['--port'] ? Number(o['--port']) : await freePort();
+  d.parent = o['--parent'] || null;
+  const f = reg.checkFindings(d, root);
+  if (f.length) { f.forEach((x) => err(`hub init: the starter does not pass hub check: ${x}`)); return 1; }
+  fs.writeFileSync(file, `${JSON.stringify(d, null, 2)}\n`);
+  out(`hub init: wrote ${reg.REGISTRY} for ${d.node} (:${d.server.port}, parent: ${d.parent || 'none'}, ${Object.keys(d.roles).length} roles); hub check: ok`);
+  return 0;
+}
+
+// ----------------------------------------------------------------- routes --
+function routeLines(d) {
+  return reg.routeTable(d).map((r) => `${r.tag}${r.kind ? `[${r.kind}]` : ''} -> ${r.target} (${r.via || 'UNRESOLVED'}${r.by === 'repos' ? ', declared by the repo' : ''})`);
+}
+
+async function cmdRoutes(argv) {
+  const o = parse(argv, ['--help', '--json'], ['--root']);
+  if (o['--help']) { out(COMMANDS.routes.help); return 0; }
+  const root = rootFrom(o);
+  if (!root) { err(`hub: no ${reg.REGISTRY} at or above ${process.cwd()}`); return 1; }
+  const r = reg.loadRegistry(root);
+  if (r.error) { err(`hub: ${r.error}`); return 1; }
+  const table = reg.routeTable(r.data);
+  if (o['--json']) { out(JSON.stringify({ node: r.data.node, routes: table })); return table.every((x) => x.via) ? 0 : 1; }
+  if (!table.length) out(`${r.data.node}: no tag routes declared (an addressed envelope routes without one)`);
+  routeLines(r.data).forEach((l) => out(l));
+  const bad = table.filter((x) => !x.via).length;
+  if (bad) out(`${bad} route(s) unresolved: hub check names each`);
+  return bad ? 1 : 0;
 }
 
 // ----------------------------------------------------------------- status --
@@ -89,11 +141,21 @@ async function probe(root) {
   return { ...s.body, auth: 'ok' };
 }
 
+// The restarts `hub up` counted (§7): each row kind `restart` in the ledger.
+function restartRows(root) { return ledger.read(root).filter((r) => r.kind === 'restart'); }
+
 async function cmdStatus(argv) {
-  const o = parse(argv, ['--help', '--json'], ['--root']);
+  const o = parse(argv, ['--help', '--json', '--restarts'], ['--root']);
   if (o['--help']) { out(COMMANDS.status.help); return 0; }
   const root = rootFrom(o);
   if (!root) { err(`hub: no ${reg.REGISTRY} at or above ${process.cwd()}`); return 1; }
+  if (o['--restarts']) {
+    const rows = restartRows(root);
+    if (o['--json']) { out(JSON.stringify({ restarts: rows.length, last: rows.at(-1) || null })); return 0; }
+    const last = rows.at(-1);
+    out(`${rows.length} restart(s) counted by hub up${last ? `; last ${last.ts}: a stale ${reg.STATE_DIR}/server.json named pid ${last.stale_pid} started ${last.stale_started}` : ''}`);
+    return 0;
+  }
   const p = await probe(root);
   if (p.error) { err(`hub: ${p.error}`); return 1; }
   if (o['--json']) {
@@ -129,6 +191,13 @@ async function cmdUp(argv) {
   const before = await probe(root);
   if (before.up) { out(`${d.node} already up :${before.port}${before.pid ? `, pid ${before.pid}` : ''}`); return before.auth === 'ok' ? 0 : 1; }
   fs.mkdirSync(path.join(root, reg.STATE_DIR), { recursive: true });
+  // a start over a stale pidfile is a restart: the server died since it wrote it
+  // (§7: the count is the evidence for the bundled-application stage)
+  const stale = server.readPidfile(root);
+  if (stale) {
+    ledger.append(root, { route: 'hub up', by: 'cli', kind: 'restart', stale_pid: stale.pid, stale_started: stale.started || null, decision: null, reason: `hub up found ${d.node} down behind a stale ${reg.STATE_DIR}/server.json` });
+    try { fs.unlinkSync(server.pidfilePath(root)); } catch { /* gone */ }
+  }
   const logFile = path.join(root, reg.STATE_DIR, LOG);
   const fd = fs.openSync(logFile, 'a');
   const child = spawn(process.execPath, [path.join(__dirname, '..', 'bin', 'hub'), 'up', '--foreground', '--root', root], {
@@ -255,8 +324,10 @@ async function cmdHook(argv) {
 const COMMANDS = {
   up: { run: cmdUp, line: 'up [--foreground] [--root <dir>]  start this node\'s server (hub check first; HUB_TOKEN from the environment)', help: 'hub up [--foreground] [--root <dir>]\n\nRuns `hub check`, needs HUB_TOKEN, starts the server on 127.0.0.1:<server.port> in the\nbackground (or in the foreground with --foreground, for a supervisor), writes .hub/server.json\n(name, pid, port, started, registry_hash) and waits for /health. One line out; exit 0 when up.' },
   down: { run: cmdDown, line: 'down [--root <dir>]  stop it (only a pid that answers /health as this node)', help: 'hub down [--root <dir>]\n\nSIGTERM to the pid in .hub/server.json, only when that pid answers /health as this node;\na stale pidfile is removed, nothing signalled. Exit 0 when down.' },
-  status: { run: cmdStatus, line: 'status [--json] [--root <dir>]  up or down, within one second', help: 'hub status [--json] [--root <dir>]\n\nAsks /health, then /status, each within 800 ms. --json prints one object:\n{name, up, port, pid, queued, held, dead_letter, children[], auth, stores_json?, note?};\na down node has pid, queued, held and dead_letter null. Exit 0 when up and the token is\naccepted, 1 otherwise.' },
-  check: { run: cmdCheck, line: 'check [--root <dir>]  hub.json and stores.json as the write gate needs them', help: 'hub check [--root <dir>]\n\nThe shape the write gate needs (hub, node, server.port, roles and their modes, repos rows\nwith cli and verbs, owners.workspace) and the workspace rules: every workspace role is a\nroles key; no workspace path falls under a repos row\'s directory; every name a role\nderives (workspace, or the repo whose directory is its dir) is a repos key or workspace.\nstores.json, when present: its shape, and every declared_by a repos key. One FAIL line\neach; exit 1 on any.' },
+  status: { run: cmdStatus, line: 'status [--json] [--restarts] [--root <dir>]  up or down, within one second; the restarts hub up counted', help: 'hub status [--json] [--restarts] [--root <dir>]\n\nAsks /health, then /status, each within 800 ms. --json prints one object:\n{name, up, port, pid, queued, held, dead_letter, children[], auth, stores_json?, note?};\na down node has pid, queued, held and dead_letter null. Exit 0 when up and the token is\naccepted, 1 otherwise. --restarts: how many times hub up found the node down behind a\nstale .hub/server.json (one ledger row each, kind restart), and the last one; exit 0.' },
+  check: { run: cmdCheck, line: 'check [--root <dir>]  hub.json against hub.schema.json and the rules the shape cannot say', help: 'hub check [--root <dir>]\n\nhub.json against hub.schema.json (the shape, every enum a vocab.js list), then the rules\nthe shape cannot say: every workspace role is a roles key; no workspace path falls under a\nrepos row\'s directory; every name a role derives (workspace, or the repo whose directory\nis its dir) is a repos key or workspace; a process role declares its lifetime and no\nother mode does; every stores prefix names a repos key; every tag resolves to a role, a\nchild or a reserved target (@from @owner @dir @write @check) and every tag a repos row\ndeclares has a route; every seam kind has an owners row or the unowned default; every\nrole dir and repos directory exists, every repos cli is executable, rendered_from.source\nexists. stores.json, when present: its shape, and every declared_by a repos key. One\nFAIL line each; exit 1 on any.' },
+  init: { run: cmdInit, line: 'init [--parent <name>] [--port <n>] [--root <dir>]  write the starter hub.json for a node without a role list', help: 'hub init [--parent <name>] [--port <n>] [--root <dir>]\n\nWrites hub.starter.json\'s registry into <root>/hub.json (the folder\'s name as the node, a\nfree port unless --port, --parent or null): the dispatcher window as the fallback, a kept\ncoder process, route and write on, owners with only the unowned default, the limits at\ntheir starting values, no tags, no children. Refuses when hub.json exists. The file it\nwrites passes hub check, or nothing is written. Where a role list exists, setup\'s hub\ncomponent writes hub.json from it instead (PLAN-hub.md §2, Decision 2).' },
+  routes: { run: cmdRoutes, line: 'routes [--json] [--root <dir>]  the tag table here, each tag resolved', help: 'hub routes [--json] [--root <dir>]\n\nOne line per route: `tag[kind] -> target (role|child|reserved)`, from hub.json\'s tags (a\nnested entry routes by question kind) and from the tags each repos row declares (routed to\nthe role or child of the repo\'s name when no tags row names them). An unresolved target\nis printed UNRESOLVED and exit 1; hub check names it. --json: {node, routes: [{tag, kind,\ntarget, via, by}]}, the same object GET /routes serves. Proposed rules from the\ndispatcher\'s choices come with H2.' },
   hook: { run: cmdHook, line: 'hook gate [--role <role>]  the PreToolUse write gate (hub hook gate --help)', help: 'hub hook <name>\n\nhooks:\n  gate   the PreToolUse write gate; `hub hook gate --help` states what it classifies' },
 };
 

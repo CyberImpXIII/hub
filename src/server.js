@@ -89,6 +89,7 @@ function readRequest(st, req) {
 const ROUTES = [
   { method: 'GET', path: '/health', handle: (st) => ({ ok: true, name: st.registry.node, pid: process.pid }) },
   { method: 'GET', path: '/status', handle: (st) => statusBody(st) },
+  { method: 'GET', path: '/routes', handle: (st) => ({ node: st.registry.node, routes: reg.routeTable(st.registry) }) },
   { method: 'POST', path: '/write-request', handle: (st, body) => writeRequest(st, body) },
   { method: 'POST', path: '/read-request', handle: (st, body) => readRequest(st, body) },
 ];
@@ -125,10 +126,33 @@ function handler(st) {
   };
 }
 
+// The state a server restores from .hub/ at start (PLAN-hub.md §3 step 3; §8 "kill
+// the server": `hub up` after a kill restores held, dead-letter and ledger state):
+// held messages are .hub/held/<id>.json, dead letters .hub/dead-letter/<id>.json,
+// and the ledger is the append-only .hub/ledger.jsonl, which nothing truncates.
+const HELD_DIR = 'held';
+const DEAD_DIR = 'dead-letter';
+
+function readDir(root, sub) {
+  const dir = path.join(root, reg.STATE_DIR, sub);
+  let names = [];
+  try { names = fs.readdirSync(dir).filter((n) => n.endsWith('.json')).sort(); } catch { return []; }
+  const out = [];
+  for (const n of names) {
+    try { out.push(JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8'))); } catch { out.push({ id: n.replace(/\.json$/, ''), unreadable: true }); }
+  }
+  return out;
+}
+
+function loadState(root) {
+  return { held: readDir(root, HELD_DIR), deadLetter: readDir(root, DEAD_DIR), ledgerRows: ledger.read(root).length };
+}
+
 // Runs in the foreground until SIGTERM or SIGINT. Resolves when listening;
 // rejects with the listen error (a port in use, say).
 function start(root, registry, token) {
-  const st = { root, registry: registry.data, hash: registry.hash, token, port: registry.data.server.port, queued: [], held: [], deadLetter: [] };
+  const restored = loadState(root);
+  const st = { root, registry: registry.data, hash: registry.hash, token, port: registry.data.server.port, queued: [], held: restored.held, deadLetter: restored.deadLetter };
   const server = http.createServer(handler(st));
   return new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -149,4 +173,4 @@ function start(root, registry, token) {
   });
 }
 
-module.exports = { start, ROUTES, readPidfile, pidfilePath };
+module.exports = { start, ROUTES, readPidfile, pidfilePath, loadState, HELD_DIR, DEAD_DIR };

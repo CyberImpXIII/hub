@@ -4,23 +4,37 @@
 // declares each) and each repo's cli.json (its CLI and its verbs). Nothing here
 // names a repo, a role or a command: they are all data in those files.
 //
-// H1a-0 reads only what the write gate needs: `server`, `roles`, `owners.workspace`,
-// `repos.<repo>.cli|verbs|dir` and `stores.json`. H1a-1 completes the schema.
+// The shape is hub.schema.json (H1a-1), validated by src/schema.js; the rules the
+// shape cannot say are checkFindings: the workspace rules, derived names, a process
+// role's lifetime, every tag resolving, every seam kind owned, the stores map, and
+// (with a root) the files the registry names existing.
 
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const schema = require('./schema');
+const V = require('./vocab');
 
 const REGISTRY = 'hub.json';
 const STORES = 'stores.json';
 const DECLARATION = 'cli.json';
 const SERVICES = 'services.json';   // a repo's `ids` declarations live here (PLAN-hub.md §12)
+const SCHEMA = 'hub.schema.json';   // at the tool's root, beside bin/ and src/
+const STARTER = 'hub.starter.json'; // what `hub init` writes, data not program
 const STATE_DIR = '.hub';
-// A role's mode is what the server does with it; a `process` role's lifetime is how
-// long its process lives, set by the role's kind (PLAN-hub.md §4). No other words.
-const MODES = ['window', 'process', 'driven'];
-const LIFETIMES = ['per-task', 'kept'];
-const WORKSPACE = 'workspace';
+const { MODES, LIFETIMES, WORKSPACE } = V;
+
+const TOOL = path.join(__dirname, '..');
+let schemaCache = null;
+function loadSchema() {
+  if (!schemaCache) schemaCache = JSON.parse(fs.readFileSync(path.join(TOOL, SCHEMA), 'utf8'));
+  return schemaCache;
+}
+function loadStarter() {
+  const s = JSON.parse(fs.readFileSync(path.join(TOOL, STARTER), 'utf8'));
+  delete s._comment;
+  return s;
+}
 
 // The nearest directory at or above `start` holding hub.json, or null.
 function findRoot(start) {
@@ -78,58 +92,75 @@ function loadRegistry(root) {
   return { root, file, hash, data };
 }
 
-// The shape H1a-0 needs, one finding per line; [] when it holds.
+// The shape, one finding per line; [] when it holds. hub.schema.json is the shape;
+// the few path rules the schema cannot state (a path inside the node) follow it.
 function shapeFindings(d) {
-  const f = [];
   if (!isObj(d)) return [`${REGISTRY}: not an object`];
-  if (d.hub !== 1) f.push(`${REGISTRY}: "hub" is ${JSON.stringify(d.hub)}, expected 1`);
-  if (typeof d.node !== 'string' || !d.node) f.push(`${REGISTRY}: "node" must be a non-empty string`);
-  const port = isObj(d.server) ? d.server.port : undefined;
-  if (!Number.isInteger(port) || port < 1 || port > 65535) f.push(`${REGISTRY}: "server.port" must be an integer 1-65535`);
-  if (!isObj(d.roles) || Object.keys(d.roles).length === 0) f.push(`${REGISTRY}: "roles" must be a non-empty object`);
-  else {
-    for (const [name, r] of Object.entries(d.roles)) {
-      if (!isObj(r)) { f.push(`roles.${name}: not an object`); continue; }
-      if (!MODES.includes(r.mode)) f.push(`roles.${name}.mode: ${JSON.stringify(r.mode)} is not one of ${MODES.join(', ')}`);
-      if (r.lifetime !== undefined && !LIFETIMES.includes(r.lifetime)) f.push(`roles.${name}.lifetime: ${JSON.stringify(r.lifetime)} is not one of ${LIFETIMES.join(', ')}`);
-      if (r.dir !== undefined && (typeof r.dir !== 'string' || cleanRel(r.dir) === null)) f.push(`roles.${name}.dir: must be a path inside the node`);
-      if (r.tools !== undefined && !isStrList(r.tools)) f.push(`roles.${name}.tools: must be a list of strings`);
-    }
+  const f = schema.validate(loadSchema(), d);
+  if (f.length) return f;
+  if (Object.keys(d.roles).length === 0) f.push(`roles: must name at least one role`);
+  for (const [name, r] of Object.entries(d.roles)) {
+    if (r.dir !== undefined && cleanRel(r.dir) === null) f.push(`roles.${name}.dir: must be a path inside the node`);
   }
-  if (d.repos !== undefined) {
-    if (!isObj(d.repos)) f.push(`${REGISTRY}: "repos" must be an object`);
-    else {
-      for (const [key, row] of Object.entries(d.repos)) {
-        if (!isObj(row)) { f.push(`repos.${key}: not an object`); continue; }
-        if (typeof row.cli !== 'string' || !row.cli) f.push(`repos.${key}.cli: must name the repo's CLI`);
-        if (!isStrList(row.verbs)) f.push(`repos.${key}.verbs: must be a list of strings`);
-        const dir = row.dir === undefined ? key : row.dir;
-        if (typeof dir !== 'string' || cleanRel(dir) === null || cleanRel(dir) === '.') f.push(`repos.${key}: its directory must be a path inside the node, not the root`);
-      }
-    }
+  for (const [key, row] of Object.entries(d.repos || {})) {
+    const dir = row.dir === undefined ? key : row.dir;
+    if (cleanRel(dir) === null || cleanRel(dir) === '.') f.push(`repos.${key}: its directory must be a path inside the node, not the root`);
   }
-  if (d.stores !== undefined) {
-    if (!isObj(d.stores)) f.push(`${REGISTRY}: "stores" must be an object: id prefix -> repos key`);
-    else for (const [k, v] of Object.entries(d.stores)) if (typeof v !== 'string' || !v) f.push(`stores.${k}: must name a repos key`);
-  }
-  if (d.owners !== undefined && !isObj(d.owners)) f.push(`${REGISTRY}: "owners" must be an object`);
   const ws = isObj(d.owners) ? d.owners[WORKSPACE] : undefined;
-  if (ws !== undefined) {
-    if (!isObj(ws)) f.push(`owners.${WORKSPACE}: not an object`);
-    else {
-      if (!isStrList(ws.paths)) f.push(`owners.${WORKSPACE}.paths: must be a list of globs`);
-      else for (const p of ws.paths) if (cleanRel(p) === null) f.push(`owners.${WORKSPACE}.paths: ${p} leaves the node`);
-      if (!isStrList(ws.roles)) f.push(`owners.${WORKSPACE}.roles: must be a list of role names`);
+  if (ws) for (const p of ws.paths) if (cleanRel(p) === null) f.push(`owners.${WORKSPACE}.paths: ${p} leaves the node`);
+  for (const c of d.children || []) if (cleanRel(c.path) === null || cleanRel(c.path) === '.') f.push(`children: ${c.name}'s path must be inside the node, not the root`);
+  return f;
+}
+
+// Each tags entry, resolved: [{tag, kind?, target, via: 'role'|'child'|'reserved'|null, by: 'tags'|'repos'}].
+// A `via` of null is a target nothing declares (the vocabulary gate's finding).
+function routeTable(d) {
+  const roles = new Set(Object.keys(isObj(d.roles) ? d.roles : {}));
+  const children = new Set((Array.isArray(d.children) ? d.children : []).map((c) => c && c.name).filter(Boolean));
+  const via = (t) => (roles.has(t) ? 'role' : children.has(t) ? 'child' : V.RESERVED_TARGETS.includes(t) ? 'reserved' : null);
+  const out = [];
+  for (const [tag, v] of Object.entries(isObj(d.tags) ? d.tags : {})) {
+    if (typeof v === 'string') out.push({ tag, kind: null, target: v, via: via(v), by: 'tags' });
+    else if (isObj(v)) for (const [kind, t] of Object.entries(v)) out.push({ tag, kind, target: t, via: via(t), by: 'tags' });
+  }
+  const declared = new Set(out.map((r) => r.tag));
+  for (const row of repoRows(d)) {
+    for (const tag of row.tags) {
+      if (declared.has(tag)) continue;
+      // a tag a repo owns routes to the role or child of that name when no tags row says otherwise
+      out.push({ tag, kind: null, target: row.key, via: via(row.key), by: 'repos' });
     }
+  }
+  return out;
+}
+
+// The vocabulary gate (§8): every tag resolves to a role, a child or a reserved
+// target, and every tag a repo declares has a route.
+function routeFindings(d) {
+  const f = [];
+  for (const r of routeTable(d)) {
+    if (r.via) continue;
+    if (r.by === 'repos') f.push(`repos.${r.target}.tags: ${r.tag} has no route: no tags row names it, and ${r.target} is neither a role nor a child`);
+    else f.push(`tags.${r.tag}${r.kind ? `.${r.kind}` : ''}: ${r.target} is neither a role, a child nor a reserved target (${V.RESERVED_TARGETS.join(', ')})`);
   }
   return f;
 }
 
-// Each repos row as {key, dir, cli, verbs}, dir root-relative.
+// Owners both ways (routing-tree §14.7): every seam kind has a row or the explicit
+// `unowned` default; the schema holds that every key is a kind, `unowned` or
+// `workspace`.
+function ownerFindings(d) {
+  const owners = isObj(d.owners) ? d.owners : {};
+  if (Object.prototype.hasOwnProperty.call(owners, V.UNOWNED)) return [];
+  return V.SEAM_KINDS.filter((k) => !Object.prototype.hasOwnProperty.call(owners, k)).map((k) => `owners: seam kind ${k} has no row and no \`${V.UNOWNED}\` default`);
+}
+
+// Each repos row as {key, dir, cli, verbs, tags, ids, check}, dir root-relative.
 function repoRows(d) {
-  if (!isObj(d.repos)) return [];
+  if (!isObj(d) || !isObj(d.repos)) return [];
   return Object.entries(d.repos).filter(([, r]) => isObj(r)).map(([key, r]) => ({
     key, dir: cleanRel(r.dir === undefined ? key : r.dir), cli: r.cli, verbs: r.verbs,
+    tags: isStrList(r.tags) ? r.tags : [], ids: Array.isArray(r.ids) ? r.ids : null, check: typeof r.check === 'string' ? r.check : null,
   }));
 }
 
@@ -158,12 +189,20 @@ function derivedNames(d, role) {
   return out;
 }
 
-// The three workspace rules (§8 "write gate", last clause), plus the shape.
-function checkFindings(d) {
+// Every rule `hub check` holds beyond the shape: the three workspace rules (§8 "write
+// gate", last clause), derived names, a process role's lifetime (§4), the stores
+// map, the vocabulary gate, owners both ways; and, given `root`, that the files the
+// registry names exist: a role's dir, a repos row's executable cli, rendered_from's
+// source.
+function checkFindings(d, root) {
   const f = shapeFindings(d);
   if (f.length) return f;
   const ws = workspaceRow(d);
   const rows = repoRows(d);
+  for (const [name, r] of Object.entries(d.roles)) {
+    if (r.mode === 'process' && r.lifetime === undefined) f.push(`roles.${name}: a process role declares its lifetime (${LIFETIMES.join(' | ')})`);
+    if (r.mode !== 'process' && r.lifetime !== undefined) f.push(`roles.${name}: lifetime is a process role's column; a ${r.mode} role has none`);
+  }
   if (ws) {
     for (const role of ws.roles) {
       if (!Object.prototype.hasOwnProperty.call(d.roles, role)) f.push(`owners.${WORKSPACE}.roles: ${role} is not a roles key`);
@@ -183,8 +222,23 @@ function checkFindings(d) {
   for (const [prefix, key] of Object.entries(storesMap(d))) {
     if (!keys.has(key)) f.push(`stores.${prefix}: ${key} is not a repos key`);
   }
+  f.push(...routeFindings(d), ...ownerFindings(d));
+  if (root) {
+    for (const [name, r] of Object.entries(d.roles)) {
+      if (r.dir !== undefined && !isDir(path.join(root, r.dir))) f.push(`roles.${name}.dir: ${r.dir}/ does not exist under the node`);
+    }
+    for (const row of rows) {
+      if (!isDir(path.join(root, row.dir))) { f.push(`repos.${row.key}: its directory ${row.dir}/ does not exist under the node`); continue; }
+      const cli = path.join(root, row.dir, row.cli);
+      if (!isExecutable(cli)) f.push(`repos.${row.key}.cli: ${row.dir}/${row.cli} is not an executable file`);
+    }
+    if (isObj(d.rendered_from) && !fs.existsSync(path.join(root, d.rendered_from.source))) f.push(`rendered_from.source: ${d.rendered_from.source} does not exist under the node`);
+  }
   return f;
 }
+
+function isDir(p) { try { return fs.statSync(p).isDirectory(); } catch { return false; } }
+function isExecutable(p) { try { fs.accessSync(p, fs.constants.X_OK); return fs.statSync(p).isFile(); } catch { return false; } }
 
 // Root-relative path for an absolute or base-relative one, or null outside the root.
 function relTo(root, p, base) {
@@ -257,24 +311,31 @@ function storesMap(d) {
   return out;
 }
 
-// A repo's id declarations, from its services.json `ids` (§12):
+// A repo's id declarations (§12): the repos row's own `ids` where the renderer put
+// them, else the repo's services.json `ids`:
 // {ids: [{prefix, pattern: RegExp|null, get: string|null}]} with the prefix kept without
-// its colon; {ids: []} when the file or the key is absent; {error} when malformed.
+// its colon; {ids: []} when neither declares any; {error} when malformed.
 function loadIds(root, row) {
-  const file = path.join(root, row.dir, SERVICES);
-  let s;
-  try { s = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {
-    return e.code === 'ENOENT' ? { ids: [] } : { ids: [], error: `${row.dir}/${SERVICES} ${e.name === 'SyntaxError' ? 'is not JSON' : 'unreadable'}` };
+  let list = row.ids;
+  let where = `repos.${row.key}.ids`;
+  if (!Array.isArray(list)) {
+    const file = path.join(root, row.dir, SERVICES);
+    let s;
+    try { s = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {
+      return e.code === 'ENOENT' ? { ids: [] } : { ids: [], error: `${row.dir}/${SERVICES} ${e.name === 'SyntaxError' ? 'is not JSON' : 'unreadable'}` };
+    }
+    if (!isObj(s) || s.ids === undefined) return { ids: [] };
+    if (!Array.isArray(s.ids)) return { ids: [], error: `${row.dir}/${SERVICES}: "ids" must be a list` };
+    list = s.ids;
+    where = `${row.dir}/${SERVICES}`;
   }
-  if (!isObj(s) || s.ids === undefined) return { ids: [] };
-  if (!Array.isArray(s.ids)) return { ids: [], error: `${row.dir}/${SERVICES}: "ids" must be a list` };
   const ids = [];
-  for (const [i, e] of s.ids.entries()) {
-    if (!isObj(e) || typeof e.prefix !== 'string' || !e.prefix) return { ids: [], error: `${row.dir}/${SERVICES}: ids[${i}] needs a "prefix"` };
+  for (const [i, e] of list.entries()) {
+    if (!isObj(e) || typeof e.prefix !== 'string' || !e.prefix) return { ids: [], error: `${where}: ids[${i}] needs a "prefix"` };
     let pattern = null;
     if (e.pattern !== undefined) {
-      if (typeof e.pattern !== 'string') return { ids: [], error: `${row.dir}/${SERVICES}: ids[${i}].pattern must be a string` };
-      try { pattern = new RegExp(`^(?:${e.pattern})$`); } catch { return { ids: [], error: `${row.dir}/${SERVICES}: ids[${i}].pattern is not a regular expression` }; }
+      if (typeof e.pattern !== 'string') return { ids: [], error: `${where}: ids[${i}].pattern must be a string` };
+      try { pattern = new RegExp(`^(?:${e.pattern})$`); } catch { return { ids: [], error: `${where}: ids[${i}].pattern is not a regular expression` }; }
     }
     ids.push({ prefix: e.prefix.replace(/:$/, ''), pattern, get: typeof e.get === 'string' && e.get ? e.get : null });
   }
@@ -287,9 +348,9 @@ function storeGet(root, row, prefix) {
   const ids = loadIds(root, row).ids;
   const decl = (prefix === undefined ? ids.find((x) => x.get) : ids.find((x) => x.prefix === prefix)) || null;
   if (!decl || !decl.get) return null;
-  const cli = loadDeclaration(root, row);
-  if (cli.error) return null;
-  return { cli: path.posix.join(row.dir, cli.cli), verb: decl.get };
+  // the repos row's cli is the one `write` and `get` run (§2 repos); cli.json's verbs
+  // are the write verbs, not needed to name the get
+  return { cli: path.posix.join(row.dir, row.cli), verb: decl.get };
 }
 
 // The `get` verbs a repo declares, so a CLI call `<cli> get <id>` is read as a read.
@@ -329,8 +390,9 @@ function cliRow(d, root, word, cwd) {
 }
 
 module.exports = {
-  REGISTRY, STORES, DECLARATION, SERVICES, STATE_DIR, MODES, LIFETIMES, WORKSPACE,
-  findRoot, loadRegistry, shapeFindings, checkFindings, derivedNames, repoRows, workspaceRow,
+  REGISTRY, STORES, DECLARATION, SERVICES, SCHEMA, STARTER, STATE_DIR, MODES, LIFETIMES, WORKSPACE,
+  findRoot, loadRegistry, loadSchema, loadStarter, shapeFindings, checkFindings, routeTable, routeFindings, ownerFindings,
+  derivedNames, repoRows, workspaceRow,
   ownerOf, relTo, cleanRel, globMatch, globUnder, loadStores, storesFindings, storeOf,
   loadDeclaration, cliRow, storesMap, loadIds, storeGet, getVerbs, storeIdOf,
 };

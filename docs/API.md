@@ -27,6 +27,16 @@ In H1a-0 the server holds no queue, held message or dead letter, so the three co
 `hub status --json` prints this object plus `auth`; when the node is down it prints the
 same keys with `up: false` and `pid`, `queued`, `held`, `dead_letter` null.
 
+### GET /routes
+
+`{"node", "routes": [{"tag", "kind", "target", "via", "by"}]}`: the node's tag table,
+each tag resolved (PLAN-hub.md §2 `tags`; §8 "vocabulary"). `kind` is the question kind
+of a nested entry, else `null`; `via` is `role`, `child` or `reserved` (`@from`,
+`@owner`, `@dir`, `@write`, `@check`), or `null` for a target nothing declares, which
+`hub check` fails; `by` is `tags` for a `tags` row and `repos` for a tag a `repos` row
+declares with no `tags` row, routed to the role or child of the repo's name. `hub routes`
+prints the same table; no routing runs through it yet (H1a-2's `/route`).
+
 ### POST /write-request
 
 The write gate. Body: `{role, tool, file?, targets?, cli?, verb?, args?, cwd?}`.
@@ -105,8 +115,16 @@ still passes.
 `kind`; `verb` is the `get` verb when one is declared and `targets` the store path when
 the read named one.
 
-## The pidfile
+## The pidfile, and the state `hub up` restores
 
 `<root>/.hub/server.json`: `{name, pid, port, started, registry_hash}`, written when the
 server listens and removed when it stops on SIGTERM or SIGINT. `registry_hash` is
 `sha256:` of `hub.json`'s bytes as read at start.
+
+A server that starts reads its state back from `.hub/` (PLAN-hub.md §3 step 3): held
+messages from `.hub/held/<id>.json`, dead letters from `.hub/dead-letter/<id>.json`
+(each file one JSON object; `/status` counts them), and the ledger, `.hub/ledger.jsonl`,
+which is append-only and never truncated. `hub up` that finds the node down behind a
+stale pidfile writes one ledger row of kind `restart` (`stale_pid`, `stale_started`)
+before it starts the new process; `hub status --restarts` counts those rows (PLAN-hub.md
+§7).
